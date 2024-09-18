@@ -1,0 +1,19 @@
+{
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "strict",
+
+  "reportGeneralTypeIssues": true,
+  "reportImplicitStringConcatenation": "none",
+  "reportPropertyTypeMismatch": "error",
+  "reportShadowedImports": "error",
+  "reportTypedDictNotRequiredAccess": "none",
+  "reportUninitializedInstanceVariable": "error",
+  "reportUnknownArgumentType": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownVariableType": "error",
+  "reportUnnecessaryComparison": "error",
+
+  "ignore": [
+    ".venv"
+  ],
+}

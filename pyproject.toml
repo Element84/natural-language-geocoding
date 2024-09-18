@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "natural-language-geocoding"
+authors = [{ name = "Jason Gilman", email = "jason@element84.com" }]
+maintainers = [{ name = "Jason Gilman", email = "jason@element84.com" }]
+description = "Natural Language Geocoding implements an AI technique to convert natural language descriptions of spatial areas into polygons."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+  # TODO once it's in pypi enable this and remove from dev-requirements.in
+  # "e84-geoai-common>=0.0.1"
+]
+# TODO switch to dynamic git tag versions
+version = "0.0.1"
+# dynamic = ["version"]
+
+[project.urls]
+Github = "https://github.com/Element84/natural-language-geocoding"
+
+[project.optional-dependencies]
+demo = [
+    "gradio>=4.44.0",
+    "gradio-folium>=0.0.6"
+]
