@@ -11,10 +11,10 @@ from e84_geoai_common.geometry import (
     BoundingBox,
     add_buffer,
     between,
-    Geometry,
     simplify_geometry,
 )
-from queryable_earth.spatial.natural_earth import coastline_of
+from natural_language_geocoding.natural_earth import coastline_of
+from shapely.geometry.base import BaseGeometry
 
 
 class SpatialNodeType(BaseModel, ABC):
@@ -22,7 +22,7 @@ class SpatialNodeType(BaseModel, ABC):
 
     @abstractmethod
     # FUTURE Is there really a need for this to return None?
-    def to_geometry(self) -> Geometry | None: ...
+    def to_geometry(self) -> BaseGeometry | None: ...
 
 
 class NamedEntity(SpatialNodeType):
@@ -44,8 +44,8 @@ class NamedEntity(SpatialNodeType):
         ),
     )
 
-    def to_geometry(self) -> Geometry | None:
-        geometry = get_named_entity_geometry(self.name)
+    def to_geometry(self) -> BaseGeometry | None:
+        geometry = nominatim_search(self.name)
         if geometry is None:
             # FUTURE change this into a specific kind of exception that we can show the user.
             raise Exception(f"Unable to find area with name [{self.name}]")
@@ -58,7 +58,7 @@ class CoastOf(SpatialNodeType):
     node_type: Literal["CoastOf"] = "CoastOf"
     child_node: "SpatialNode"
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         child_bounds = self.child_node.to_geometry()
         if child_bounds is None:
             return None
@@ -84,7 +84,7 @@ class Buffer(SpatialNodeType):
                 return self.distance * 1.60934
         raise Exception(f"Unexpected distance unit {self.distance_unit}")
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         child_bounds = self.child_node.to_geometry()
         if child_bounds is None:
             return None
@@ -99,7 +99,7 @@ class DirectionalConstraint(BaseModel):
     child_node: "SpatialNode"
     direction: Literal["west", "north", "south", "east"]
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         child_bounds = self.child_node.to_geometry()
         if child_bounds is None:
             return None
@@ -141,7 +141,7 @@ class Intersection(SpatialNodeType):
     child_node_1: "SpatialNode"
     child_node_2: "SpatialNode"
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         b1 = self.child_node_1.to_geometry()
         b2 = self.child_node_2.to_geometry()
         if b1 is None or b2 is None:
@@ -156,7 +156,7 @@ class Union(SpatialNodeType):
     child_node_1: "SpatialNode"
     child_node_2: "SpatialNode"
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         b1 = self.child_node_1.to_geometry()
         b2 = self.child_node_2.to_geometry()
         if b1 is None or b2 is None:
@@ -171,7 +171,7 @@ class Difference(SpatialNodeType):
     child_node_1: "SpatialNode"
     child_node_2: "SpatialNode"
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         b1 = self.child_node_1.to_geometry()
         b2 = self.child_node_2.to_geometry()
         if b1 is None or b2 is None:
@@ -190,7 +190,7 @@ class Between(SpatialNodeType):
     child_node_1: "SpatialNode"
     child_node_2: "SpatialNode"
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         b1 = self.child_node_1.to_geometry()
         b2 = self.child_node_2.to_geometry()
         if b1 is None or b2 is None:
@@ -213,5 +213,5 @@ AnySpatialNodeType = (
 
 class SpatialNode(RootModel[AnySpatialNodeType]):
 
-    def to_geometry(self) -> Geometry | None:
+    def to_geometry(self) -> BaseGeometry | None:
         return self.root.to_geometry()

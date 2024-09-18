@@ -1,18 +1,13 @@
 """Helpers for dealing with GeoJSON from Natural Earth"""
 
 import json
-from geojson_pydantic import Feature, FeatureCollection
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices
 
+from e84_geoai_common.features import FeatureCollection
+from e84_geoai_common.geometry import add_buffer
 from e84_geoai_common.util import timed_function
-
-# from queryable_earth.spatial.features import FeatureCollection
-from e84_geoai_common.geometry import (
-    Geometry,
-    GeometryCollection,
-    add_buffer,
-)
-
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from shapely import GeometryCollection
+from shapely.geometry.base import BaseGeometry
 
 NE_COASTLINE_FILE = "natural_earth_data/ne_10m_coastline.json"
 NE_REGIONS_FILE = "natural_earth_data/ne_10m_geography_regions_polys.json"
@@ -34,9 +29,7 @@ class NaturalEarthProperties(BaseModel):
     max_label: float | None = None
 
 
-NaturalEarthFeature = Feature[Geometry, NaturalEarthProperties]
-
-NaturalEarthFeatureCollection = FeatureCollection[NaturalEarthFeature]
+NaturalEarthFeatureCollection = FeatureCollection[NaturalEarthProperties]
 
 
 with open(NE_COASTLINE_FILE) as f:
@@ -75,7 +68,7 @@ def _region_name_to_searchable(name: str | None):
     return name
 
 
-_region_to_geom: dict[str, Geometry] = {
+_region_to_geom: dict[str, BaseGeometry] = {
     _region_name_to_searchable(feature.properties.name): feature.geometry
     for feature in _feature_coll_regions.features
 }
@@ -85,7 +78,7 @@ _region_to_geom: dict[str, Geometry] = {
 
 
 @timed_function
-def coastline_of(g: Geometry) -> Geometry | None:
+def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
     buffered_geom = add_buffer(g, 2)
     intersection = buffered_geom.intersection(ALL_COASTLINES)
     if intersection.is_empty:
@@ -94,6 +87,6 @@ def coastline_of(g: Geometry) -> Geometry | None:
         return intersection
 
 
-def find_region_geometry(region_name: str) -> Geometry | None:
+def find_region_geometry(region_name: str) -> BaseGeometry | None:
     search_name = _region_name_to_searchable(region_name)
     return _region_to_geom.get(search_name)

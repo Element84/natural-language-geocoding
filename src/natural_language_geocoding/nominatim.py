@@ -2,7 +2,8 @@ import json
 from typing import Any
 import requests
 from e84_geoai_common.util import timed_function
-from e84_geoai_common.geometry import Geometry, geometry_from_wkt
+from e84_geoai_common.geometry import geometry_from_wkt
+from shapely.geometry.base import BaseGeometry
 
 
 def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
@@ -14,7 +15,7 @@ def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 @timed_function
-def nominatim_search(name: str) -> Geometry | None:
+def nominatim_search(name: str) -> BaseGeometry | None:
     print(f"Searching for [{name}] geometry")
     places = requests.get(
         "https://nominatim.openstreetmap.org/search",

@@ -3,7 +3,12 @@ import gradio as gr  # type: ignore
 import folium  # type: ignore
 from gradio_folium import Folium  # type: ignore
 from pydantic import BaseModel, ConfigDict
-from e84_geoai_common.llm.core import BedrockClaudeLLM
+from e84_geoai_common.llm.core import BedrockClaudeLLM, extract_data_from_text
+
+from natural_language_geocoding import NaturalLanguageRequest
+from natural_language_geocoding.models import SpatialNode
+from e84_geoai_common.geometry import simplify_geometry
+from e84_geoai_common.debugging import display_geometry
 
 CURR_DIR = os.path.dirname(__file__)
 
@@ -15,18 +20,17 @@ class AppState(BaseModel):
     model_config = ConfigDict(
         strict=True, extra="forbid", frozen=True, arbitrary_types_allowed=True
     )
-    query: NaturalLanguageGeocodingQuery
+    spatial: SpatialNode
 
 
 def filter_map(text: str) -> tuple[AppState, folium.Map]:
-
-    query = llm_query_parser.parse_user_query(text, NaturalLanguageGeocodingQuery)
-    geometry = query.geometry
+    spatial_node = extract_data_from_text(llm, NaturalLanguageRequest)
+    geometry = spatial_node.to_geometry()
     if geometry is None:
         raise Exception("No geometry. FUTURE handle this better on the UI")
     geometry = simplify_geometry(geometry)
     folium_map = display_geometry([geometry])
-    return (AppState(query=query), folium_map)
+    return (AppState(spatial=spatial_node), folium_map)
 
 
 with gr.Blocks() as demo:
