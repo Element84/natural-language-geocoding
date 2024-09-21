@@ -1,6 +1,7 @@
 """Helpers for dealing with GeoJSON from Natural Earth"""
 
 import json
+import os
 
 from e84_geoai_common.features import FeatureCollection
 from e84_geoai_common.geometry import add_buffer
@@ -9,11 +10,17 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from shapely import GeometryCollection
 from shapely.geometry.base import BaseGeometry
 
-NE_COASTLINE_FILE = "natural_earth_data/ne_10m_coastline.json"
-NE_REGIONS_FILE = "natural_earth_data/ne_10m_geography_regions_polys.json"
+NATURAL_EARTH_DATA_DIR = os.path.join(os.path.dirname(__file__), "natural_earth_data")
+
+NE_COASTLINE_FILE = os.path.join(NATURAL_EARTH_DATA_DIR, "ne_10m_coastline.json")
+NE_REGIONS_FILE = os.path.join(
+    NATURAL_EARTH_DATA_DIR, "ne_10m_geography_regions_polys.json"
+)
 
 
 class NaturalEarthProperties(BaseModel):
+    """TODO"""
+
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     scalerank: int
@@ -79,6 +86,7 @@ _region_to_geom: dict[str, BaseGeometry] = {
 
 @timed_function
 def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
+    """TODO"""
     buffered_geom = add_buffer(g, 2)
     intersection = buffered_geom.intersection(ALL_COASTLINES)
     if intersection.is_empty:
@@ -88,5 +96,6 @@ def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
 
 
 def find_region_geometry(region_name: str) -> BaseGeometry | None:
+    """TODO"""
     search_name = _region_name_to_searchable(region_name)
     return _region_to_geom.get(search_name)
