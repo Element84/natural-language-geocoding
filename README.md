@@ -5,8 +5,16 @@ Natural Language Geocoding implements an AI technique to convert natural languag
 
 * Add integration tests
   * Can have them just run locally for now
+* Add unit tests
 
-# Development
+## Running the demo
+
+TODO
+
+* Setup aws credentials
+*
+
+## Development
 
 TODO
 
