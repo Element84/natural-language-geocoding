@@ -13,13 +13,10 @@ from shapely.geometry.base import BaseGeometry
 NATURAL_EARTH_DATA_DIR = os.path.join(os.path.dirname(__file__), "natural_earth_data")
 
 NE_COASTLINE_FILE = os.path.join(NATURAL_EARTH_DATA_DIR, "ne_10m_coastline.json")
-NE_REGIONS_FILE = os.path.join(
-    NATURAL_EARTH_DATA_DIR, "ne_10m_geography_regions_polys.json"
-)
 
 
 class NaturalEarthProperties(BaseModel):
-    """TODO"""
+    """A model for parsing Natural Earth GeoJSON properties"""
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
@@ -44,41 +41,6 @@ with open(NE_COASTLINE_FILE) as f:
 
 ALL_COASTLINES = GeometryCollection([f.geometry for f in _feature_coll_coasts.features])
 
-with open(NE_REGIONS_FILE) as f:
-    _feature_coll_regions = NaturalEarthFeatureCollection.model_validate(json.load(f))
-
-_abbreviations_to_full = {
-    "ra.": "range",
-    "pen.": "peninsula",
-    "pén.": "peninsula",
-    "mts.": "mountains",
-    "i.": "island",
-    "î.": "island",
-    "is.": "island",
-    "plat.": "plateau",
-    "arch.": "archipelago",
-    "cord.": "cordillera",
-    "s.": "south",
-    "n.": "north",
-    "st.": "saint",
-}
-
-
-def _region_name_to_searchable(name: str | None):
-    if name is None:
-        raise Exception("region name is none")
-    name = name.lower()
-
-    for abbrev, full in _abbreviations_to_full.items():
-        if abbrev in name:
-            name = name.replace(abbrev, full)
-    return name
-
-
-_region_to_geom: dict[str, BaseGeometry] = {
-    _region_name_to_searchable(feature.properties.name): feature.geometry
-    for feature in _feature_coll_regions.features
-}
 
 ######################
 # Public Functions
@@ -86,16 +48,10 @@ _region_to_geom: dict[str, BaseGeometry] = {
 
 @timed_function
 def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
-    """TODO"""
+    """Given a geometry finds the area that intersects with a coastline."""
     buffered_geom = add_buffer(g, 2)
     intersection = buffered_geom.intersection(ALL_COASTLINES)
     if intersection.is_empty:
         return None
     else:
         return intersection
-
-
-def find_region_geometry(region_name: str) -> BaseGeometry | None:
-    """TODO"""
-    search_name = _region_name_to_searchable(region_name)
-    return _region_to_geom.get(search_name)

@@ -6,9 +6,6 @@ For instance, when a query mentions specific landmarks or features along with a 
 
 Specifically, when translating city names into named entities, always include the most specific geographical context available, such as 'Boston Massachusetts' instead of just 'Boston'. This ensures that the NamedEntity reflects both the city and state, or city and country, maintaining clear and unambiguous geographical identification.
 
-<!-- TODO should have a way to comment prompts -->
-<!-- TODO guideliness are included here but we never had them originally. -->
-
 ## Guidelines
 
 Simplify When Possible: Always generate the simplest version of the tree possible to accurately represent the user's request. This often means direct mapping of queries to a "NamedEntity" for singular geographical locations without implied spatial operations.

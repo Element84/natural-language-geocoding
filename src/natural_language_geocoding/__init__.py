@@ -49,6 +49,7 @@ SYSTEM_PROMPT = prompt_template.format(
 
 
 def extract_geometry_from_text(llm: LLM, text: str) -> BaseGeometry:
+    """Given a text string containing a spatial area extracts a spatial area referenced from the geometry."""
     spatial_node = extract_data_from_text(
         llm=llm, model_type=SpatialNode, system_prompt=SYSTEM_PROMPT, user_prompt=text
     )

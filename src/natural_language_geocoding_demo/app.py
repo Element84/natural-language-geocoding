@@ -21,8 +21,6 @@ def filter_map(text: str) -> folium.Map:
     return folium_map
 
 
-# filter_map("within 10 km of the coast of Iberian Peninsula")
-
 with gr.Blocks() as demo:
     text = gr.Textbox(
         value="within 10 km of the coast of Iberian Peninsula",
@@ -48,6 +46,5 @@ if __name__ == "__main__":
         api_open=False,
     )
     demo.launch(  # type: ignore
-        server_name="0.0.0.0",
         inline=False,  # If True, inline the Gradio interface with the notebook output
     )
