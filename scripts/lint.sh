@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ####################################################################################################
-# Recreates the virtual environment with frozen dependencies.
+# Performs code linting and type checks. Fails if errors are found
 ####################################################################################################
 
 set -e -o pipefail
 
-rm -rf .venv
+echo "Running black"
+black --diff --check src/
 
-uv venv
-
-uv pip install -r requirements.txt
+echo "Running pyright"
+pyright .

@@ -1,9 +1,10 @@
 import json
 import os
-from e84_geoai_common.llm.core import LLM, ExtractDataExample, extract_data_from_text
+
+from e84_geoai_common.llm import LLM, ExtractDataExample, extract_data_from_text
+from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.models import SpatialNode
-from shapely.geometry.base import BaseGeometry
 
 EXAMPLES = [
     ExtractDataExample(

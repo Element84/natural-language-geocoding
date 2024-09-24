@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ####################################################################################################
-# TODO
+# Pulls downs the latest requirements as defined in the pyproject.toml and requirements.in files.
 ####################################################################################################
 
 set -e -o pipefail

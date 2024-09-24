@@ -2,7 +2,7 @@ import os
 import gradio as gr  # type: ignore
 import folium  # type: ignore
 from gradio_folium import Folium  # type: ignore
-from e84_geoai_common.llm.core import BedrockClaudeLLM
+from e84_geoai_common.llm import BedrockClaudeLLM
 
 from natural_language_geocoding import extract_geometry_from_text
 from e84_geoai_common.geometry import simplify_geometry

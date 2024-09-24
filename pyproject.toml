@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
 
@@ -15,9 +15,9 @@ dependencies = [
   # TODO once it's in pypi enable this and remove from dev-requirements.in
   # "e84-geoai-common>=0.0.1"
 ]
-# TODO switch to dynamic git tag versions
-version = "0.0.1"
-# dynamic = ["version"]
+dynamic = ["version"]
+
+[tool.setuptools_scm]
 
 [project.urls]
 Github = "https://github.com/Element84/natural-language-geocoding"

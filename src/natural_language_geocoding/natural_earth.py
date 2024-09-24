@@ -3,7 +3,7 @@
 import json
 import os
 
-from e84_geoai_common.features import FeatureCollection
+from e84_geoai_common.geojson import FeatureCollection
 from e84_geoai_common.geometry import add_buffer
 from e84_geoai_common.util import timed_function
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
