@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
-  # TODO once it's in pypi enable this and remove from dev-requirements.in
+  # TODO once it's in pypi enable this
   # "e84-geoai-common>=0.0.1"
 ]
 dynamic = ["version"]
@@ -34,4 +34,13 @@ demo = [
   # and https://github.com/oobabooga/text-generation-webui/issues/6367
   # Latest version with the problem is 0.115.0. Try after they release a new version.
   "fastapi==0.112.2"
+]
+dev = [
+  "pytest>=8.3.3",
+  "ipykernel>=6.29.5",
+  "black>=24.8.0",
+  "pyright>=1.1.381",
+  "build>=1.2.2",
+  "pre-commit>=3.8.0",
+  "pre-commit-hooks>=4.6.0"
 ]

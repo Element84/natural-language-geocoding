@@ -16,7 +16,7 @@ appnope==0.1.4
 asttokens==2.4.1
     # via stack-data
 black==24.8.0
-    # via -r dev-requirements.in
+    # via natural-language-geocoding (pyproject.toml)
 boto3==1.35.20
     # via e84-geoai-common
 boto3-stubs==1.35.20
@@ -30,12 +30,14 @@ botocore-stubs==1.35.20
 branca==0.7.2
     # via folium
 build==1.2.2
-    # via -r dev-requirements.in
+    # via natural-language-geocoding (pyproject.toml)
 certifi==2024.8.30
     # via
     #   httpcore
     #   httpx
     #   requests
+cfgv==3.4.0
+    # via pre-commit
 charset-normalizer==3.3.2
     # via requests
 click==8.1.7
@@ -53,6 +55,8 @@ debugpy==1.8.5
     # via ipykernel
 decorator==5.1.1
     # via ipython
+distlib==0.3.8
+    # via virtualenv
 exceptiongroup==1.2.2
     # via
     #   anyio
@@ -67,7 +71,9 @@ fastapi==0.112.2
 ffmpy==0.4.0
     # via gradio
 filelock==3.16.0
-    # via huggingface-hub
+    # via
+    #   huggingface-hub
+    #   virtualenv
 folium==0.17.0
     # via gradio-folium
 fonttools==4.53.1
@@ -98,6 +104,8 @@ huggingface-hub==0.24.7
     # via
     #   gradio
     #   gradio-client
+identify==2.6.1
+    # via pre-commit
 idna==3.10
     # via
     #   anyio
@@ -108,7 +116,7 @@ importlib-resources==6.4.5
 iniconfig==2.0.0
     # via pytest
 ipykernel==6.29.5
-    # via -r dev-requirements.in
+    # via natural-language-geocoding (pyproject.toml)
 ipython==8.27.0
     # via ipykernel
 jedi==0.19.1
@@ -151,7 +159,9 @@ mypy-extensions==1.0.0
 nest-asyncio==1.6.0
     # via ipykernel
 nodeenv==1.9.1
-    # via pyright
+    # via
+    #   pre-commit
+    #   pyright
 numpy==2.0.2
     # via
     #   contourpy
@@ -189,8 +199,13 @@ platformdirs==4.3.3
     # via
     #   black
     #   jupyter-core
+    #   virtualenv
 pluggy==1.5.0
     # via pytest
+pre-commit==3.8.0
+    # via natural-language-geocoding (pyproject.toml)
+pre-commit-hooks==4.6.0
+    # via natural-language-geocoding (pyproject.toml)
 prompt-toolkit==3.0.47
     # via ipython
 psutil==6.0.0
@@ -217,9 +232,9 @@ pyparsing==3.1.4
 pyproject-hooks==1.1.0
     # via build
 pyright==1.1.381
-    # via -r dev-requirements.in
+    # via natural-language-geocoding (pyproject.toml)
 pytest==8.3.3
-    # via -r dev-requirements.in
+    # via natural-language-geocoding (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
     #   botocore
@@ -234,6 +249,7 @@ pyyaml==6.0.2
     # via
     #   gradio
     #   huggingface-hub
+    #   pre-commit
 pyzmq==26.2.0
     # via
     #   ipykernel
@@ -244,6 +260,10 @@ requests==2.32.3
     #   huggingface-hub
 rich==13.8.1
     # via typer
+ruamel-yaml==0.18.6
+    # via pre-commit-hooks
+ruamel-yaml-clib==0.2.8
+    # via ruamel-yaml
 ruff==0.6.5
     # via gradio
 s3transfer==0.10.2
@@ -270,6 +290,7 @@ tomli==2.0.1
     # via
     #   black
     #   build
+    #   pre-commit-hooks
     #   pytest
 tomlkit==0.12.0
     # via gradio
@@ -319,6 +340,8 @@ urllib3==2.2.3
     #   requests
 uvicorn==0.30.6
     # via gradio
+virtualenv==20.26.5
+    # via pre-commit
 wcwidth==0.2.13
     # via prompt-toolkit
 websockets==12.0

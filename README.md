@@ -24,5 +24,7 @@ There's a gradio demo in `src/natural_language_geocoding_demo`. It can be run by
 1. Install python and [uv](https://github.com/astral-sh/uv)
 2. Checkout the code
 3. Run `scripts/recreate_venv.sh`
-4. Make changes
-5. Verify linting passes `scripts/lint.sh`
+4. Run `pre-commit install` to install the pre commit changes
+5. Make changes
+6. Verify linting passes `scripts/lint.sh`
+7. Commit and push your changes
