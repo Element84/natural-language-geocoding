@@ -27,6 +27,12 @@ Github = "https://github.com/Element84/natural-language-geocoding"
 [project.scripts]
 natural-language-geocoding = "natural_language_geocoding.main:main"
 
+[tool.pytest.ini_options]
+pythonpath = "src"
+testpaths=[
+  "tests"
+]
+
 [project.optional-dependencies]
 demo = [
   # Must use this version of Gradio until this issue is resolved in Gradio Folium

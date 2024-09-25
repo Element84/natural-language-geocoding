@@ -4,7 +4,6 @@ Natural Language Geocoding implements an AI technique to convert natural languag
 
 ## TODOS
 
-* Setup snyk
 * Add integration tests
   * Can have them just run locally for now
 * Add unit tests
@@ -34,10 +33,11 @@ There's a gradio demo in `src/natural_language_geocoding_demo`. It can be run by
 1. Install python and [uv](https://github.com/astral-sh/uv)
 2. Checkout the code
 3. Run `scripts/recreate_venv.sh`
-4. Run `pre-commit install` to install the pre commit changes
-5. Make changes
-6. Verify linting passes `scripts/lint.sh`
-7. Commit and push your changes
+4. Run `PYTHONPATH=src python src/natural_language_geocoding/main.py init`
+5. Run `pre-commit install` to install the pre commit checks
+6. Make changes
+7. Verify linting passes `scripts/lint.sh`
+8. Commit and push your changes
 
 ## Attribution
 
