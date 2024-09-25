@@ -35,16 +35,8 @@ testpaths=[
 
 [project.optional-dependencies]
 demo = [
-  # Must use this version of Gradio until this issue is resolved in Gradio Folium
-  # https://huggingface.co/spaces/freddyaboulton/gradio_folium/discussions/3
-  "gradio==4.40.0",
-  "gradio-folium>=0.0.6",
-
-  # Using this version of fastapi due to a pydantic issue.
-  # See https://discuss.huggingface.co/t/new-gradio-space-connection-errored-out/105509
-  # and https://github.com/oobabooga/text-generation-webui/issues/6367
-  # Latest version with the problem is 0.115.0. Try after they release a new version.
-  "fastapi==0.112.2"
+  "streamlit>=1.38.0",
+  "streamlit-folium>=0.22.1"
 ]
 dev = [
   "pytest>=8.3.3",

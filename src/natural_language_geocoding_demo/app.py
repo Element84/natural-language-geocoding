@@ -1,50 +1,37 @@
-import os
-import gradio as gr  # type: ignore
-import folium  # type: ignore
-from gradio_folium import Folium  # type: ignore
 from e84_geoai_common.llm import BedrockClaudeLLM
-
 from natural_language_geocoding import extract_geometry_from_text
-from e84_geoai_common.geometry import simplify_geometry
+from e84_geoai_common.geometry import simplify_geometry, geometry_to_geojson
 from e84_geoai_common.debugging import display_geometry
+import streamlit as st
+from shapely.geometry.base import BaseGeometry
 
-CURR_DIR = os.path.dirname(__file__)
+from streamlit_folium import st_folium  # type: ignore
+
+if "llm" not in st.session_state:
+    st.session_state["llm"] = BedrockClaudeLLM()
+
+llm = st.session_state["llm"]
 
 
-llm = BedrockClaudeLLM()
-
-
-def filter_map(text: str) -> folium.Map:
+@st.cache_data
+def text_to_geometry(text: str) -> BaseGeometry:
     geometry = extract_geometry_from_text(llm, text)
-    geometry = simplify_geometry(geometry)
-    folium_map = display_geometry([geometry])
-    return folium_map
+    return simplify_geometry(geometry)
 
 
-with gr.Blocks() as demo:
-    text = gr.Textbox(
-        value="within 10 km of the coast of Iberian Peninsula",
-        label="Query",
-    )
-    map = Folium(
-        # FUTURE if we can get the whole gradio UI to take up a larger height we'll do this.
-        # Only accepts int heights but this actually works
-        # height="100%",
-        height=400,
-    )
+text = st.text_input(
+    "Spatial area", value="within 10 km of the coast of Iberian Peninsula"
+)
 
-    # Handle Enter button in text box
-    text.submit(  # type: ignore
-        fn=filter_map,
-        inputs=text,
-        outputs=map,
-    )
+geometry = text_to_geometry(text)
+geojson = geometry_to_geojson(geometry)
 
-if __name__ == "__main__":
-    demo.queue(
-        # Disables the API since we don't want anyone using that directly
-        api_open=False,
-    )
-    demo.launch(  # type: ignore
-        inline=False,  # If True, inline the Gradio interface with the notebook output
-    )
+st.download_button(
+    label="Download GeoJSON",
+    data=geojson,
+    file_name="nl_geocoding.geojson",
+    mime="application/json",
+)
+
+# call to render Folium map in Streamlit
+st_data = st_folium(display_geometry([geometry]), width=1000)
