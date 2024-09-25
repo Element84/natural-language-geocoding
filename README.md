@@ -24,7 +24,7 @@ There's a gradio demo in `src/natural_language_geocoding_demo`. It can be run by
 
 1. Set up AWS credentials. The demo uses AWS Bedrock Anthropic Claude as the LLM. Valid AWS access keys to an account need to be present.
 2. Follow steps for local development
-3. Run `scripts/run_demo.sh`
+3. Run `NOMINATIM_USER_AGENT=your-nominatim-user-agent scripts/run_demo.sh`
 4. Open http://localhost:7860
 
 
