@@ -1,7 +1,7 @@
 import json
 from typing import Any
 import requests
-from e84_geoai_common.util import timed_function
+from e84_geoai_common.util import timed_function, get_env_var
 from e84_geoai_common.geometry import geometry_from_wkt
 from shapely.geometry.base import BaseGeometry
 
@@ -17,11 +17,13 @@ def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
 @timed_function
 def nominatim_search(name: str) -> BaseGeometry | None:
     print(f"Searching for [{name}] geometry")
+
+    nominatim_user_agent = get_env_var("NOMINATIM_USER_AGENT")
+
     places = requests.get(
         "https://nominatim.openstreetmap.org/search",
         params={"q": name, "format": "json", "limit": 5, "polygon_text": True},
-        # TODO replace user agent with a environment variable
-        headers={"User-Agent": "e84_location_test"},
+        headers={"User-Agent": nominatim_user_agent},
     ).json()
     if len(places) > 0:
         selected_place = _get_best_place(places)
