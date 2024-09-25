@@ -9,6 +9,16 @@ Natural Language Geocoding implements an AI technique to convert natural languag
   * Can have them just run locally for now
 * Add unit tests
 
+## Installing
+
+```shell
+pip install natural-language-geocoding
+
+# Download data files like coastlines.
+natural-language-geocoding init
+```
+
+
 ## Running the demo
 
 There's a gradio demo in `src/natural_language_geocoding_demo`. It can be run by following these steps.

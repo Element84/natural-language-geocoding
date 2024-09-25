@@ -38,12 +38,15 @@ NaturalEarthFeatureCollection = FeatureCollection[NaturalEarthProperties]
 
 
 def download_coastlines_file():
-    """TODO"""
+    """
+    Downloads a file describing all the coastlines of the world.
+
+    This file is not part of this repository so it's downloaded from github.com/martynafford/natural-earth-geojson
+    """
     if os.path.exists(NE_COASTLINE_FILE):
         print("Coastline file already downloaded")
     else:
         print("Downloading coastline file")
-        # Make the NATURAL_EARTH_DATA_DIR if it doesn't exist
         os.makedirs(NATURAL_EARTH_DATA_DIR, exist_ok=True)
 
         # Download the NE_COASTLINE_FILE
@@ -53,6 +56,10 @@ def download_coastlines_file():
 
 @lru_cache(None)
 def _get_coastlines() -> GeometryCollection:
+    if not os.path.exists(NE_COASTLINE_FILE):
+        raise Exception(
+            "The coastline file has not been downloaded. Run 'natural-language-geocoding init'."
+        )
     with open(NE_COASTLINE_FILE) as f:
         _feature_coll_coasts = NaturalEarthFeatureCollection.model_validate(
             json.load(f)

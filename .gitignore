@@ -162,3 +162,8 @@ cython_debug/
 #.idea/
 
 temp/
+
+# Ignoring the natural earth data that's downloaded after install
+src/natural_language_geocoding/natural_earth_data
+
+.DS_Store
