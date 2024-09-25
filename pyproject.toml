@@ -14,6 +14,8 @@ license = { file = "LICENSE" }
 dependencies = [
   # TODO once it's in pypi enable this
   # "e84-geoai-common>=0.0.1"
+
+  "requests>=2.32.3"
 ]
 dynamic = ["version"]
 
@@ -21,6 +23,9 @@ dynamic = ["version"]
 
 [project.urls]
 Github = "https://github.com/Element84/natural-language-geocoding"
+
+[project.scripts]
+natural-language-geocoding = "natural_language_geocoding.main:main"
 
 [project.optional-dependencies]
 demo = [

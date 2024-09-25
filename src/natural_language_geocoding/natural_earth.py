@@ -1,7 +1,9 @@
 """Helpers for dealing with GeoJSON from Natural Earth"""
 
+from functools import lru_cache
 import json
 import os
+import urllib.request
 
 from e84_geoai_common.geojson import FeatureCollection
 from e84_geoai_common.geometry import add_buffer
@@ -11,7 +13,6 @@ from shapely import GeometryCollection
 from shapely.geometry.base import BaseGeometry
 
 NATURAL_EARTH_DATA_DIR = os.path.join(os.path.dirname(__file__), "natural_earth_data")
-
 NE_COASTLINE_FILE = os.path.join(NATURAL_EARTH_DATA_DIR, "ne_10m_coastline.json")
 
 
@@ -36,10 +37,28 @@ class NaturalEarthProperties(BaseModel):
 NaturalEarthFeatureCollection = FeatureCollection[NaturalEarthProperties]
 
 
-with open(NE_COASTLINE_FILE) as f:
-    _feature_coll_coasts = NaturalEarthFeatureCollection.model_validate(json.load(f))
+def download_coastlines_file():
+    """TODO"""
+    if os.path.exists(NE_COASTLINE_FILE):
+        print("Coastline file already downloaded")
+    else:
+        print("Downloading coastline file")
+        # Make the NATURAL_EARTH_DATA_DIR if it doesn't exist
+        os.makedirs(NATURAL_EARTH_DATA_DIR, exist_ok=True)
 
-ALL_COASTLINES = GeometryCollection([f.geometry for f in _feature_coll_coasts.features])
+        # Download the NE_COASTLINE_FILE
+        url = "https://raw.githubusercontent.com/martynafford/natural-earth-geojson/refs/heads/master/10m/physical/ne_10m_coastline.json"
+        urllib.request.urlretrieve(url, NE_COASTLINE_FILE)
+
+
+@lru_cache(None)
+def _get_coastlines() -> GeometryCollection:
+    with open(NE_COASTLINE_FILE) as f:
+        _feature_coll_coasts = NaturalEarthFeatureCollection.model_validate(
+            json.load(f)
+        )
+
+    return GeometryCollection([f.geometry for f in _feature_coll_coasts.features])
 
 
 ######################
@@ -50,7 +69,7 @@ ALL_COASTLINES = GeometryCollection([f.geometry for f in _feature_coll_coasts.fe
 def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
     """Given a geometry finds the area that intersects with a coastline."""
     buffered_geom = add_buffer(g, 2)
-    intersection = buffered_geom.intersection(ALL_COASTLINES)
+    intersection = buffered_geom.intersection(_get_coastlines())
     if intersection.is_empty:
         return None
     else:

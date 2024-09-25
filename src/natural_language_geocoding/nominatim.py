@@ -20,6 +20,7 @@ def nominatim_search(name: str) -> BaseGeometry | None:
     places = requests.get(
         "https://nominatim.openstreetmap.org/search",
         params={"q": name, "format": "json", "limit": 5, "polygon_text": True},
+        # TODO replace user agent with a environment variable
         headers={"User-Agent": "e84_location_test"},
     ).json()
     if len(places) > 0:
