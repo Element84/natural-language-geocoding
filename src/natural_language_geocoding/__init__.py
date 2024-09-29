@@ -1,51 +1,8 @@
-import json
-import os
-
-from e84_geoai_common.llm import LLM, ExtractDataExample, extract_data_from_text
+from e84_geoai_common.llm import LLM, extract_data_from_text
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.models import SpatialNode
-
-EXAMPLES = [
-    ExtractDataExample(
-        name="Simple Spatial Example",
-        user_query="in North Dakota",
-        structure=SpatialNode.model_validate(
-            {"node_type": "NamedEntity", "name": "North Dakota"}
-        ),
-    ),
-    ExtractDataExample(
-        name="Complex Query Example",
-        user_query="in northern New Mexico, west of Albuquerque",
-        structure=SpatialNode.model_validate(
-            {
-                "node_type": "Intersection",
-                "child_node_1": {
-                    "node_type": "NamedEntity",
-                    "name": "New Mexico",
-                    "subportion": "western half",
-                },
-                "child_node_2": {
-                    "node_type": "DirectionalConstraint",
-                    "child_node": {
-                        "node_type": "NamedEntity",
-                        "name": "Albuquerque",
-                    },
-                    "direction": "west",
-                },
-            }
-        ),
-    ),
-]
-
-
-with open(os.path.join(os.path.dirname(__file__), "prompt.md")) as f:
-    prompt_template = f.read()
-
-SYSTEM_PROMPT = prompt_template.format(
-    json_schema=json.dumps(SpatialNode.model_json_schema()),
-    examples="\n\n".join([example.to_str() for example in EXAMPLES]),
-)
+from natural_language_geocoding.prompt import SYSTEM_PROMPT
 
 
 def extract_geometry_from_text(llm: LLM, text: str) -> BaseGeometry:

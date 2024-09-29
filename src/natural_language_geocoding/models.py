@@ -21,7 +21,6 @@ class SpatialNodeType(BaseModel, ABC):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     @abstractmethod
-    # FUTURE Is there really a need for this to return None?
     def to_geometry(self) -> BaseGeometry | None: ...
 
 
