@@ -10,4 +10,4 @@ if [[ -f .env ]]; then
     source .env
 fi
 
-PYTHONPATH=src PYTHONPATH=src streamlit run streamlit_app.py
+PYTHONPATH=src streamlit run src/natural_language_geocoding_demo/app.py

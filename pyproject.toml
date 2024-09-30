@@ -12,9 +12,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
-  # TODO once it's in pypi enable this
-  # "e84-geoai-common>=0.0.1"
-
+  "e84-geoai-common>=0.0.1",
   "requests>=2.32.3"
 ]
 dynamic = ["version"]
