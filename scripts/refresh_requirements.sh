@@ -11,6 +11,7 @@ rm -rf .venv
 uv pip compile \
   --refresh \
   --all-extras \
+  --upgrade \
   pyproject.toml \
   -o requirements.txt
 
