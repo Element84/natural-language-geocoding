@@ -1,7 +1,7 @@
 import json
 import os
 from e84_geoai_common.util import singleline
-from e84_geoai_common.llm import ExtractDataExample
+from e84_geoai_common.llm.extraction import ExtractDataExample
 
 from natural_language_geocoding.models import SpatialNode
 

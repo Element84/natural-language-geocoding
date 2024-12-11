@@ -1,4 +1,5 @@
-from e84_geoai_common.llm import LLM, extract_data_from_text
+from e84_geoai_common.llm.core import LLM
+from e84_geoai_common.llm.extraction import extract_data_from_text
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.models import SpatialNode
