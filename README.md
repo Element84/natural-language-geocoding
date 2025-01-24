@@ -39,7 +39,7 @@ There's a streamlit demo in `src/natural_language_geocoding_demo`. It can be run
 7. Verify linting passes `scripts/lint.sh`
 8. Commit and push your changes
 
-# Contributions
+## Contributions
 
 We are happy to take contributions! It is best to get in touch with the maintainers about larger features or design changes *before* starting the work, as it will make the process of accepting changes smoother.
 
