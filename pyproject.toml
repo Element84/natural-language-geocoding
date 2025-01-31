@@ -34,7 +34,8 @@ testpaths=[
 [project.optional-dependencies]
 demo = [
   "streamlit>=1.38.0",
-  "streamlit-folium>=0.22.1"
+  "streamlit-folium>=0.22.1",
+  "watchdog>=6.0.0"
 ]
 dev = [
   "pytest>=8.3.3",

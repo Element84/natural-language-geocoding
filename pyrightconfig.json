@@ -1,6 +1,8 @@
 {
   "pythonVersion": "3.10",
   "typeCheckingMode": "strict",
+  "venv": ".venv",
+  "venvPath": "./",
 
   "reportGeneralTypeIssues": true,
   "reportImplicitStringConcatenation": "none",
