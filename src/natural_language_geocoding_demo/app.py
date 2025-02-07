@@ -1,4 +1,4 @@
-from e84_geoai_common.llm.bedrock import BedrockClaudeLLM
+from e84_geoai_common.llm.models.claude import BedrockClaudeLLM
 from natural_language_geocoding import extract_geometry_from_text
 from e84_geoai_common.geometry import simplify_geometry, geometry_to_geojson
 from e84_geoai_common.debugging import display_geometry
