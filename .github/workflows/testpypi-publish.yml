@@ -1,9 +1,10 @@
 name: Publish to Test PyPI
 
 on:
-  push:
-    branches:
-      - 'brian/auto-pypi-publish'
+  release:
+    types:
+      - published
+
 jobs:
   publish-testpypi:
     runs-on: ubuntu-latest
