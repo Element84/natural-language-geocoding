@@ -1,20 +1,19 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-
-from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing import Literal
 
-
-from e84_geoai_common.util import singleline
-from natural_language_geocoding.nominatim import nominatim_search
 from e84_geoai_common.geometry import (
     BoundingBox,
     add_buffer,
     between,
     simplify_geometry,
 )
-from natural_language_geocoding.natural_earth import coastline_of
+from e84_geoai_common.util import singleline
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 from shapely.geometry.base import BaseGeometry
+
+from natural_language_geocoding.natural_earth import coastline_of
+from natural_language_geocoding.nominatim import nominatim_search
 
 
 class SpatialNodeType(BaseModel, ABC):
@@ -25,22 +24,22 @@ class SpatialNodeType(BaseModel, ABC):
 
 
 class NamedEntity(SpatialNodeType):
-    """Represents the name of a place somewhere in the world"""
+    """Represents the name of a place somewhere in the world."""
 
     node_type: Literal["NamedEntity"] = "NamedEntity"
     name: str
 
-    subportion: (
-        Literal["western half", "northern half", "southern half", "eastern half"] | None
-    ) = Field(
-        default=None,
-        description=singleline(
-            """
+    subportion: Literal["western half", "northern half", "southern half", "eastern half"] | None = (
+        Field(
+            default=None,
+            description=singleline(
+                """
                 An optional field to indicate that a subportion of the NamedEntity is referenced
                 suchas "Western Brazil" would refer to the west half of Brazil. Note this is NOT
                 used in cases where a cardinal direction is part of the place name like "South Africa"
             """
-        ),
+            ),
+        )
     )
 
     def to_geometry(self) -> BaseGeometry | None:
@@ -92,7 +91,10 @@ class Buffer(SpatialNodeType):
 
 
 class DirectionalConstraint(BaseModel):
-    """Constrains a spatial area such that it will be "west of", "north of", etc a particular spatial area."""
+    """Constrains a spatial area by a direction.
+
+    Example: 'west of London' represents the entire world west of London
+    """
 
     node_type: Literal["DirectionalConstraint"]
     child_node: "SpatialNode"
@@ -134,7 +136,7 @@ class DirectionalConstraint(BaseModel):
 
 
 class Intersection(SpatialNodeType):
-    """Represents the spatial intersection of two areas"""
+    """Represents the spatial intersection of two areas."""
 
     node_type: Literal["Intersection"]
     child_node_1: "SpatialNode"
@@ -149,7 +151,7 @@ class Intersection(SpatialNodeType):
 
 
 class Union(SpatialNodeType):
-    """Represents the spatial union of two areas"""
+    """Represents the spatial union of two areas."""
 
     node_type: Literal["Union"]
     child_node_1: "SpatialNode"
@@ -164,7 +166,7 @@ class Union(SpatialNodeType):
 
 
 class Difference(SpatialNodeType):
-    """Represents the spatial difference of two areas"""
+    """Represents the spatial difference of two areas."""
 
     node_type: Literal["Difference"]
     child_node_1: "SpatialNode"
@@ -211,6 +213,5 @@ AnySpatialNodeType = (
 
 
 class SpatialNode(RootModel[AnySpatialNodeType]):
-
     def to_geometry(self) -> BaseGeometry | None:
         return self.root.to_geometry()

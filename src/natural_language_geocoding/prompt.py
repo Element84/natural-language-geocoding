@@ -1,7 +1,8 @@
 import json
-import os
-from e84_geoai_common.util import singleline
+from pathlib import Path
+
 from e84_geoai_common.llm.extraction import ExtractDataExample
+from e84_geoai_common.util import singleline
 
 from natural_language_geocoding.models import SpatialNode
 
@@ -75,9 +76,7 @@ EXAMPLES = [
     ExtractDataExample(
         name="Simple Spatial Example",
         user_query="in North Dakota",
-        structure=SpatialNode.model_validate(
-            {"node_type": "NamedEntity", "name": "North Dakota"}
-        ),
+        structure=SpatialNode.model_validate({"node_type": "NamedEntity", "name": "North Dakota"}),
     ),
     ExtractDataExample(
         name="Complex Query Example",
@@ -103,7 +102,7 @@ EXAMPLES = [
     ),
 ]
 
-with open(os.path.join(os.path.dirname(__file__), "prompt.md")) as f:
+with (Path(__file__).parent / "prompt.md").open() as f:
     prompt_template = f.read()
 
 SYSTEM_PROMPT = prompt_template.format(

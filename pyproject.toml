@@ -9,7 +9,7 @@ authors = [{ name = "Jason Gilman", email = "jason@element84.com" }]
 maintainers = [{ name = "Jason Gilman", email = "jason@element84.com" }]
 description = "Natural Language Geocoding implements an AI technique to convert natural language descriptions of spatial areas into polygons."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
   "e84-geoai-common>=0.0.3",
@@ -17,20 +17,17 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.setuptools_scm]
-
-[project.urls]
-Github = "https://github.com/Element84/natural-language-geocoding"
-
-[project.scripts]
-natural-language-geocoding = "natural_language_geocoding.main:main"
+[tool.setuptools-git-versioning]
+enabled = true
+dev_template = "{tag}"
+dirty_template = "{tag}"
 
 [tool.pytest.ini_options]
 pythonpath = "src"
-testpaths=[
-  "tests"
-]
+testpaths = ["tests"]
 
+[project.urls]
+Github = "https://github.com/Element84/natural-language-geocoding"
 [project.optional-dependencies]
 demo = [
   "streamlit>=1.38.0",
@@ -40,9 +37,79 @@ demo = [
 dev = [
   "pytest>=8.3.3",
   "ipykernel>=6.29.5",
-  "black>=24.8.0",
+  "ruff>=0.6.8",
   "pyright>=1.1.381",
   "build>=1.2.2",
   "pre-commit>=3.8.0",
-  "pre-commit-hooks>=4.6.0"
+  "pre-commit-hooks>=4.6.0",
+]
+
+[tool.pyright]
+pythonVersion = "3.12"
+include = ["src/", "tests/"]
+ignore = ["**/venv/**", "*.pyc", "temp/", "build/"]
+typeCheckingMode = "strict"
+reportGeneralTypeIssues = true
+reportImplicitStringConcatenation = "none"
+reportPropertyTypeMismatch = "error"
+reportShadowedImports = "error"
+reportTypedDictNotRequiredAccess = "none"
+reportUninitializedInstanceVariable = "error"
+reportUnknownArgumentType = "error"
+reportUnknownMemberType = "error"
+reportUnknownVariableType = "error"
+reportUnnecessaryComparison = "error"
+reportIncompatibleVariableOverride = "none"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint]
+# http://docs.astral.sh/ruff/rules/
+select = ['ALL']
+ignore = [
+  # Unnecessary assignment before return statement
+  'RET504',
+  # Trailing comma missing
+  'COM812',
+  # Missing docstring for module
+  'D100',
+  # Docstring in public class
+  'D101',
+  # Documentation in public method
+  'D102',
+  # Missing docstring in magic method
+  'D105',
+  # 1 blank line required before class docstring
+  'D203',
+  # Multi-line docstring summary should start at the second line
+  'D213',
+  # Allow messages in exception declarations
+  'TRY002',
+  'TRY003',
+  'EM101',
+  'EM102'
+]
+
+[tool.ruff.lint.per-file-ignores]
+'__init__.py' = [
+  # Module level import not at top of cell
+  'E402',
+  # Imported but unused
+  'F401',
+]
+'tests/**/*' = [
+  # Use of assert detected
+  'S101',
+  # Missing return type annotation for public function
+  'ANN201',
+  # Missing docstrings
+  'D1',
+  # Private member accessed
+  'SLF001',
+  # magic values
+  'PLR2004',
 ]

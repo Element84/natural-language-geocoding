@@ -12,19 +12,17 @@ attrs==25.1.0
     # via
     #   jsonschema
     #   referencing
-black==25.1.0
-    # via natural-language-geocoding (pyproject.toml)
 blinker==1.9.0
     # via streamlit
-boto3==1.36.15
+boto3==1.36.18
     # via e84-geoai-common
-boto3-stubs==1.36.15
+boto3-stubs==1.36.18
     # via e84-geoai-common
-botocore==1.36.15
+botocore==1.36.18
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.36.15
+botocore-stubs==1.36.18
     # via boto3-stubs
 branca==0.8.1
     # via
@@ -41,9 +39,7 @@ cfgv==3.4.0
 charset-normalizer==3.4.1
     # via requests
 click==8.1.8
-    # via
-    #   black
-    #   streamlit
+    # via streamlit
 comm==0.2.2
     # via ipykernel
 debugpy==1.8.12
@@ -54,10 +50,6 @@ distlib==0.3.9
     # via virtualenv
 e84-geoai-common==0.0.3
     # via natural-language-geocoding (pyproject.toml)
-exceptiongroup==1.2.2
-    # via
-    #   ipython
-    #   pytest
 executing==2.2.0
     # via stack-data
 filelock==3.17.0
@@ -70,7 +62,7 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
     # via streamlit
-identify==2.6.6
+identify==2.6.7
     # via pre-commit
 idna==3.10
     # via requests
@@ -115,9 +107,7 @@ mdurl==0.1.2
     # via markdown-it-py
 mypy-boto3-bedrock-runtime==1.36.2
     # via boto3-stubs
-mypy-extensions==1.0.0
-    # via black
-narwhals==1.25.2
+narwhals==1.26.0
     # via altair
 nest-asyncio==1.6.0
     # via ipykernel
@@ -136,7 +126,6 @@ numpy==2.2.2
 packaging==24.2
     # via
     #   altair
-    #   black
     #   build
     #   ipykernel
     #   pytest
@@ -145,15 +134,12 @@ pandas==2.2.3
     # via streamlit
 parso==0.8.4
     # via jedi
-pathspec==0.12.1
-    # via black
 pexpect==4.9.0
     # via ipython
 pillow==11.1.0
     # via streamlit
 platformdirs==4.3.6
     # via
-    #   black
     #   jupyter-core
     #   virtualenv
 pluggy==1.5.0
@@ -222,6 +208,8 @@ ruamel-yaml==0.18.10
     # via pre-commit-hooks
 ruamel-yaml-clib==0.2.12
     # via ruamel-yaml
+ruff==0.9.6
+    # via natural-language-geocoding (pyproject.toml)
 s3transfer==0.11.2
     # via boto3
 shapely==2.0.7
@@ -242,12 +230,6 @@ tenacity==9.0.0
     # via streamlit
 toml==0.10.2
     # via streamlit
-tomli==2.2.1
-    # via
-    #   black
-    #   build
-    #   pre-commit-hooks
-    #   pytest
 tornado==6.4.2
     # via
     #   ipykernel
@@ -261,7 +243,7 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-types-awscrt==0.23.9
+types-awscrt==0.23.10
     # via botocore-stubs
 types-s3transfer==0.11.2
     # via boto3-stubs
@@ -270,15 +252,10 @@ types-shapely==2.0.0.20250202
 typing-extensions==4.12.2
     # via
     #   altair
-    #   black
-    #   boto3-stubs
-    #   ipython
-    #   mypy-boto3-bedrock-runtime
     #   pydantic
     #   pydantic-core
     #   pyright
     #   referencing
-    #   rich
     #   streamlit
 tzdata==2025.1
     # via pandas
@@ -286,7 +263,7 @@ urllib3==2.3.0
     # via
     #   botocore
     #   requests
-virtualenv==20.29.1
+virtualenv==20.29.2
     # via pre-commit
 watchdog==6.0.0
     # via natural-language-geocoding (pyproject.toml)
