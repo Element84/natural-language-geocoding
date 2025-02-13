@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools_scm"]
+requires = ["setuptools", "setuptools-git-versioning"]
 build-backend = "setuptools.build_meta"
 
 
@@ -17,7 +17,10 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[tool.setuptools_scm]
+[tool.setuptools-git-versioning]
+enabled = true
+dev_template = "{tag}"
+dirty_template = "{tag}"
 
 [project.urls]
 Github = "https://github.com/Element84/natural-language-geocoding"

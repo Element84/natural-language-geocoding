@@ -1,0 +1,37 @@
+name: Publish to Test PyPI
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  publish-testpypi:
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://pypi.org/p/natural-language-geocoding/
+    permissions:
+      id-token: write
+    if: ${{ github.repository }} == 'Element84/natural-language-geocoding'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
