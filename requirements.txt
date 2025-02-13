@@ -14,11 +14,11 @@ attrs==25.1.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.36.18
+boto3==1.36.20
     # via e84-geoai-common
-boto3-stubs==1.36.18
+boto3-stubs==1.36.19
     # via e84-geoai-common
-botocore==1.36.18
+botocore==1.36.20
     # via
     #   boto3
     #   s3transfer
@@ -48,7 +48,7 @@ decorator==5.1.1
     # via ipython
 distlib==0.3.9
     # via virtualenv
-e84-geoai-common==0.0.3
+e84-geoai-common==0.0.4
     # via natural-language-geocoding (pyproject.toml)
 executing==2.2.0
     # via stack-data
@@ -115,7 +115,7 @@ nodeenv==1.9.1
     # via
     #   pre-commit
     #   pyright
-numpy==2.2.2
+numpy==2.2.3
     # via
     #   folium
     #   pandas
@@ -172,7 +172,7 @@ pygments==2.19.1
     #   rich
 pyproject-hooks==1.2.0
     # via build
-pyright==1.1.393
+pyright==1.1.394
     # via natural-language-geocoding (pyproject.toml)
 pytest==8.3.4
     # via natural-language-geocoding (pyproject.toml)

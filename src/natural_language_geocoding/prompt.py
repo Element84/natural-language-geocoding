@@ -19,7 +19,7 @@ GUIDELINES = [
         The structured response must adhere to the provided JSON schema, emphasizing the importance
         of accurately representing spatial relationships. These include direct spatial operations
         like "between," "buffer," and "intersection," as well as hierarchical geographical
-        containment—ensuring entities are contextualized within broader regions or countries when
+        containment—ensuring place names are contextualized within broader regions or countries when
         implied.
         """
     ),
@@ -27,16 +27,16 @@ GUIDELINES = [
         """
         For instance, when a query mentions specific landmarks or features along with a broader
         geographical area (e.g., "within the United States"), the structure should encapsulate
-        the named entities within the broader geographical context. This approach ensures the
+        the named places within the broader geographical context. This approach ensures the
         query's spatial intent is fully captured, particularly for complex requests involving
         multiple spatial relationships and geographical contexts.
         """
     ),
     singleline(
         """
-        Specifically, when translating city names into named entities, always include the most
+        Specifically, when translating city names into named places, always include the most
         specific geographical context available, such as 'Boston Massachusetts' instead of just
-        'Boston'. This ensures that the NamedEntity reflects both the city and state, or city and
+        'Boston'. This ensures that the NamedPlace reflects both the city and state, or city and
         country, maintaining clear and unambiguous geographical identification.
         """
     ),
@@ -44,14 +44,14 @@ GUIDELINES = [
         """
         Simplify When Possible: Always generate the simplest version of the tree possible to
         accurately represent the user's request. This often means direct mapping of queries to a
-        "NamedEntity" for singular geographical locations without implied spatial operations.
+        "NamedPlace" for singular geographical locations without implied spatial operations.
         """
     ),
     singleline(
         """
         Appropriate Use of Node Types: Only employ complex node types (e.g., "Intersection",
         "Buffer") when the user's query explicitly or implicitly requires the representation of
-        spatial relationships or operations between two or more entities.
+        spatial relationships or operations between two or more places.
         """
     ),
     singleline(
@@ -76,7 +76,7 @@ EXAMPLES = [
     ExtractDataExample(
         name="Simple Spatial Example",
         user_query="in North Dakota",
-        structure=SpatialNode.model_validate({"node_type": "NamedEntity", "name": "North Dakota"}),
+        structure=SpatialNode.model_validate({"node_type": "NamedPlace", "name": "North Dakota"}),
     ),
     ExtractDataExample(
         name="Complex Query Example",
@@ -84,19 +84,21 @@ EXAMPLES = [
         structure=SpatialNode.model_validate(
             {
                 "node_type": "Intersection",
-                "child_node_1": {
-                    "node_type": "NamedEntity",
-                    "name": "New Mexico",
-                    "subportion": "western half",
-                },
-                "child_node_2": {
-                    "node_type": "DirectionalConstraint",
-                    "child_node": {
-                        "node_type": "NamedEntity",
-                        "name": "Albuquerque",
+                "child_nodes": [
+                    {
+                        "node_type": "NamedPlace",
+                        "name": "New Mexico",
+                        "subportion": "western half",
                     },
-                    "direction": "west",
-                },
+                    {
+                        "node_type": "DirectionalConstraint",
+                        "child_node": {
+                            "node_type": "NamedPlace",
+                            "name": "Albuquerque",
+                        },
+                        "direction": "west",
+                    },
+                ],
             }
         ),
     ),

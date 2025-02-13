@@ -47,7 +47,7 @@ dev = [
 [tool.pyright]
 pythonVersion = "3.12"
 include = ["src/", "tests/"]
-ignore = ["**/venv/**", "*.pyc", "temp/", "build/"]
+ignore = ["**/venv/**", "*.pyc", "build/"]
 typeCheckingMode = "strict"
 reportGeneralTypeIssues = true
 reportImplicitStringConcatenation = "none"
