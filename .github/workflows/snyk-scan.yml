@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@master
 
       - name: Snyk Python report vulnerabilities
-        uses: snyk/actions/python-3.10@master
+        uses: snyk/actions/python-3.12@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
