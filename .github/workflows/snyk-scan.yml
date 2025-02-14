@@ -21,24 +21,31 @@ jobs:
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3 # Check out the repository to the workflow runner
+      - uses: actions/checkout@v3
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v4 # Use setup-python to configure Python 3.12
+        uses: actions/setup-python@v4
         with:
           python-version: '3.12'
 
-      - name: Install Snyk CLI
-        run: pip install snyk # Install Snyk CLI for vulnerability scanning
+      - name: Install dependencies
+        run: |
+          python --version # Confirm Python 3.12 is installed
+          pip install -r requirements.txt # Install your project's dependencies
 
       - name: Snyk Python report vulnerabilities
+        uses: snyk/actions/python-3.10@master
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }} # Snyk authentication token from GitHub secrets
-        run: snyk test --sarif-file-output=snyk.sarif --policy-path=.snyk --severity-threshold=high # Forces fail on high-severity vulnerabilities
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: |
+            --sarif-file-output=snyk.sarif
+            --policy-path=.snyk
+            --severity-threshold=high # Forces fail on high-severity vulnerabilities
 
       # Push the Snyk Code results into GitHub Code Scanning tab
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
-        if: success() || failure() # Upload results to GitHub even if the scan fails
+        if: success() || failure()
         with:
           sarif_file: snyk.sarif
