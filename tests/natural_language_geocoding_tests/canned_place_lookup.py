@@ -14,7 +14,9 @@ _STATES_TO_GEOM_FILE = Path(__file__).parent / "states_to_geom.json"
 with _STATES_TO_GEOM_FILE.open() as f:
     parsed = json.load(f)
 
-_STATES_TO_GEOMS = {state: geometry_from_geojson_dict(geojson) for state, geojson in parsed.items()}
+_STATES_TO_GEOMS: dict[str, BaseGeometry] = {
+    state: geometry_from_geojson_dict(geojson) for state, geojson in parsed.items()
+}
 
 
 FLORIDA = _STATES_TO_GEOMS["Florida"]
@@ -23,6 +25,8 @@ ALABAMA = _STATES_TO_GEOMS["Georgia"]
 MISSISSIPPI = _STATES_TO_GEOMS["Mississippi"]
 LOUISIANA = _STATES_TO_GEOMS["Louisiana"]
 TEXAS = _STATES_TO_GEOMS["Texas"]
+NORTH_DAKOTA = _STATES_TO_GEOMS["North Dakota"]
+SOUTH_DAKOTA = _STATES_TO_GEOMS["South Dakota"]
 
 
 #     1  3   4   6      9  10    13   15
@@ -77,7 +81,7 @@ class CannedPlaceLookup(PlaceLookup):
     def __init__(self) -> None:
         super().__init__()
         self.name_to_geom = {
-            **_STATES_TO_GEOMS,
+            **{state.lower(): geom for state, geom in _STATES_TO_GEOMS.items()},
             "alpha": ALPHA,
             "bravo": BRAVO,
             "gamma": GAMMA,
@@ -85,6 +89,7 @@ class CannedPlaceLookup(PlaceLookup):
         }
 
     def search(self, name: str) -> BaseGeometry:
-        if name in self.name_to_geom:
-            return self.name_to_geom[name]
+        lower_name = name.lower()
+        if lower_name in self.name_to_geom:
+            return self.name_to_geom[lower_name]
         raise LookupError(f"Unable to find location with name {name}")

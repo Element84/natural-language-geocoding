@@ -9,6 +9,8 @@ from shapely import Polygon
 from natural_language_geocoding import extract_geometry_from_text
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
+    BorderBetween,
+    BorderOf,
     Difference,
     DirectionalConstraint,
     Intersection,
@@ -21,6 +23,8 @@ from natural_language_geocoding_tests.canned_place_lookup import (
     DELTA,
     FLORIDA,
     LOUISIANA,
+    NORTH_DAKOTA,
+    SOUTH_DAKOTA,
     CannedPlaceLookup,
 )
 
@@ -83,3 +87,42 @@ def test_directional_constraint():
     ])
     # fmt: on
     assert geom == alpha_north_of_bravo
+
+
+def test_border():
+    place_lookup = CannedPlaceLookup()
+    llm = make_llm(BorderOf(child_node=NamedPlace(name="alpha")))
+    geom = extract_geometry_from_text(llm, text="border of alpha", place_lookup=place_lookup)
+    assert geom == ALPHA.boundary
+
+
+def test_border_between():
+    place_lookup = CannedPlaceLookup()
+    llm = make_llm(
+        BorderBetween(
+            child_node_1=NamedPlace(name="North Dakota"),
+            child_node_2=NamedPlace(name="South Dakota"),
+        )
+    )
+    border = extract_geometry_from_text(
+        llm, text="the border between north and south dakota", place_lookup=place_lookup
+    )
+    assert NORTH_DAKOTA.intersects(border)
+    assert SOUTH_DAKOTA.intersects(border)
+
+    nd_west, nd_south, nd_east, _nd_north = NORTH_DAKOTA.bounds
+    sd_west, _sd_south, _sd_east, sd_north = SOUTH_DAKOTA.bounds
+    border_west, border_south, border_east, border_north = border.bounds
+
+    # Ensure the border covers the east and west extremes
+    assert border_west < nd_west
+    assert border_west < sd_west
+    assert border_east > nd_east
+    # The eastern most longitude of the northern border of south dakota
+    # Parts of South Dakota go east of this which won't be covered by this border geometry.
+    sd_north_border_east = -96.563664
+    assert border_east > sd_north_border_east
+
+    # Ensure the border covers the south of North Dakota and the north of South Dakota
+    assert border_south < nd_south < border_north
+    assert border_south < sd_north < border_north
