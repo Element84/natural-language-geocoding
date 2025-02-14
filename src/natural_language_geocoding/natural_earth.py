@@ -1,9 +1,9 @@
-"""Helpers for dealing with GeoJSON from Natural Earth"""
+"""Helpers for dealing with GeoJSON from Natural Earth."""
 
-from functools import lru_cache
 import json
-import os
 import urllib.request
+from functools import lru_cache
+from pathlib import Path
 
 from e84_geoai_common.geojson import FeatureCollection
 from e84_geoai_common.geometry import add_buffer
@@ -12,12 +12,12 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from shapely import GeometryCollection
 from shapely.geometry.base import BaseGeometry
 
-NATURAL_EARTH_DATA_DIR = os.path.join(os.path.dirname(__file__), "natural_earth_data")
-NE_COASTLINE_FILE = os.path.join(NATURAL_EARTH_DATA_DIR, "ne_10m_coastline.json")
+NATURAL_EARTH_DATA_DIR = Path(__file__).parent / "natural_earth_data"
+NE_COASTLINE_FILE = NATURAL_EARTH_DATA_DIR / "ne_10m_coastline.json"
 
 
 class NaturalEarthProperties(BaseModel):
-    """A model for parsing Natural Earth GeoJSON properties"""
+    """A model for parsing Natural Earth GeoJSON properties."""
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
@@ -37,33 +37,33 @@ class NaturalEarthProperties(BaseModel):
 NaturalEarthFeatureCollection = FeatureCollection[NaturalEarthProperties]
 
 
-def download_coastlines_file():
-    """
-    Downloads a file describing all the coastlines of the world.
+def download_coastlines_file() -> None:
+    """Downloads a file describing all the coastlines of the world.
 
-    This file is not part of this repository so it's downloaded from github.com/martynafford/natural-earth-geojson
+    This file is not part of this repository so it's downloaded from
+    github.com/martynafford/natural-earth-geojson
     """
-    if os.path.exists(NE_COASTLINE_FILE):
-        print("Coastline file already downloaded")
+    if NE_COASTLINE_FILE.exists():
+        print("Coastline file already downloaded")  # noqa: T201
     else:
-        print("Downloading coastline file")
-        os.makedirs(NATURAL_EARTH_DATA_DIR, exist_ok=True)
+        print("Downloading coastline file")  # noqa: T201
+        NATURAL_EARTH_DATA_DIR.mkdir(exist_ok=True)
 
         # Download the NE_COASTLINE_FILE
-        url = "https://raw.githubusercontent.com/martynafford/natural-earth-geojson/refs/heads/master/10m/physical/ne_10m_coastline.json"
-        urllib.request.urlretrieve(url, NE_COASTLINE_FILE)
+        urllib.request.urlretrieve(
+            "https://raw.githubusercontent.com/martynafford/natural-earth-geojson/refs/heads/master/10m/physical/ne_10m_coastline.json",
+            NE_COASTLINE_FILE,
+        )
 
 
 @lru_cache(None)
 def _get_coastlines() -> GeometryCollection:
-    if not os.path.exists(NE_COASTLINE_FILE):
+    if not NE_COASTLINE_FILE.exists():
         raise Exception(
             "The coastline file has not been downloaded. Run 'natural-language-geocoding init'."
         )
-    with open(NE_COASTLINE_FILE) as f:
-        _feature_coll_coasts = NaturalEarthFeatureCollection.model_validate(
-            json.load(f)
-        )
+    with NE_COASTLINE_FILE.open() as f:
+        _feature_coll_coasts = NaturalEarthFeatureCollection.model_validate(json.load(f))
 
     return GeometryCollection([f.geometry for f in _feature_coll_coasts.features])
 
@@ -79,5 +79,4 @@ def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
     intersection = buffered_geom.intersection(_get_coastlines())
     if intersection.is_empty:
         return None
-    else:
-        return intersection
+    return intersection

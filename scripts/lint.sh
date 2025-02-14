@@ -6,8 +6,8 @@
 
 set -e -o pipefail
 
-echo "Running black"
-black --diff --check src/
+echo "Running Ruff"
+ruff check src/ tests/
 
 echo "Running pyright"
 pyright .
