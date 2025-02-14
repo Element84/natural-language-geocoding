@@ -29,6 +29,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       # Install Snyk CLI into the Python 3.12 environment
       - name: Install Snyk CLI
         uses: snyk/actions/setup@master
