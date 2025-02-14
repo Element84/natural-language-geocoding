@@ -16,32 +16,30 @@ permissions:
 jobs:
   snyk-python:
     permissions:
-      contents: read # for actions/checkout to fetch code
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+      contents: read       # for actions/checkout to fetch code
+      security-events: write  # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read        # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
+      # Set up Python 3.12 environment
       - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
-        run: |
-          python --version # Confirm Python 3.12 is installed
-          pip install -r requirements.txt # Install your project's dependencies
-
-      - name: Snyk Python report vulnerabilities
-        uses: snyk/actions/python-3.10@master
+      # Install Snyk CLI into the Python 3.12 environment
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: |
-            --sarif-file-output=snyk.sarif
-            --policy-path=.snyk
-            --severity-threshold=high # Forces fail on high-severity vulnerabilities
+
+      # Run Snyk Python report vulnerabilities
+      - name: Snyk Python report vulnerabilities
+        run: snyk test --sarif-file-output=snyk.sarif --policy-path=.snyk --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       # Push the Snyk Code results into GitHub Code Scanning tab
       - name: Upload result to GitHub Code Scanning
