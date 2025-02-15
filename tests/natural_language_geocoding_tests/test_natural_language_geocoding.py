@@ -47,14 +47,20 @@ def test_single_place():
 
 def test_union():
     place_lookup = CannedPlaceLookup()
-    llm = make_llm(Union.from_nodes(NamedPlace(name="Florida"), NamedPlace(name="Louisiana")))
-    geom = extract_geometry_from_text(llm, text="Florida and Louisiana", place_lookup=place_lookup)
+    llm = make_llm(
+        Union.from_nodes(NamedPlace(name="Florida"), NamedPlace(name="Louisiana"))
+    )
+    geom = extract_geometry_from_text(
+        llm, text="Florida and Louisiana", place_lookup=place_lookup
+    )
     assert geom == FLORIDA.union(LOUISIANA)
 
 
 def test_intersection():
     place_lookup = CannedPlaceLookup()
-    llm = make_llm(Intersection.from_nodes(NamedPlace(name="delta"), NamedPlace(name="bravo")))
+    llm = make_llm(
+        Intersection.from_nodes(NamedPlace(name="delta"), NamedPlace(name="bravo"))
+    )
     geom = extract_geometry_from_text(
         llm, text="Where delta and bravo overlap", place_lookup=place_lookup
     )
@@ -64,9 +70,13 @@ def test_intersection():
 def test_difference():
     place_lookup = CannedPlaceLookup()
     llm = make_llm(
-        Difference(child_node_1=NamedPlace(name="alpha"), child_node_2=NamedPlace(name="bravo"))
+        Difference(
+            child_node_1=NamedPlace(name="alpha"), child_node_2=NamedPlace(name="bravo")
+        )
     )
-    geom = extract_geometry_from_text(llm, text="alpha except for bravo", place_lookup=place_lookup)
+    geom = extract_geometry_from_text(
+        llm, text="alpha except for bravo", place_lookup=place_lookup
+    )
     assert geom == ALPHA - BRAVO
 
 
@@ -75,10 +85,14 @@ def test_directional_constraint():
     llm = make_llm(
         Intersection.from_nodes(
             NamedPlace(name="alpha"),
-            DirectionalConstraint(child_node=NamedPlace(name="bravo"), direction="north"),
+            DirectionalConstraint(
+                child_node=NamedPlace(name="bravo"), direction="north"
+            ),
         )
     )
-    geom = extract_geometry_from_text(llm, text="alpha north of bravo", place_lookup=place_lookup)
+    geom = extract_geometry_from_text(
+        llm, text="alpha north of bravo", place_lookup=place_lookup
+    )
     # fmt: off
     alpha_north_of_bravo = Polygon([
         (1, 11), (15, 11),  # top edge
@@ -92,7 +106,9 @@ def test_directional_constraint():
 def test_border():
     place_lookup = CannedPlaceLookup()
     llm = make_llm(BorderOf(child_node=NamedPlace(name="alpha")))
-    geom = extract_geometry_from_text(llm, text="border of alpha", place_lookup=place_lookup)
+    geom = extract_geometry_from_text(
+        llm, text="border of alpha", place_lookup=place_lookup
+    )
     assert geom == ALPHA.boundary
 
 

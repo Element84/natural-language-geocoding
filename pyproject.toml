@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-git-versioning"]
+requires = ["setuptools", "setuptools_scm", "setuptools-git-versioning"]
 build-backend = "setuptools.build_meta"
 
 
@@ -12,8 +12,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
-  "e84-geoai-common>=0.0.3",
-  "requests>=2.32.3"
+  "requests>=2.32.3",
+  "e84-geoai-common>=0.0.4"
 ]
 dynamic = ["version"]
 
