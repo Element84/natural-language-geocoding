@@ -58,10 +58,55 @@ class CoastOf(SpatialNodeType):
     child_node: "AnySpatialNodeType"
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
-        child_bounds = self.child_node.to_geometry(place_lookup)
-        if child_bounds is None:
+        if child_bounds := self.child_node.to_geometry(place_lookup):
+            return coastline_of(child_bounds)
+        return None
+
+
+# The number of kilometers of buffer added to each shape to ensure that the areas that are very
+# close to intersection do intersect when computing border collisions
+_BORDER_BUFFER_SIZE = 3.5
+
+
+class BorderBetween(SpatialNodeType):
+    """Represents the adjoining border of two areas that are adjacent to each other.
+
+    Example: the border between North Dakota and South Dakota would be a very short, wide polygon
+    that covers the area where North and South Dakota connect.
+    """
+
+    node_type: Literal["BorderBetween"] = "BorderBetween"
+    child_node_1: "AnySpatialNodeType"
+    child_node_2: "AnySpatialNodeType"
+
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+        child1_bounds = self.child_node_1.to_geometry(place_lookup)
+        child2_bounds = self.child_node_2.to_geometry(place_lookup)
+        if child1_bounds is None or child2_bounds is None:
             return None
-        return coastline_of(child_bounds)
+
+        c1 = add_buffer(child1_bounds, _BORDER_BUFFER_SIZE)
+        c2 = add_buffer(child2_bounds, _BORDER_BUFFER_SIZE)
+
+        if c1.intersects(c2):
+            return c1.intersection(c2)
+        return None
+
+
+class BorderOf(SpatialNodeType):
+    """Represents the border of an area as one or more LineStrings."""
+
+    node_type: Literal["BorderOf"] = "BorderOf"
+    child_node: "AnySpatialNodeType"
+
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+        if child_bounds := self.child_node.to_geometry(place_lookup):
+            boundary = child_bounds.boundary
+
+            if boundary.is_empty:
+                return None
+            return boundary
+        return None
 
 
 class Buffer(SpatialNodeType):
@@ -84,11 +129,9 @@ class Buffer(SpatialNodeType):
         raise Exception(f"Unexpected distance unit {self.distance_unit}")
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
-        child_bounds = self.child_node.to_geometry(place_lookup)
-        if child_bounds is None:
-            return None
-
-        return add_buffer(child_bounds, self.distance_km)
+        if child_bounds := self.child_node.to_geometry(place_lookup):
+            return add_buffer(child_bounds, self.distance_km)
+        return None
 
 
 class DirectionalConstraint(BaseModel):
@@ -210,6 +253,8 @@ class Between(SpatialNodeType):
 AnySpatialNodeType = (
     NamedPlace
     | Buffer
+    | BorderBetween
+    | BorderOf
     | CoastOf
     | Intersection
     | Union
