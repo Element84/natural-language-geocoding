@@ -34,11 +34,11 @@ class NamedPlace(SpatialNodeType):
             default=None,
             description=singleline(
                 """
-                An optional field to indicate that a subportion of the NamedPlace is referenced
-                suchas "Western Brazil" would refer to the west half of Brazil. Note this is NOT
+                An optional field to indicate that a subportion of the NamedPlace is referenced. For
+                example, "Western Brazil" would refer to the west half of Brazil. Note this is NOT
                 used in cases where a cardinal direction is part of the place name like
                 "South Africa"
-            """
+                """
             ),
         )
     )
