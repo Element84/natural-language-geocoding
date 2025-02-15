@@ -1,41 +1,42 @@
-# This workflow sets up Snyk scans
-
-name: Snyk Scan
+name: Snyk Scan (Python 3.12)
 
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-  schedule: # Run snyk scan daily at midnight
-    - cron: '0 0 * * *'
+  schedule:
+    - cron: '0 0 * * *'  # daily at midnight
 
 permissions:
   contents: read
 
 jobs:
-  snyk-python:
+  snyk-scan:
     permissions:
-      contents: read # for actions/checkout to fetch code
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+      contents: read      # for actions/checkout to fetch code
+      security-events: write  # for uploading SARIF results
+      actions: read       # needed for run status in some actions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Snyk Python report vulnerabilities
-        uses: snyk/actions/python-3.10@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args:
-            --sarif-file-output=snyk.sarif
-            --policy-path=.snyk
-            --severity-threshold=high # Forces fail on high-severity vulnerabilities
+      - name: Run Snyk Scan using Python 3.12 Docker image
+        run: |
+          docker run --rm \
+            -e SNYK_TOKEN=${{ secrets.SNYK_TOKEN }} \
+            -e FORCE_COLOR=2 \
+            -e SNYK_INTEGRATION_NAME=GITHUB_ACTIONS \
+            -e SNYK_INTEGRATION_VERSION=python-3.12 \
+            -v "${{ github.workspace }}:/app" \
+            snyk/snyk:python-3.12 \
+            snyk test --all-projects --sarif-file-output=snyk.sarif --policy-path=.snyk --severity-threshold=high
 
-      # Push the Snyk Code results into GitHub Code Scanning tab
-      - name: Upload result to GitHub Code Scanning
+
+
+      - name: Upload SARIF results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
-        if: success() || failure()
+        if: always()
         with:
           sarif_file: snyk.sarif
