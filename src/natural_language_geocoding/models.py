@@ -29,18 +29,18 @@ class NamedPlace(SpatialNodeType):
     node_type: Literal["NamedPlace"] = "NamedPlace"
     name: str
 
-    subportion: (
-        Literal["western half", "northern half", "southern half", "eastern half"] | None
-    ) = Field(
-        default=None,
-        description=singleline(
-            """
-            An optional field to indicate that a subportion of the NamedPlace is referenced. For
-            example, "Western Brazil" would refer to the west half of Brazil. Note this is NOT
-            used in cases where a cardinal direction is part of the place name like
-            "South Africa"
-            """
-        ),
+    subportion: Literal["western half", "northern half", "southern half", "eastern half"] | None = (
+        Field(
+            default=None,
+            description=singleline(
+                """
+                An optional field to indicate that a subportion of the NamedPlace is referenced. For
+                example, "Western Brazil" would refer to the west half of Brazil. Note this is NOT
+                used in cases where a cardinal direction is part of the place name like
+                "South Africa"
+                """
+            ),
+        )
     )
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
@@ -69,7 +69,11 @@ _BORDER_BUFFER_SIZE = 3.5
 
 
 class BorderBetween(SpatialNodeType):
-    """Represents the border of two areas."""
+    """Represents the adjoining border of two areas that are adjacent to each other.
+
+    Example: the border between North Dakota and South Dakota would be a very short, wide polygon
+    that covers the area where North and South Dakota connect.
+    """
 
     node_type: Literal["BorderBetween"] = "BorderBetween"
     child_node_1: "AnySpatialNodeType"
@@ -90,7 +94,7 @@ class BorderBetween(SpatialNodeType):
 
 
 class BorderOf(SpatialNodeType):
-    """Represents the border of an area."""
+    """Represents the border of an area as one or more LineStrings."""
 
     node_type: Literal["BorderOf"] = "BorderOf"
     child_node: "AnySpatialNodeType"
