@@ -2,13 +2,15 @@ import sys
 
 from natural_language_geocoding.natural_earth import download_coastlines_file
 
+# ruff: noqa: T201
 
-def main():
+
+def _main() -> None:
     if len(sys.argv) > 1:
         action = sys.argv[1]
     else:
         print("Please provide an action. The only available action is 'init'.")
-        exit(1)
+        sys.exit(1)
 
     if action == "init":
         download_coastlines_file()
@@ -17,4 +19,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _main()

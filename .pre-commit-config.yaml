@@ -1,12 +1,13 @@
 repos:
   - repo: local
     hooks:
-      - id: black_check
-        name: black check
-        entry: black
+      - id: ruff-check
+        name: Run ruff check
+        entry: ruff check
+        args: [src/, tests/]
         language: python
-        'types_or': [python, pyi]
-        args: [--diff, --check, src/]
+        types_or: [python, pyi]
+        pass_filenames: true
         require_serial: true
       - id: check-added-large-files
         name: Check for added large files
@@ -34,10 +35,14 @@ repos:
         language: system
         types: [text]
         stages: [commit, push, manual]
-      - id: pyright
-        name: pyright
-        entry: pyright
-        language: python
-        'types_or': [python, pyi]
-        args: [--verbose, .]
-        require_serial: true
+      # Pre-commit runs pyright-python in its own virtual environment by
+      # default which means it does not detect installed dependencies. The
+      # virtual env can be specified in pyrightconfig.json via the "venvPath"
+      # and "venv" variables. However, this doesn't seem to work with
+      # conda/mamba environments and is less robust anyway.
+      # - id: pyright
+      #   name: pyright
+      #   entry: pyright src/ --verbose
+      #   language: python
+      #   'types_or': [python, pyi]
+      #   require_serial: true
