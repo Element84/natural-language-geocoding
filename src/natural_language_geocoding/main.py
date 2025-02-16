@@ -5,7 +5,8 @@ from natural_language_geocoding.natural_earth import download_coastlines_file
 # ruff: noqa: T201
 
 
-def _main() -> None:
+def main() -> None:
+    """Main method."""
     if len(sys.argv) > 1:
         action = sys.argv[1]
     else:
@@ -19,4 +20,4 @@ def _main() -> None:
 
 
 if __name__ == "__main__":
-    _main()
+    main()

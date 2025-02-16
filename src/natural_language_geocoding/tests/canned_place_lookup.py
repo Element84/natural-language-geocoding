@@ -1,18 +1,18 @@
-import json
+"""A utility for testing with a set of known places."""
+
 from pathlib import Path
 
+import yaml
 from e84_geoai_common.geometry import geometry_from_geojson_dict
 from shapely import Polygon
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.place_lookup import PlaceLookup
 
-# states_to_geom.json was generated from simplified Census cartographic boundaries for US states.
-_STATES_TO_GEOM_FILE = Path(__file__).parent / "states_to_geom.json"
-
+_STATES_TO_GEOM_FILE = Path(__file__).parent / "states_to_geom.yaml"
 
 with _STATES_TO_GEOM_FILE.open() as f:
-    parsed = json.load(f)
+    parsed = yaml.safe_load(f)
 
 _STATES_TO_GEOMS: dict[str, BaseGeometry] = {
     state: geometry_from_geojson_dict(geojson) for state, geojson in parsed.items()
@@ -89,7 +89,9 @@ class CannedPlaceLookup(PlaceLookup):
         }
 
     def search(self, name: str) -> BaseGeometry:
-        lower_name = name.lower()
+        # Help make the name more consistent for when testing with a real LLM.
+        lower_name = name.lower().replace("USA", "").strip()
+
         if lower_name in self.name_to_geom:
             return self.name_to_geom[lower_name]
         raise LookupError(f"Unable to find location with name {name}")
