@@ -68,6 +68,16 @@ class CoastOf(SpatialNodeType):
 _BORDER_BUFFER_SIZE = 3.5
 
 
+def border_between(g1: BaseGeometry, g2: BaseGeometry) -> BaseGeometry | None:
+    """Computes the border between two geometries."""
+    c1 = add_buffer(g1, _BORDER_BUFFER_SIZE)
+    c2 = add_buffer(g2, _BORDER_BUFFER_SIZE)
+
+    if c1.intersects(c2):
+        return c1.intersection(c2)
+    return None
+
+
 class BorderBetween(SpatialNodeType):
     """Represents the adjoining border of two areas that are adjacent to each other.
 
@@ -85,12 +95,7 @@ class BorderBetween(SpatialNodeType):
         if child1_bounds is None or child2_bounds is None:
             return None
 
-        c1 = add_buffer(child1_bounds, _BORDER_BUFFER_SIZE)
-        c2 = add_buffer(child2_bounds, _BORDER_BUFFER_SIZE)
-
-        if c1.intersects(c2):
-            return c1.intersection(c2)
-        return None
+        return border_between(child1_bounds, child2_bounds)
 
 
 class BorderOf(SpatialNodeType):
