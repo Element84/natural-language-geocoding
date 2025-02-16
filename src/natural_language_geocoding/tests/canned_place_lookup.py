@@ -89,7 +89,9 @@ class CannedPlaceLookup(PlaceLookup):
         }
 
     def search(self, name: str) -> BaseGeometry:
-        lower_name = name.lower()
+        # Help make the name more consistent for when testing with a real LLM.
+        lower_name = name.lower().replace("USA", "").strip()
+
         if lower_name in self.name_to_geom:
             return self.name_to_geom[lower_name]
         raise LookupError(f"Unable to find location with name {name}")
