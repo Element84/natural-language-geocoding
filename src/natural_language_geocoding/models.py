@@ -120,7 +120,7 @@ class Buffer(SpatialNodeType):
     node_type: Literal["Buffer"] = "Buffer"
     child_node: "AnySpatialNodeType"
     distance: float
-    distance_unit: Literal["kilometers", "meters", "miles"]
+    distance_unit: Literal["kilometers", "meters", "miles", "nautical miles"]
 
     @cached_property
     def distance_km(self) -> float:
@@ -131,7 +131,8 @@ class Buffer(SpatialNodeType):
                 return self.distance / 1000.0
             case "miles":
                 return self.distance * 1.60934
-        raise Exception(f"Unexpected distance unit {self.distance_unit}")
+            case "nautical miles":
+                return self.distance * 1.852
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
         if child_bounds := self.child_node.to_geometry(place_lookup):
