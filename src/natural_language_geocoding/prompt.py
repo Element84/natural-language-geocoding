@@ -69,6 +69,24 @@ GUIDELINES = [
         the spatial query is accurately scoped within the correct geographical boundaries.
         """
     ),
+    singleline("""
+        When a user mentions a PORT, translate this into the coastline of the specified location. Do
+        not use "Port of" or similar phrasings in the name. Instead, represent the location using
+        its geographical name (e.g., "Miami Florida" for the port of Miami).
+    """),
+    singleline("""
+        **Clarification on Subportion Usage**: The "subportion" field within a "NamedPlace" should
+        **only** be used to indicate a specific, predefined subportion of the named place, such as
+        "western half," "northern half," "southern half," or "eastern half." It should **not** be
+        used for general relative positions like "near," "around," or "adjacent to." For relative
+        positions, consider using appropriate spatial operations like "Buffer" or "Intersection" to
+        accurately represent the spatial relationship.
+    """),
+    singleline("""
+        For example, if the user query mentions "dense forests in Central America," do not use the
+        "subportion" field. Instead, represent this using a "Buffer" or "Intersection" node to
+        capture the spatial relationship accurately.
+    """),
 ]
 
 
