@@ -13,11 +13,15 @@ CREATE TABLE geo_places (
     type VARCHAR(50) NOT NULL, -- ocean, country, river, etc.
     geom GEOMETRY, -- If you want to store spatial data
     search_vector TSVECTOR, -- For full-text search
-    alternative_names TEXT[] -- Store common variations/spellings
+    alternative_names TEXT[], -- Store common variations/spellings
+    properties JSONB -- Store additional properties in JSON format
 );
 
 -- Add index for text search
 CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
+
+-- TODO considering whether to have this or not.
+-- CREATE UNIQUE INDEX idx_places_name_type ON geo_places (name, type);
 
 
 

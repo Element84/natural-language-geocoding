@@ -1,5 +1,6 @@
 import json
 from collections.abc import Sequence
+from typing import Any
 
 import psycopg2
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,6 +17,7 @@ class GeoPlace(BaseModel):
     type: str
     geom: BaseGeometry
     alternate_names: list[str] = Field(default_factory=list)
+    properties: dict[str, Any]
 
 
 class GeocodeDB:
@@ -54,12 +56,13 @@ class GeocodeDB:
             for place in places:
                 cur.execute(
                     """
-                    INSERT INTO geo_places (name, type, geom, alternative_names)
+                    INSERT INTO geo_places (name, type, geom, alternative_names, properties)
                     VALUES (
                         %s,
                         %s,
                         ST_GeomFromGeoJSON(%s),
-                        %s
+                        %s,
+                        %s::jsonb
                     )
                     """,
                     (
@@ -67,6 +70,7 @@ class GeocodeDB:
                         place.type,
                         json.dumps(place.geom.__geo_interface__),
                         place.alternate_names,
+                        json.dumps(place.properties),
                     ),
                 )
         self._conn.commit()
