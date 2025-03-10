@@ -24,6 +24,7 @@ CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
 -- CREATE UNIQUE INDEX idx_places_name_type ON geo_places (name, type);
 
 
+------------------------------
 
 CREATE OR REPLACE FUNCTION update_place_search_vector() RETURNS TRIGGER AS $$
 BEGIN
@@ -36,14 +37,18 @@ END
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tsvector_update_trigger
-BEFORE INSERT OR UPDATE ON geo_places
-FOR EACH ROW EXECUTE PROCEDURE update_place_search_vector();
+  BEFORE INSERT OR UPDATE ON geo_places
+  FOR EACH ROW EXECUTE PROCEDURE update_place_search_vector();
+
+------------------------------
+
 
 CREATE OR REPLACE FUNCTION find_place(search_term TEXT) RETURNS TABLE (
     id INTEGER,
     name VARCHAR(255),
     type VARCHAR(50),
     geom GEOMETRY,
+    properties JSONB,
     similarity REAL
 ) AS $$
 BEGIN
@@ -53,6 +58,7 @@ BEGIN
         gp.name,
         gp.type,
         gp.geom,
+        gp.properties,
         similarity(gp.name, search_term) AS similarity
     FROM
         geo_places gp
