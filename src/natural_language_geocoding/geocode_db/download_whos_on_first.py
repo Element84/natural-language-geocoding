@@ -6,6 +6,7 @@ import requests
 url = "https://data.geocode.earth/wof/dist/legacy/whosonfirst-data-country-latest.tar.bz2"
 
 temp_dir = Path("temp")
+temp_dir.mkdir(exist_ok=True)
 
 filename = url.split("/")[-1]
 dirname = filename.split(".")[0]

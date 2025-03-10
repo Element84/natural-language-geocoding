@@ -92,6 +92,7 @@ def chunk_items[T](seq: Iterator[T], chunk_size: int) -> Generator[list[T], None
         chunk.append(item)
         if len(chunk) >= chunk_size:
             yield chunk
+            chunk = []
     if len(chunk) > 0:
         yield chunk
 
@@ -104,10 +105,8 @@ if conn_str is None:
 db = GeocodeDB(conn_str)
 
 
-for feature in find_all_wof_features(importdir):
-    wof_feature_to_geoplace(feature)
-
 
 for features in chunk_items(find_all_wof_features(importdir), 10):
     places = [wof_feature_to_geoplace(f) for f in features]
     db.insert_geoplaces(places)
+    print(f"Inserted {len(features)} features", ','.join([p.name for p in places]))

@@ -40,7 +40,7 @@ CREATE OR REPLACE FUNCTION find_place(search_term TEXT) RETURNS TABLE (
     name VARCHAR(255),
     type VARCHAR(50),
     geom GEOMETRY,
-    similarity FLOAT
+    similarity REAL
 ) AS $$
 BEGIN
     RETURN QUERY
