@@ -47,6 +47,9 @@ dev = [
   "pre-commit>=3.8.0",
   "pre-commit-hooks>=4.6.0",
 ]
+geocode_db = [
+  "psycopg2-binary"
+]
 
 [tool.pyright]
 pythonVersion = "3.12"
@@ -97,7 +100,11 @@ ignore = [
   'TRY002',
   'TRY003',
   'EM101',
-  'EM102'
+  'EM102',
+  # TODOs
+  'TD002',
+  'TD003',
+  'TD004',
 ]
 
 [tool.ruff.lint.per-file-ignores]
