@@ -7,15 +7,38 @@ CREATE EXTENSION postgis;
 -- For unaccent functionality (handles accents in names)
 CREATE EXTENSION unaccent;
 
+CREATE TYPE PlaceType AS ENUM (
+    'continent',
+    'ocean',
+    'country',
+    'macrocounty',
+    'empire',
+    'county',
+    'region',
+    'macroregion',
+    'locality',
+    'borough',
+    'marinearea',
+    'dependency',
+    'disputed',
+    'localadmin',
+    'marketarea',
+    'neighbourhood',
+    'macrohood',
+    'microhood',
+    'postalregion',
+);
+
 CREATE TABLE geo_places (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL, -- ocean, country, river, etc.
+    type PlaceType NOT NULL, -- ocean, country, river, etc.
     geom GEOMETRY, -- If you want to store spatial data
     search_vector TSVECTOR, -- For full-text search
     alternative_names TEXT[], -- Store common variations/spellings
     properties JSONB -- Store additional properties in JSON format
 );
+
 
 -- Add index for text search
 CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
@@ -30,7 +53,7 @@ CREATE OR REPLACE FUNCTION update_place_search_vector() RETURNS TRIGGER AS $$
 BEGIN
     NEW.search_vector =
         setweight(to_tsvector('english', NEW.name), 'A') ||
-        setweight(to_tsvector('english', COALESCE(NEW.type, '')), 'B') ||
+        setweight(to_tsvector('english', NEW.type::text), 'B') ||
         setweight(to_tsvector('english', array_to_string(COALESCE(NEW.alternative_names, '{}'::text[]), ' ')), 'C');
     RETURN NEW;
 END
@@ -43,10 +66,11 @@ CREATE TRIGGER tsvector_update_trigger
 ------------------------------
 
 
+
 CREATE OR REPLACE FUNCTION find_place(search_term TEXT) RETURNS TABLE (
     id INTEGER,
     name VARCHAR(255),
-    type VARCHAR(50),
+    type PlaceType,
     geom GEOMETRY,
     properties JSONB,
     similarity REAL
@@ -68,7 +92,8 @@ BEGIN
         OR gp.search_vector @@ plainto_tsquery('english', search_term)
     ORDER BY
         similarity DESC,
-        ts_rank(gp.search_vector, plainto_tsquery('english', search_term)) DESC
+        ts_rank(gp.search_vector, plainto_tsquery('english', search_term)) DESC,
+        type
     LIMIT 10;
 END;
 $$ LANGUAGE plpgsql;
