@@ -59,6 +59,7 @@ CREATE TABLE geo_places (
 CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
 
 CREATE UNIQUE INDEX idx_places_source_source_id ON geo_places (source, source_id);
+CREATE INDEX idx_places_source_source_path ON geo_places (source, source_path);
 
 
 ------------------------------
