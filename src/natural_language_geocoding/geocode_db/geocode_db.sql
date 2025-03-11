@@ -29,22 +29,36 @@ CREATE TYPE PlaceType AS ENUM (
     'postalregion',
 );
 
+create type PlaceSourceType as ENUM (
+  'wof'
+);
+
+
 CREATE TABLE geo_places (
     id SERIAL PRIMARY KEY,
+
+    -- Core fields
     name VARCHAR(255) NOT NULL,
-    type PlaceType NOT NULL, -- ocean, country, river, etc.
-    geom GEOMETRY, -- If you want to store spatial data
-    search_vector TSVECTOR, -- For full-text search
-    alternative_names TEXT[], -- Store common variations/spellings
-    properties JSONB -- Store additional properties in JSON format
+    type PlaceType NOT NULL,
+    geom GEOMETRY,
+    -- Store common variations/spellings
+    alternative_names TEXT[],
+    properties JSONB,
+
+    -- Identifying where this came from
+    source PlaceSourceType NOT NULL,
+    source_path VARCHAR(255) NOT NULL,
+    source_id INTEGER NOT NULL,
+
+    -- For full-text search
+    search_vector TSVECTOR
 );
 
 
 -- Add index for text search
 CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
 
--- TODO considering whether to have this or not.
--- CREATE UNIQUE INDEX idx_places_name_type ON geo_places (name, type);
+CREATE UNIQUE INDEX idx_places_source_source_id ON geo_places (source, source_id);
 
 
 ------------------------------

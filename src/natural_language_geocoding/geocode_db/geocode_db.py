@@ -35,6 +35,10 @@ class GeoPlaceType(Enum):
     region = "region"
 
 
+class GeoPlaceSource(Enum):
+    wof = "wof"
+
+
 class GeoPlace(BaseModel):
     model_config = ConfigDict(
         strict=True,
@@ -48,6 +52,9 @@ class GeoPlace(BaseModel):
     name: str
     type: GeoPlaceType
     geom: BaseGeometry
+    source: GeoPlaceSource
+    source_path: str
+    source_id: int
     alternate_names: list[str] = Field(default_factory=list)
     properties: dict[str, Any]
 
@@ -82,19 +89,38 @@ class GeocodeDB:
             self.reconnect()
             self._test_connection(rethrow=True)
 
+    def delete_by_source_path(self, source: GeoPlaceSource, source_path: str) -> None:
+        with self._conn.cursor() as cur:
+            sql = "DELETE FROM geo_places WHERE source = %s and source_path = %s"
+            cur.execute(sql, [source.value, source_path])
+
+        self._conn.commit()
+
     def insert_geoplaces(self, places: Sequence[GeoPlace]) -> None:
         """Insert multiple GeoPlace objects into the database."""
         with self._conn.cursor() as cur:
             for place in places:
                 cur.execute(
                     """
-                    INSERT INTO geo_places (name, type, geom, alternative_names, properties)
+                    INSERT INTO geo_places (
+                        name,
+                        type,
+                        geom,
+                        alternative_names,
+                        properties,
+                        source,
+                        source_path,
+                        source_id
+                    )
                     VALUES (
                         %s,
                         %s,
                         ST_GeomFromGeoJSON(%s),
                         %s,
-                        %s::jsonb
+                        %s::jsonb,
+                        %s,
+                        %s,
+                        %s
                     )
                     """,
                     (
@@ -103,6 +129,9 @@ class GeocodeDB:
                         json.dumps(place.geom.__geo_interface__),
                         place.alternate_names,
                         json.dumps(place.properties),
+                        place.source.value,
+                        place.source_path,
+                        place.source_id,
                     ),
                 )
         self._conn.commit()

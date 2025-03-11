@@ -12,7 +12,12 @@ import requests
 from e84_geoai_common.geojson import Feature
 from pydantic import BaseModel, ConfigDict, Field
 
-from natural_language_geocoding.geocode_db.geocode_db import GeocodeDB, GeoPlace, GeoPlaceType
+from natural_language_geocoding.geocode_db.geocode_db import (
+    GeocodeDB,
+    GeoPlace,
+    GeoPlaceSource,
+    GeoPlaceType,
+)
 
 # ruff: noqa: D103,T201,BLE001,FIX002,ERA001,E501
 # TODO reenable this
@@ -109,25 +114,25 @@ class WhosOnFirstPlaceType(Enum):
 
 
 DOWNLOADABLE_PLACETYPES = [
-    # WhosOnFirstPlaceType.borough,  # (5.8 MB)
-    # WhosOnFirstPlaceType.continent,  # (5.0 MB)
-    # WhosOnFirstPlaceType.country,  # (202.4 MB)
-    # WhosOnFirstPlaceType.county,  # (563.1 MB)
-    # WhosOnFirstPlaceType.dependency,  # (1.2 MB)
-    # WhosOnFirstPlaceType.disputed,  # (1.5 MB)
-    # WhosOnFirstPlaceType.empire,  # (1.6 MB)
+    WhosOnFirstPlaceType.borough,  # (5.8 MB)
+    WhosOnFirstPlaceType.continent,  # (5.0 MB)
+    WhosOnFirstPlaceType.country,  # (202.4 MB)
+    WhosOnFirstPlaceType.county,  # (563.1 MB)
+    WhosOnFirstPlaceType.dependency,  # (1.2 MB)
+    WhosOnFirstPlaceType.disputed,  # (1.5 MB)
+    WhosOnFirstPlaceType.empire,  # (1.6 MB)
     WhosOnFirstPlaceType.localadmin,  # (948.3 MB)
     WhosOnFirstPlaceType.locality,  # (1.96 GB)
-    # WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
-    # WhosOnFirstPlaceType.macrohood,  # (8.7 MB)
-    # WhosOnFirstPlaceType.macroregion,  # (32.9 MB)
-    # WhosOnFirstPlaceType.marinearea,  # (4.6 MB)
-    # WhosOnFirstPlaceType.marketarea,  # (12.5 MB)
-    # WhosOnFirstPlaceType.microhood,  # (5.6 MB)
-    # WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB)
-    # WhosOnFirstPlaceType.ocean,  # (110 KB)
-    # WhosOnFirstPlaceType.postalregion,  # (49.5 MB)
-    # WhosOnFirstPlaceType.region,  # (259.7 MB)
+    WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
+    WhosOnFirstPlaceType.macrohood,  # (8.7 MB)
+    WhosOnFirstPlaceType.macroregion,  # (32.9 MB)
+    WhosOnFirstPlaceType.marinearea,  # (4.6 MB)
+    WhosOnFirstPlaceType.marketarea,  # (12.5 MB)
+    WhosOnFirstPlaceType.microhood,  # (5.6 MB)
+    WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB)
+    WhosOnFirstPlaceType.ocean,  # (110 KB)
+    WhosOnFirstPlaceType.postalregion,  # (49.5 MB)
+    WhosOnFirstPlaceType.region,  # (259.7 MB)
     # We won't download these
     # WhosOnFirstPlaceType.planet (3 KB)
     # WhosOnFirstPlaceType.campus  (72.2 MB)
@@ -159,13 +164,17 @@ class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
     def is_deprecated(self) -> bool:
         return self.properties.edtf_deprecated is not None
 
-    def to_geoplace(self) -> GeoPlace:
-        return GeoPlace(
-            name=self.properties.name,
-            type=self.properties.placetype.to_geoplace_type(),
-            geom=self.geometry,
-            properties=self.properties.model_dump(mode="json"),
-        )
+
+def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> GeoPlace:
+    return GeoPlace(
+        name=feature.properties.name,
+        type=feature.properties.placetype.to_geoplace_type(),
+        geom=feature.geometry,
+        properties=feature.properties.model_dump(mode="json"),
+        source=GeoPlaceSource.wof,
+        source_path=source_path,
+        source_id=feature.id,
+    )
 
 
 def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
@@ -243,13 +252,15 @@ def process_placetypes() -> None:
         placetype_to_count[placetype.value] = 0
         placetype_file = _download_placetype(placetype)
 
+        db.delete_by_source_path(GeoPlaceSource.wof, placetype_file.name)
+
         features_iter = find_all_wof_features(placetype_file)
         features_iter = counting_generator(features_iter)
         features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
 
         for features in chunk_items(features_iter, 10):
             try:
-                places = [f.to_geoplace() for f in features]
+                places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
                 db.insert_geoplaces(places)
             except:
                 print("failed places:")
