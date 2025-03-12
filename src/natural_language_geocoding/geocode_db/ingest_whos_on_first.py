@@ -10,7 +10,7 @@ from typing import TypeVar
 
 import requests
 from e84_geoai_common.geojson import Feature
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from natural_language_geocoding.geocode_db.geocode_db import (
     GeocodeDB,
@@ -114,13 +114,14 @@ class WhosOnFirstPlaceType(Enum):
 
 
 DOWNLOADABLE_PLACETYPES = [
-    WhosOnFirstPlaceType.borough,  # (5.8 MB)
-    WhosOnFirstPlaceType.continent,  # (5.0 MB)
-    WhosOnFirstPlaceType.country,  # (202.4 MB)
-    WhosOnFirstPlaceType.county,  # (563.1 MB)
-    WhosOnFirstPlaceType.dependency,  # (1.2 MB)
-    WhosOnFirstPlaceType.disputed,  # (1.5 MB)
-    WhosOnFirstPlaceType.empire,  # (1.6 MB)
+    # Commented out because it's done
+    # WhosOnFirstPlaceType.borough,  # (5.8 MB)
+    # WhosOnFirstPlaceType.continent,  # (5.0 MB)
+    # WhosOnFirstPlaceType.country,  # (202.4 MB)
+    # WhosOnFirstPlaceType.county,  # (563.1 MB)
+    # WhosOnFirstPlaceType.dependency,  # (1.2 MB)``
+    # WhosOnFirstPlaceType.disputed,  # (1.5 MB)
+    # WhosOnFirstPlaceType.empire,  # (1.6 MB)
     WhosOnFirstPlaceType.localadmin,  # (948.3 MB)
     WhosOnFirstPlaceType.locality,  # (1.96 GB)
     WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
@@ -148,7 +149,7 @@ class WhosOnFirstPlaceProperties(BaseModel):
         json_encoders={WhosOnFirstPlaceType: lambda x: x.value},
     )
 
-    name: str = Field(validation_alias="wof:name")
+    name: str | None = Field(validation_alias=AliasChoices("name", "wof:name"))
     placetype: WhosOnFirstPlaceType = Field(validation_alias="wof:placetype")
     edtf_deprecated: str | None = Field(
         validation_alias="edtf:deprecated",
@@ -166,8 +167,11 @@ class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
 
 
 def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> GeoPlace:
+    name = feature.properties.name
+    if name is None:
+        raise Exception(f"Can't convert feature [{feature.id}] to geoplace without a name.")
     return GeoPlace(
-        name=feature.properties.name,
+        name=name,
         type=feature.properties.placetype.to_geoplace_type(),
         geom=feature.geometry,
         properties=feature.properties.model_dump(mode="json"),
@@ -214,6 +218,7 @@ def find_all_wof_features(source_tar: Path) -> Generator[WhosOnFirstFeature, Non
 
 
 T = TypeVar("T")
+K = TypeVar("K")
 
 
 def counting_generator(items: Iterator[T], *, log_after_secs: int = 10) -> Generator[T, None, None]:
@@ -234,9 +239,25 @@ def counting_generator(items: Iterator[T], *, log_after_secs: int = 10) -> Gener
             last_logged = time()
 
 
-def filter_items(items: Iterator[T], filter_fn: Callable[[T], bool]) -> Generator[T, None, None]:
+def filter_items(
+    items: Iterator[T], filter_fn: Callable[[T], bool], *, log_not_matching: bool = False
+) -> Generator[T, None, None]:
     for item in items:
         if filter_fn(item):
+            yield item
+        elif log_not_matching:
+            print("Filtered out", item)
+
+
+def unique_by(items: Iterator[T], key_fn: Callable[[T], K]) -> Iterator[T]:
+    keys: set[K] = set()
+
+    for item in items:
+        key = key_fn(item)
+        if key in keys:
+            print("Skipping duplicate key", key)
+        else:
+            keys.add(key)
             yield item
 
 
@@ -244,7 +265,6 @@ def process_placetypes() -> None:
     conn_str = os.getenv("GEOCODE_DB_CONN_STR")
     if conn_str is None:
         raise Exception("GEOCODE_DB_CONN_STR must be set")
-    print("Connecting with", conn_str)
     db = GeocodeDB(conn_str)
     placetype_to_count: dict[str, int] = {}
 
@@ -257,6 +277,13 @@ def process_placetypes() -> None:
         features_iter = find_all_wof_features(placetype_file)
         features_iter = counting_generator(features_iter)
         features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
+        features_iter = filter_items(
+            features_iter,
+            filter_fn=lambda f: f.properties.name is not None,
+            log_not_matching=True,
+        )
+        # Who's on first places are sometimes duplicated with similar information.
+        features_iter = unique_by(features_iter, lambda p: p.id)
 
         for features in chunk_items(features_iter, 10):
             try:
@@ -287,13 +314,9 @@ process_placetypes()
 
 # placetype = DOWNLOADABLE_PLACETYPES[0]
 # placetype_file = _download_placetype(placetype)
+# placetype_file = Path("temp/whosonfirst-data-localadmin-latest.tar.bz2")
 
 
 # features_iter = find_all_wof_features(placetype_file)
 # features_iter = counting_generator(features_iter)
 # features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
-
-
-# for f in features_iter:
-#     sleep(1)
-#     print(f.properties.name)
