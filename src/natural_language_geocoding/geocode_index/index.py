@@ -29,19 +29,38 @@ _GEOPLACE_INDEX_MAPPINGS = {
         "name": {"type": "text"},
         "type": {"type": "keyword"},
         # We may not need to search it as a geometry
-        # "geom": {"type": "geo_shape"},
+        # "geom": {"type": "geo_shape"},  # noqa: ERA001
         "geom": {"type": "keyword", "doc_values": False, "index": False},
         "source_id": {"type": "long"},
         "source_type": {"type": "keyword"},
         "source_path": {"type": "keyword"},
         "alternate_names": {"type": "text"},
-        "continent_id": {"type": "long"},
-        "country_id": {"type": "long"},
-        "empire_id": {"type": "long"},
-        "locality_id": {"type": "long"},
-        "macroregion_id": {"type": "long"},
-        "region_id": {"type": "long"},
         "properties": {"type": "keyword", "doc_values": False, "index": False},
+        "hierarchies": {
+            "type": "object",
+            "dynamic": "strict",
+            "properties": {
+                "borough_id": {"type": "long"},
+                "continent_id": {"type": "long"},
+                "country_id": {"type": "long"},
+                "county_id": {"type": "long"},
+                "dependency_id": {"type": "long"},
+                "disputed_id": {"type": "long"},
+                "empire_id": {"type": "long"},
+                "localadmin_id": {"type": "long"},
+                "locality_id": {"type": "long"},
+                "macrocounty_id": {"type": "long"},
+                "macrohood_id": {"type": "long"},
+                "macroregion_id": {"type": "long"},
+                "marinearea_id": {"type": "long"},
+                "marketarea_id": {"type": "long"},
+                "microhood_id": {"type": "long"},
+                "neighbourhood_id": {"type": "long"},
+                "ocean_id": {"type": "long"},
+                "postalregion_id": {"type": "long"},
+                "region_id": {"type": "long"},
+            },
+        },
     },
 }
 
@@ -60,36 +79,12 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> dict[str, Any]:
         "alternate_names": geoplace.alternate_names,
         "properties": json.dumps(geoplace.properties),
     }
-    if hierarchy := geoplace.hierarchy:
-        doc["continent_id"] = hierarchy.continent_id
-        doc["country_id"] = hierarchy.country_id
-        doc["locality_id"] = hierarchy.locality_id
-        doc["macroregion_id"] = hierarchy.macroregion_id
-        doc["region_id"] = hierarchy.region_id
-        doc["empire_id"] = hierarchy.empire_id
+    if hierarchies := geoplace.hierarchies:
+        doc["hierarchies"] = [h.model_dump() for h in hierarchies]
     return doc
 
 
 def _doc_to_geo_place(doc: dict[str, Any]) -> GeoPlace:
-    continent_id = doc.get("continent_id")
-    country_id = doc.get("country_id")
-    locality_id = doc.get("locality_id")
-    macroregion_id = doc.get("macroregion_id")
-    region_id = doc.get("region_id")
-    empire_id = doc.get("empire_id")
-
-    if continent_id or country_id or locality_id or macroregion_id or region_id:
-        hierarchy = Hierarchy(
-            continent_id=continent_id,
-            country_id=country_id,
-            locality_id=locality_id,
-            macroregion_id=macroregion_id,
-            region_id=region_id,
-            empire_id=empire_id,
-        )
-    else:
-        hierarchy = None
-
     return GeoPlace(
         id=doc["id"],
         name=doc["name"],
@@ -101,7 +96,9 @@ def _doc_to_geo_place(doc: dict[str, Any]) -> GeoPlace:
         ),
         alternate_names=doc["alternate_names"],
         properties=json.loads(doc["properties"]),
-        hierarchy=hierarchy,
+        hierarchies=[
+            Hierarchy.model_validate(hierarchy) for hierarchy in doc.get("hierarchies", [])
+        ],
     )
 
 
@@ -165,5 +162,5 @@ class GeocodeIndex:
         resp = self.client.bulk(bulk_body)
 
         if resp["errors"]:
-            print(json.dumps(resp))
+            print(json.dumps(resp))  # noqa: T201
             raise Exception("There were errors in the bulk index")

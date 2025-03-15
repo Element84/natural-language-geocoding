@@ -6,4 +6,4 @@ set -a
 source .env
 set +a
 
-PYTHONPATH=src python -u src/natural_language_geocoding/geocode_db/ingest_whos_on_first.py
+PYTHONPATH=src python -u src/natural_language_geocoding/geocode_index/whos_on_first.py

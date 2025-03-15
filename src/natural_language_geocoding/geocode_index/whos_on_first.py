@@ -1,5 +1,4 @@
 import json
-import os
 import tarfile
 import threading
 from collections.abc import Callable, Generator, Iterator
@@ -93,7 +92,7 @@ class WhosOnFirstPlaceType(Enum):
     marinearea = "marinearea"
     marketarea = "marketarea"
 
-    # Things like "The Bay Area" – this one is hard so we shouldn't spend too much time worrying about the details yet but instead treat as something we want to do eventually.
+    # Things like "The Bay Area" - this one is hard so we shouldn't spend too much time worrying about the details yet but instead treat as something we want to do eventually.
     metroarea = "metroarea"
 
     microhood = "microhood"
@@ -144,17 +143,6 @@ DOWNLOADABLE_PLACETYPES = [
 ]
 
 
-class WofHierarchy(BaseModel):
-    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
-
-    continent_id: int | None = None
-    empire_id: int | None = None
-    country_id: int | None = None
-    locality_id: int | None = None
-    macroregion_id: int | None = None
-    region_id: int | None = None
-
-
 class WhosOnFirstPlaceProperties(BaseModel):
     model_config = ConfigDict(
         strict=True,
@@ -170,9 +158,20 @@ class WhosOnFirstPlaceProperties(BaseModel):
         default=None,
         description="Appears to indicate when place was deprecated",
     )
-    # TODO add in alternative spellings
-    # name:eng_x_...
-    hierarchies: list[WofHierarchy] = Field(validation_alias="wof:hierarchy", default_factory=list)
+
+    eng_x_colloquial: list[str] = Field(
+        validation_alias="name:eng_x_colloquial", default_factory=list
+    )
+    eng_x_historical: list[str] = Field(
+        validation_alias="name:eng_x_historical", default_factory=list
+    )
+    eng_x_preferred: list[str] = Field(
+        validation_alias="name:eng_x_preferred", default_factory=list
+    )
+    eng_x_unknown: list[str] = Field(validation_alias="name:eng_x_unknown", default_factory=list)
+    eng_x_variant: list[str] = Field(validation_alias="name:eng_x_variant", default_factory=list)
+
+    hierarchies: list[Hierarchy] = Field(validation_alias="wof:hierarchy", default_factory=list)
 
 
 class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
@@ -188,20 +187,6 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
     if name is None:
         raise Exception(f"Can't convert feature [{feature.id}] to geoplace without a name.")
 
-    if len(feature.properties.hierarchies) > 0:
-        if len(feature.properties.hierarchies) > 1:
-            raise Exception(f"Can't handle feature [{feature.id}] with multiple hierarchies")
-        wof_h = feature.properties.hierarchies[0]
-        hierarchy = Hierarchy(
-            continent_id=wof_h.continent_id,
-            country_id=wof_h.country_id,
-            locality_id=wof_h.locality_id,
-            macroregion_id=wof_h.macroregion_id,
-            region_id=wof_h.region_id,
-        )
-    else:
-        hierarchy = None
-
     return GeoPlace(
         id=f"wof_{feature.id}",
         name=name,
@@ -213,7 +198,14 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
             source_path=source_path,
         ),
         source_id=feature.id,
-        hierarchy=hierarchy,
+        hierarchies=feature.properties.hierarchies,
+        alternate_names=[
+            *feature.properties.eng_x_colloquial,
+            *feature.properties.eng_x_historical,
+            *feature.properties.eng_x_preferred,
+            *feature.properties.eng_x_unknown,
+            *feature.properties.eng_x_variant,
+        ],
     )
 
 
@@ -260,19 +252,25 @@ K = TypeVar("K")
 def counting_generator(items: Iterator[T], *, log_after_secs: int = 10) -> Generator[T, None, None]:
     start_time = time()
     last_logged = time()
-    for index, item in enumerate(items):
-        yield item
-        now = time()
+    count = 0
 
-        if now - last_logged >= log_after_secs:
-            elapsed = now - start_time
-            count = index + 1
-            rate_per_sec = count / elapsed
-            rate_per_min = rate_per_sec * 60
-            print(
-                f"Processed {count} items. Rate: {ceil(rate_per_min)} per min. Elapsed time: {ceil(elapsed / 60)} mins"
-            )
+    def _log() -> None:
+        now = time()
+        elapsed = now - start_time
+        rate_per_sec = count / elapsed
+        rate_per_min = rate_per_sec * 60
+        print(
+            f"Processed {count} items. Rate: {ceil(rate_per_min)} per min. Elapsed time: {ceil(elapsed / 60)} mins"
+        )
+
+    for item in items:
+        yield item
+        count += 1
+        if time() - last_logged >= log_after_secs:
+            _log()
             last_logged = time()
+
+    _log()
 
 
 def filter_items(
@@ -363,29 +361,26 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 
 def process_placetypes() -> None:
-    conn_str = os.getenv("GEOCODE_DB_CONN_STR")
-    if conn_str is None:
-        raise Exception("GEOCODE_DB_CONN_STR must be set")
-    index = GeocodeIndex()
+    # index = GeocodeIndex()
+    # index.create_index(recreate=True)
 
     for placetype in DOWNLOADABLE_PLACETYPES:
         placetype_file = _download_placetype(placetype)
-        process_placetype_file(index, placetype_file)
+        process_placetype_file_multithread(placetype_file)
 
 
-# if __name__ == "__main__":
-#     process_placetypes()
+if __name__ == "__main__":
+    process_placetypes()
 
-placetype_file = Path("temp/whosonfirst-data-country-latest.tar.bz2")
+# Code for manual testing
 
-index = GeocodeIndex()
-index.create_index(recreate=True)
-# process_placetype_file(index, placetype_file)
+# placetype_file = Path("temp/whosonfirst-data-country-latest.tar.bz2")
+
+# index = GeocodeIndex()
+# index.create_index(recreate=True)
+# # process_placetype_file(index, placetype_file)
+# process_placetype_file_multithread(placetype_file)
 
 # Initial 159 per minute (10 per bulk request, default refresh, default number of replicas)
 # 170 per minute (10 per bulk request, refresh 30s, 0 replicas)
 # 187 per minute (50 per bulk request, refresh 30s, 0 replicas)
-
-process_placetype_file_multithread(placetype_file)
-
-# 210 per minute (Multithreaded 5 threads, 50 per bulk request, refresh 30s, 0 replicas)

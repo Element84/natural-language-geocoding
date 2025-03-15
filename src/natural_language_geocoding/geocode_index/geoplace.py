@@ -11,17 +11,15 @@ class GeoPlaceType(Enum):
     Based on a subset of the Who's On First placetypes.
     """
 
+    borough = "borough"
     continent = "continent"
-    ocean = "ocean"
     country = "country"
-    empire = "empire"
-    locality = "locality"
+    county = "county"
     dependency = "dependency"
     disputed = "disputed"
-    region = "region"
+    empire = "empire"
     localadmin = "localadmin"
-    borough = "borough"
-    county = "county"
+    locality = "locality"
     macrocounty = "macrocounty"
     macrohood = "macrohood"
     macroregion = "macroregion"
@@ -29,7 +27,9 @@ class GeoPlaceType(Enum):
     marketarea = "marketarea"
     microhood = "microhood"
     neighbourhood = "neighbourhood"
+    ocean = "ocean"
     postalregion = "postalregion"
+    region = "region"
 
 
 class GeoPlaceSourceType(Enum):
@@ -52,12 +52,25 @@ class GeoPlaceSource(BaseModel):
 class Hierarchy(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
-    continent_id: int | None
+    borough_id: int | None = None
+    continent_id: int | None = None
+    country_id: int | None = None
+    county_id: int | None = None
+    dependency_id: int | None = None
+    disputed_id: int | None = None
     empire_id: int | None = None
-    country_id: int | None
-    locality_id: int | None
-    macroregion_id: int | None
-    region_id: int | None
+    localadmin_id: int | None = None
+    locality_id: int | None = None
+    macrocounty_id: int | None = None
+    macrohood_id: int | None = None
+    macroregion_id: int | None = None
+    marinearea_id: int | None = None
+    marketarea_id: int | None = None
+    microhood_id: int | None = None
+    neighbourhood_id: int | None = None
+    ocean_id: int | None = None
+    postalregion_id: int | None = None
+    region_id: int | None = None
 
 
 class GeoPlace(BaseModel):
@@ -79,5 +92,5 @@ class GeoPlace(BaseModel):
     source_id: int
     source: GeoPlaceSource
     alternate_names: list[str] = Field(default_factory=list)
-    hierarchy: Hierarchy | None
+    hierarchies: list[Hierarchy] = Field(default_factory=list)
     properties: dict[str, Any]
