@@ -29,7 +29,7 @@ Github = "https://github.com/Element84/natural-language-geocoding"
 natural-language-geocoding = "natural_language_geocoding.main:main"
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [project.optional-dependencies]
@@ -48,7 +48,8 @@ dev = [
   "pre-commit-hooks>=4.6.0",
 ]
 geocode_db = [
-  "psycopg2-binary"
+  "psycopg2-binary",
+  "opensearch-py"
 ]
 
 [tool.pyright]

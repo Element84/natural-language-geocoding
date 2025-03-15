@@ -4,25 +4,23 @@ altair==5.5.0
     # via streamlit
 annotated-types==0.7.0
     # via pydantic
-appnope==0.1.4
-    # via ipykernel
 asttokens==3.0.0
     # via stack-data
-attrs==25.1.0
+attrs==25.3.0
     # via
     #   jsonschema
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.37.9
+boto3==1.37.13
     # via e84-geoai-common
-boto3-stubs==1.37.9
+boto3-stubs==1.37.13
     # via e84-geoai-common
-botocore==1.37.9
+botocore==1.37.13
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.37.9
+botocore-stubs==1.37.13
     # via boto3-stubs
 branca==0.8.1
     # via
@@ -33,7 +31,9 @@ build==1.2.2.post1
 cachetools==5.5.2
     # via streamlit
 certifi==2025.1.31
-    # via requests
+    # via
+    #   opensearch-py
+    #   requests
 cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.4.1
@@ -50,9 +50,11 @@ distlib==0.3.9
     # via virtualenv
 e84-geoai-common==0.0.5
     # via natural-language-geocoding (pyproject.toml)
+events==0.5
+    # via opensearch-py
 executing==2.2.0
     # via stack-data
-filelock==3.17.0
+filelock==3.18.0
     # via virtualenv
 folium==0.19.5
     # via streamlit-folium
@@ -105,7 +107,7 @@ matplotlib-inline==0.1.7
     #   ipython
 mypy-boto3-bedrock-runtime==1.37.7
     # via boto3-stubs
-narwhals==1.29.1
+narwhals==1.30.0
     # via altair
 nest-asyncio==1.6.0
     # via ipykernel
@@ -121,6 +123,8 @@ numpy==2.2.3
     #   shapely
     #   streamlit
     #   types-shapely
+opensearch-py==2.8.0
+    # via natural-language-geocoding (pyproject.toml)
 packaging==24.2
     # via
     #   altair
@@ -180,12 +184,13 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   jupyter-client
+    #   opensearch-py
     #   pandas
 pytz==2025.1
     # via pandas
 pyyaml==6.0.2
     # via pre-commit
-pyzmq==26.2.1
+pyzmq==26.3.0
     # via
     #   ipykernel
     #   jupyter-client
@@ -197,6 +202,7 @@ requests==2.32.3
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   folium
+    #   opensearch-py
     #   streamlit
 rpds-py==0.23.1
     # via
@@ -206,7 +212,7 @@ ruamel-yaml==0.18.10
     # via pre-commit-hooks
 ruamel-yaml-clib==0.2.12
     # via ruamel-yaml
-ruff==0.9.10
+ruff==0.11.0
     # via natural-language-geocoding (pyproject.toml)
 s3transfer==0.11.4
     # via boto3
@@ -218,7 +224,7 @@ smmap==5.0.2
     # via gitdb
 stack-data==0.6.3
     # via ipython
-streamlit==1.43.1
+streamlit==1.43.2
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   streamlit-folium
@@ -241,7 +247,7 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-types-awscrt==0.23.10
+types-awscrt==0.24.2
     # via botocore-stubs
 types-s3transfer==0.11.4
     # via boto3-stubs
@@ -260,11 +266,14 @@ tzdata==2025.1
 urllib3==2.3.0
     # via
     #   botocore
+    #   opensearch-py
     #   requests
 virtualenv==20.29.3
     # via pre-commit
 watchdog==6.0.0
-    # via natural-language-geocoding (pyproject.toml)
+    # via
+    #   natural-language-geocoding (pyproject.toml)
+    #   streamlit
 wcwidth==0.2.13
     # via prompt-toolkit
 xyzservices==2025.1.0
