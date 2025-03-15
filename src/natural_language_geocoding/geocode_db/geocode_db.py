@@ -1,9 +1,11 @@
 import json
 from collections.abc import Sequence
 from enum import Enum
+from textwrap import dedent
 from typing import Any
 
 import psycopg2
+from e84_geoai_common.geometry import geometry_from_geojson
 from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry.base import BaseGeometry
 
@@ -14,15 +16,17 @@ class GeoPlaceType(Enum):
     Based on a subset of the Who's On First placetypes.
     """
 
-    borough = "borough"
     continent = "continent"
+    ocean = "ocean"
     country = "country"
-    county = "county"
+    empire = "empire"
+    locality = "locality"
     dependency = "dependency"
     disputed = "disputed"
-    empire = "empire"
+    region = "region"
     localadmin = "localadmin"
-    locality = "locality"
+    borough = "borough"
+    county = "county"
     macrocounty = "macrocounty"
     macrohood = "macrohood"
     macroregion = "macroregion"
@@ -30,9 +34,13 @@ class GeoPlaceType(Enum):
     marketarea = "marketarea"
     microhood = "microhood"
     neighbourhood = "neighbourhood"
-    ocean = "ocean"
     postalregion = "postalregion"
-    region = "region"
+
+    @classmethod
+    def to_order_clause(cls) -> str:
+        parts = [f"when '{val.value}' then {idx + 1}" for idx, val in enumerate(cls)]
+        parts_joined = "\n                ".join(parts)
+        return f"case type\n                {parts_joined}\n            end"
 
 
 class GeoPlaceSource(Enum):
@@ -57,6 +65,9 @@ class GeoPlace(BaseModel):
     source_id: int
     alternate_names: list[str] = Field(default_factory=list)
     properties: dict[str, Any]
+
+    # TODO temporarily added for testing
+    similarity: float | None = None
 
 
 class GeocodeDB:
@@ -137,45 +148,121 @@ class GeocodeDB:
         self._conn.commit()
 
 
-#     def search_by_name(
-#         self, name: str
-#     ) -> list[GeoPlace]:
-#         # Select fields
-#         select = "select id, uri, ST_AsGeoJSON(polygon) from queryable_earth_chips"
-#         sql_args: list[str | int] = []
+##########################################################
+# Code for testing
 
-#         # Where clause
-#         if geometry is not None:
-#             where = "where ST_Intersects(polygon, ST_GeomFromGeoJSON(%s))"
-#             sql_args.append(geometry_to_geojson(geometry))
-#         else:
-#             where = ""
+import os
 
-#         # Order by embedding match
-#         order_by = "ORDER BY embedding <-> %s"
-#         embedding_floats: list[float] = embeddings.tolist()[0]
-#         embedding_float_str = "[" + ",".join([str(e) for e in embedding_floats]) + "]"
-#         sql_args.append(embedding_float_str)
+from e84_geoai_common.debugging import display_geometry
 
-#         # Limit to number of matches requested
-#         limit = "limit %s"
-#         sql_args.append(k)
-
-#         sql = " ".join([select, where, order_by, limit])
-
-#         self._ensure_connected()
-#         with self._conn.cursor() as cursor:
-#             cursor.execute(sql, sql_args)
-#             rows: list[tuple[int, str, str]] = cursor.fetchall()
-
-#         return [
-#             ChipFeature.create(id=id, uri=uri, polygon_json=polygon_json)
-#             for id, uri, polygon_json in rows
-#         ]
+conn_str = os.getenv("GEOCODE_DB_CONN_STR")
+if conn_str is None:
+    raise Exception("GEOCODE_DB_CONN_STR must be set")
+db = GeocodeDB(conn_str)
 
 
-# class GeocodeDbPlaceLookup(PlaceLookup):
+def search_by_source_id(source_id: int) -> GeoPlace | None:
+    sql = dedent("""
+        select
+            id,
+            name,
+            type,
+            ST_AsGeoJSON(geom),
+            alternative_names,
+            properties,
+            source,
+            source_path,
+            source_id
+        from geo_places
+        where source_id = %s
+    """).strip()
+    with db._conn.cursor() as cur:
+        cur.execute(sql, [source_id])
+        row: tuple[int, str, str, str, list[str], dict[str, Any], str, str, int] | None = (
+            cur.fetchone()
+        )
+    if row:
+        return GeoPlace(
+            id=row[0],
+            name=row[1],
+            type=GeoPlaceType(row[2]),
+            geom=geometry_from_geojson(row[3]),
+            alternate_names=row[4],
+            properties=row[5],
+            source=GeoPlaceSource(row[6]),
+            source_path=row[7],
+            source_id=row[8],
+        )
+    return None
 
-#     db: GeocodeDB
 
-#     def search(self, name: str) -> BaseGeometry:
+def search_by_name(place_type: GeoPlaceType, place_name: str, *, limit: int = 10) -> list[GeoPlace]:
+    sql = dedent(f"""
+        select * from (
+            select
+                id,
+                name,
+                type,
+                ST_AsGeoJSON(geom),
+                alternative_names,
+                properties,
+                source,
+                source_path,
+                source_id,
+                similarity(name, %s) similarity
+            from geo_places
+            where type = %s and name %% %s
+        ) sub
+        where similarity > 0.3
+        order by
+            similarity desc,
+            {GeoPlaceType.to_order_clause()}
+        limit %s;
+    """).strip()  # noqa: S608
+    with db._conn.cursor() as cur:
+        cur.execute(sql, [place_name, place_type.value, place_name, limit])
+        rows: list[tuple[int, str, str, str, list[str], dict[str, Any], str, str, int, float]] = (
+            cur.fetchall()
+        )
+    return [
+        GeoPlace(
+            id=row[0],
+            name=row[1],
+            type=GeoPlaceType(row[2]),
+            geom=geometry_from_geojson(row[3]),
+            alternate_names=row[4],
+            properties=row[5],
+            source=GeoPlaceSource(row[6]),
+            source_path=row[7],
+            source_id=row[8],
+            similarity=row[9],
+        )
+        for row in rows
+    ]
+
+
+# TODO things that need to be done
+# - Search by a certain type
+# - Search where the place is inside of another area
+# - Rivers are missing
+# - Searching by "Atlantic" finds the ocean as two separate entries
+
+# Things that need to change
+# - Find rivers to ingest
+# - the llm should indicate a type like ocean, etc
+# - The llm should also be able to provide an identifier for what it's within
+#   - We need to pull out what it's within into a separate queryable list
+
+db.reconnect()
+
+results = search_by_name(GeoPlaceType.country, "United States")
+
+
+display_geometry([results[0].geom])
+display_geometry([results[1].geom])
+display_geometry([results[2].geom])
+display_geometry([results[3].geom])
+
+print(json.dumps(results[0].properties, indent=2))
+
+display_geometry([search_by_source_id(102191575).geom])

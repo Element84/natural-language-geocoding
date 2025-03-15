@@ -55,14 +55,33 @@ CREATE TABLE geo_places (
 );
 
 
--- Add index for text search
-CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
-
 CREATE UNIQUE INDEX idx_places_source_source_id ON geo_places (source, source_id);
 CREATE INDEX idx_places_source_source_path ON geo_places (source, source_path);
 
 
 ------------------------------
+
+CREATE INDEX CONCURRENTLY idx_places_name_trgm ON geo_places USING gin (name gin_trgm_ops);
+
+
+
+select name, type, similarity(name, 'mexico') similarity
+from geo_places
+where
+  name % 'mexico'
+  and similarity > 0.3
+order by
+	similarity desc,
+	type
+limit 50;
+
+
+
+
+
+----------------------------------------------------------------------------------------------------
+-- The original generated query and then modified a bunch. It's kind of overkill
+
 
 CREATE OR REPLACE FUNCTION update_place_search_vector() RETURNS TRIGGER AS $$
 BEGIN
@@ -78,11 +97,23 @@ CREATE TRIGGER tsvector_update_trigger
   BEFORE INSERT OR UPDATE ON geo_places
   FOR EACH ROW EXECUTE PROCEDURE update_place_search_vector();
 
-------------------------------
+
+-- Add index for text search
+CREATE INDEX idx_places_search ON geo_places USING GIN(search_vector);
+
+-- For trigram searches on name
+CREATE INDEX CONCURRENTLY idx_places_name_trgm ON geo_places USING gin (name gin_trgm_ops);
+
+-- For alternative names array
+CREATE INDEX CONCURRENTLY idx_places_alt_names_gin ON geo_places USING gin (alternative_names);
+CREATE INDEX CONCURRENTLY idx_places_alt_names_trgm ON geo_places USING gin (alternative_names gin_trgm_ops);
 
 
 
 CREATE OR REPLACE FUNCTION find_place(search_term TEXT) RETURNS TABLE (
+    source PlaceSourceType,
+    source_path VARCHAR(255),
+    source_id INTEGER,
     id INTEGER,
     name VARCHAR(255),
     type PlaceType,
@@ -92,23 +123,69 @@ CREATE OR REPLACE FUNCTION find_place(search_term TEXT) RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        gp.id,
-        gp.name,
-        gp.type,
-        gp.geom,
-        gp.properties,
-        similarity(gp.name, search_term) AS similarity
-    FROM
-        geo_places gp
-    WHERE
-        gp.name % search_term
-        OR search_term % ANY(gp.alternative_names)
-        OR gp.search_vector @@ plainto_tsquery('english', search_term)
+    WITH ranked_results AS (
+        -- Direct name matches
+        SELECT
+          gp.*,
+          1.0 as similarity,
+          1 as source_priority  -- Highest priority for exact matches
+        FROM geo_places gp
+        WHERE gp.name ILIKE search_term
+
+        UNION ALL
+
+        -- Trigram similarity on name
+        SELECT
+            gp.*,
+            similarity(gp.name, search_term) as similarity,
+            2 as source_priority  -- Second priority for name similarities
+        FROM geo_places gp
+        WHERE gp.name % search_term
+        AND gp.name NOT ILIKE search_term
+        AND similarity(gp.name, search_term) > 0.3
+
+        UNION ALL
+
+        -- Commenting out alternative names for now since it's slow and we don't have any data in it
+        -- -- Alternative names search
+        -- (SELECT
+        --     gp.*,
+        --     similarity(unnest(alternative_names), search_term) as similarity
+        -- FROM geo_places gp
+        -- WHERE EXISTS (
+        --     SELECT 1
+        --     FROM unnest(alternative_names) alt_name
+        --     WHERE similarity(alt_name, search_term) > 0.3
+        -- )
+        -- LIMIT 5)
+
+        -- UNION ALL
+
+        -- Full-text search
+        SELECT
+            gp.*,
+            ts_rank(search_vector, query) as similarity,
+            4 as source_priority  -- Lowest priority for full-text matches
+        FROM geo_places gp,
+        plainto_tsquery('english', search_term) query
+        WHERE search_vector @@ query
+        AND gp.name NOT ILIKE search_term
+    )
+   SELECT DISTINCT ON (id)  -- Add DISTINCT ON to eliminate duplicates
+        source,
+        source_path,
+        source_id,
+        id,
+        name,
+        type,
+        geom,
+        properties,
+        similarity
+    FROM all_matches
     ORDER BY
+        id,              -- Required for DISTINCT ON
+        source_priority, -- This ensures we keep the best match for each id
         similarity DESC,
-        ts_rank(gp.search_vector, plainto_tsquery('english', search_term)) DESC,
         type
     LIMIT 10;
-END;
-$$ LANGUAGE plpgsql;
+END;$$ LANGUAGE plpgsql;
