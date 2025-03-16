@@ -117,13 +117,14 @@ class WhosOnFirstPlaceType(Enum):
 
 
 DOWNLOADABLE_PLACETYPES = [
-    WhosOnFirstPlaceType.borough,  # (5.8 MB)
-    WhosOnFirstPlaceType.continent,  # (5.0 MB)
-    WhosOnFirstPlaceType.country,  # (202.4 MB)
-    WhosOnFirstPlaceType.county,  # (563.1 MB)
-    WhosOnFirstPlaceType.dependency,  # (1.2 MB)``
-    WhosOnFirstPlaceType.disputed,  # (1.5 MB)
-    WhosOnFirstPlaceType.empire,  # (1.6 MB)
+    # Commenting out already completed placetypes
+    # WhosOnFirstPlaceType.borough,  # (5.8 MB)
+    # WhosOnFirstPlaceType.continent,  # (5.0 MB)
+    # WhosOnFirstPlaceType.country,  # (202.4 MB)
+    # WhosOnFirstPlaceType.county,  # (563.1 MB)
+    # WhosOnFirstPlaceType.dependency,  # (1.2 MB)
+    # WhosOnFirstPlaceType.disputed,  # (1.5 MB)
+    # WhosOnFirstPlaceType.empire,  # (1.6 MB)
     WhosOnFirstPlaceType.localadmin,  # (948.3 MB)
     WhosOnFirstPlaceType.locality,  # (1.96 GB)
     WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
@@ -159,19 +160,36 @@ class WhosOnFirstPlaceProperties(BaseModel):
         description="Appears to indicate when place was deprecated",
     )
 
-    eng_x_colloquial: list[str] = Field(
+    eng_x_colloquial: list[str | None] = Field(
         validation_alias="name:eng_x_colloquial", default_factory=list
     )
-    eng_x_historical: list[str] = Field(
+    eng_x_historical: list[str | None] = Field(
         validation_alias="name:eng_x_historical", default_factory=list
     )
-    eng_x_preferred: list[str] = Field(
+    eng_x_preferred: list[str | None] = Field(
         validation_alias="name:eng_x_preferred", default_factory=list
     )
-    eng_x_unknown: list[str] = Field(validation_alias="name:eng_x_unknown", default_factory=list)
-    eng_x_variant: list[str] = Field(validation_alias="name:eng_x_variant", default_factory=list)
+    eng_x_unknown: list[str | None] = Field(
+        validation_alias="name:eng_x_unknown", default_factory=list
+    )
+    eng_x_variant: list[str | None] = Field(
+        validation_alias="name:eng_x_variant", default_factory=list
+    )
 
     hierarchies: list[Hierarchy] = Field(validation_alias="wof:hierarchy", default_factory=list)
+
+    def get_alternate_names(self) -> list[str]:
+        return [
+            name
+            for name in [
+                *self.eng_x_colloquial,
+                *self.eng_x_historical,
+                *self.eng_x_preferred,
+                *self.eng_x_unknown,
+                *self.eng_x_variant,
+            ]
+            if name is not None
+        ]
 
 
 class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
@@ -199,13 +217,7 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
         ),
         source_id=feature.id,
         hierarchies=feature.properties.hierarchies,
-        alternate_names=[
-            *feature.properties.eng_x_colloquial,
-            *feature.properties.eng_x_historical,
-            *feature.properties.eng_x_preferred,
-            *feature.properties.eng_x_unknown,
-            *feature.properties.eng_x_variant,
-        ],
+        alternate_names=feature.properties.get_alternate_names(),
     )
 
 

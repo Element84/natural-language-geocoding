@@ -164,3 +164,8 @@ class GeocodeIndex:
         if resp["errors"]:
             print(json.dumps(resp))  # noqa: T201
             raise Exception("There were errors in the bulk index")
+
+    # def search(self) -> list[GeoPlace]:
+    #     self.client.search(
+
+    #     )
