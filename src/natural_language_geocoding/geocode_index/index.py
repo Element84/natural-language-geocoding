@@ -179,8 +179,19 @@ class GeocodeIndex:
             print(json.dumps(resp))  # noqa: T201
             raise Exception("There were errors in the bulk index")
 
+    # TODO Updated timed function take a logger
+    @timed_function
     def search(self, request: SearchRequest) -> SearchResponse:
-        raise NotImplementedError
+        body: dict[str, Any] = {
+            "query": request.query,
+            "size": request.size,
+            "from": request.start_index,
+        }
+        if request.sort:
+            body["sort"] = [f"{field}:{direction}" for field, direction in request.sort]
+
+        resp = self.client.search(index=_GEOPLACE_INDEX_NAME, body=body)
+        return SearchResponse.from_search_resp(resp)
 
 
 QueryCondition = dict[str, Any]
@@ -196,8 +207,11 @@ class QueryDSL:
         return {"bool": {"should": conds}}
 
     @staticmethod
-    def match(field: str, text: str) -> QueryCondition:
-        return {"match": {field: text}}
+    def match(field: str, text: str, *, fuzzy: bool = False) -> QueryCondition:
+        inner_cond = {"query": text}
+        if fuzzy:
+            inner_cond["fuzziness"] = "AUTO"
+        return {"match": {field: inner_cond}}
 
     @staticmethod
     def term(field: str, value: str) -> QueryCondition:
@@ -210,20 +224,24 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
     def __init__(self) -> None:
         self._index = GeocodeIndex()
 
-    def _find_by_name_and_type(self, name: str, place_type: GeoPlaceType) -> str:
+    def _find_by_name_and_type(
+        self, name: str, place_type: GeoPlaceType, other_conditions: list[QueryCondition]
+    ) -> str:
         request = SearchRequest(
             size=5,
-            query={
-                "bool": {
-                    "must": [
-                        {"match": {"name": name}},
-                        {"term": {"type": {"value": place_type.value}}},
-                    ]
-                }
-            },
+            query=QueryDSL.and_conds(
+                QueryDSL.match("name", name),
+                QueryDSL.term("type", place_type.value),
+                *other_conditions,
+            ),
         )
         resp = self._index.search(request)
-        return resp.places[0].id
+        if len(resp.places) > 0:
+            return resp.places[0].id
+        raise Exception(
+            f"Unable find place with name [{name}] type [{place_type}] and other conditions "
+            f"[{json.dumps(other_conditions)}]"
+        )
 
     @timed_function
     def search(
@@ -244,19 +262,29 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         if place_type:
             conditions.append(QueryDSL.term("type", place_type.value))
 
+        within_conds: list[QueryCondition] = []
+
         if in_continent:
-            continent_id = self._find_by_name_and_type(in_continent, GeoPlaceType.continent)
-            conditions.append(QueryDSL.term("hierarchies.continent_id", continent_id))
+            continent_id = self._find_by_name_and_type(in_continent, GeoPlaceType.continent, [])
+            within_conds.append(QueryDSL.term("hierarchies.continent_id", continent_id))
         if in_country:
-            country_id = self._find_by_name_and_type(in_country, GeoPlaceType.country)
-            conditions.append(QueryDSL.term("hierarchies.country_id", country_id))
+            country_id = self._find_by_name_and_type(in_country, GeoPlaceType.country, within_conds)
+            within_conds.append(QueryDSL.term("hierarchies.country_id", country_id))
         if in_region:
-            region_id = self._find_by_name_and_type(in_region, GeoPlaceType.region)
-            conditions.append(QueryDSL.term("hierarchies.region_id", region_id))
+            region_id = self._find_by_name_and_type(in_region, GeoPlaceType.region, within_conds)
+            within_conds.append(QueryDSL.term("hierarchies.region_id", region_id))
 
         request = SearchRequest(
             size=5,
-            query=QueryDSL.and_conds(*conditions),
+            query=QueryDSL.and_conds(*conditions, *within_conds),
         )
         resp = self._index.search(request)
-        return resp.places[0].geom
+        if len(resp.places) > 0:
+            return resp.places[0].geom
+        raise Exception(
+            f"Unable find place with name [{name}] "
+            f"type [{place_type}] "
+            f"in_continent [{in_continent}] "
+            f"in_country [{in_country}] "
+            f"in_region [{in_region}] "
+        )

@@ -6,16 +6,19 @@ from shapely.geometry.base import BaseGeometry
 from streamlit_folium import st_folium  # type: ignore[reportUnknownVariableType]
 
 from natural_language_geocoding import extract_geometry_from_text
+from natural_language_geocoding.geocode_index.index import GeocodeIndexPlaceLookup
 
 if "llm" not in st.session_state:
     st.session_state["llm"] = BedrockClaudeLLM()
 
 llm = st.session_state["llm"]
 
+place_lookup = GeocodeIndexPlaceLookup()
+
 
 @st.cache_data
 def _text_to_geometry(text: str) -> BaseGeometry:
-    geometry = extract_geometry_from_text(llm, text)
+    geometry = extract_geometry_from_text(llm, text, place_lookup)
     return simplify_geometry(geometry)
 
 
