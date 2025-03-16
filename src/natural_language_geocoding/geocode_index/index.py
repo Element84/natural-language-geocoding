@@ -1,11 +1,12 @@
 import json
-from typing import Any
+from typing import Any, Literal
 
 import boto3
 from e84_geoai_common.geometry import geometry_from_geojson, geometry_to_geojson
-from e84_geoai_common.util import get_env_var
+from e84_geoai_common.util import get_env_var, timed_function
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 from pydantic import BaseModel, ConfigDict
+from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
@@ -14,6 +15,7 @@ from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlaceType,
     Hierarchy,
 )
+from natural_language_geocoding.place_lookup import PlaceLookup
 
 _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
     "index": {
@@ -40,25 +42,25 @@ _GEOPLACE_INDEX_MAPPINGS = {
             "type": "object",
             "dynamic": "strict",
             "properties": {
-                "borough_id": {"type": "long"},
-                "continent_id": {"type": "long"},
-                "country_id": {"type": "long"},
-                "county_id": {"type": "long"},
-                "dependency_id": {"type": "long"},
-                "disputed_id": {"type": "long"},
-                "empire_id": {"type": "long"},
-                "localadmin_id": {"type": "long"},
-                "locality_id": {"type": "long"},
-                "macrocounty_id": {"type": "long"},
-                "macrohood_id": {"type": "long"},
-                "macroregion_id": {"type": "long"},
-                "marinearea_id": {"type": "long"},
-                "marketarea_id": {"type": "long"},
-                "microhood_id": {"type": "long"},
-                "neighbourhood_id": {"type": "long"},
-                "ocean_id": {"type": "long"},
-                "postalregion_id": {"type": "long"},
-                "region_id": {"type": "long"},
+                "borough_id": {"type": "keyword"},
+                "continent_id": {"type": "keyword"},
+                "country_id": {"type": "keyword"},
+                "county_id": {"type": "keyword"},
+                "dependency_id": {"type": "keyword"},
+                "disputed_id": {"type": "keyword"},
+                "empire_id": {"type": "keyword"},
+                "localadmin_id": {"type": "keyword"},
+                "locality_id": {"type": "keyword"},
+                "macrocounty_id": {"type": "keyword"},
+                "macrohood_id": {"type": "keyword"},
+                "macroregion_id": {"type": "keyword"},
+                "marinearea_id": {"type": "keyword"},
+                "marketarea_id": {"type": "keyword"},
+                "microhood_id": {"type": "keyword"},
+                "neighbourhood_id": {"type": "keyword"},
+                "ocean_id": {"type": "keyword"},
+                "postalregion_id": {"type": "keyword"},
+                "region_id": {"type": "keyword"},
             },
         },
     },
@@ -121,6 +123,18 @@ class SearchResponse(BaseModel):
         )
 
 
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+        frozen=True,
+    )
+    size: int = 10
+    start_index: int = 0
+    sort: list[tuple[str, Literal["asc", "desc"]]] | None = None
+    query: dict[str, Any]
+
+
 class GeocodeIndex:
     def __init__(self) -> None:
         host = get_env_var("GEOCODE_INDEX_HOST")
@@ -165,7 +179,84 @@ class GeocodeIndex:
             print(json.dumps(resp))  # noqa: T201
             raise Exception("There were errors in the bulk index")
 
-    # def search(self) -> list[GeoPlace]:
-    #     self.client.search(
+    def search(self, request: SearchRequest) -> SearchResponse:
+        raise NotImplementedError
 
-    #     )
+
+QueryCondition = dict[str, Any]
+
+
+class QueryDSL:
+    @staticmethod
+    def and_conds(*conds: QueryCondition) -> QueryCondition:
+        return {"bool": {"must": conds}}
+
+    @staticmethod
+    def or_conds(*conds: QueryCondition) -> QueryCondition:
+        return {"bool": {"should": conds}}
+
+    @staticmethod
+    def match(field: str, text: str) -> QueryCondition:
+        return {"match": {field: text}}
+
+    @staticmethod
+    def term(field: str, value: str) -> QueryCondition:
+        return {"term": {field: {"value": value}}}
+
+
+class GeocodeIndexPlaceLookup(PlaceLookup):
+    _index: GeocodeIndex
+
+    def __init__(self) -> None:
+        self._index = GeocodeIndex()
+
+    def _find_by_name_and_type(self, name: str, place_type: GeoPlaceType) -> str:
+        request = SearchRequest(
+            size=5,
+            query={
+                "bool": {
+                    "must": [
+                        {"match": {"name": name}},
+                        {"term": {"type": {"value": place_type.value}}},
+                    ]
+                }
+            },
+        )
+        resp = self._index.search(request)
+        return resp.places[0].id
+
+    @timed_function
+    def search(
+        self,
+        *,
+        name: str,
+        place_type: GeoPlaceType | None = None,
+        in_continent: str | None = None,
+        in_country: str | None = None,
+        in_region: str | None = None,
+    ) -> BaseGeometry:
+        conditions: list[QueryCondition] = [
+            QueryDSL.or_conds(
+                QueryDSL.match("name", name),
+                QueryDSL.match("alternate_names", name),
+            )
+        ]
+        if place_type:
+            conditions.append(QueryDSL.term("type", place_type.value))
+
+        if in_continent:
+            continent_id = self._find_by_name_and_type(in_continent, GeoPlaceType.continent)
+            conditions.append(QueryDSL.term("hierarchies.continent_id", continent_id))
+        if in_country:
+            country_id = self._find_by_name_and_type(in_country, GeoPlaceType.country)
+            conditions.append(QueryDSL.term("hierarchies.country_id", country_id))
+        if in_region:
+            region_id = self._find_by_name_and_type(in_region, GeoPlaceType.region)
+            conditions.append(QueryDSL.term("hierarchies.region_id", region_id))
+
+        request = SearchRequest(
+            size=5,
+            query=QueryDSL.and_conds(*conditions),
+        )
+        resp = self._index.search(request)
+        return resp.places[0].geom

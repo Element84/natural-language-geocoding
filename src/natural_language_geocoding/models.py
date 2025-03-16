@@ -8,12 +8,15 @@ from e84_geoai_common.geometry import (
     between,
     simplify_geometry,
 )
-from e84_geoai_common.util import singleline
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
 from natural_language_geocoding.place_lookup import PlaceLookup
+
+# TODO Issue for the ability to specify a portion of an area like the northern part or southern part
+# This was originally here but the implementation ignored it.
 
 
 class SpatialNodeType(BaseModel, ABC):
@@ -24,27 +27,35 @@ class SpatialNodeType(BaseModel, ABC):
 
 
 class NamedPlace(SpatialNodeType):
-    """Represents the name of a place somewhere in the world."""
+    """Represents a place on the earth locatable in a geocoding database."""
 
     node_type: Literal["NamedPlace"] = "NamedPlace"
-    name: str
+    name: str = Field(description="The name to use to find the location")
+    type: GeoPlaceType | None = Field(
+        default=None, description="Limits the search to a specific type of location"
+    )
 
-    subportion: Literal["western half", "northern half", "southern half", "eastern half"] | None = (
-        Field(
-            default=None,
-            description=singleline(
-                """
-                An optional field to indicate that a subportion of the NamedPlace is referenced. For
-                example, "Western Brazil" would refer to the west half of Brazil. Note this is NOT
-                used in cases where a cardinal direction is part of the place name like
-                "South Africa"
-                """
-            ),
-        )
+    in_continent: str | None = Field(
+        default=None,
+        description="Indicates to search within a specific continent.",
+    )
+    in_country: str | None = Field(
+        default=None,
+        description="Indicates to search within a specific country.",
+    )
+    in_region: str | None = Field(
+        default=None,
+        description="Indicates to search within a specific region such as a specific US state.",
     )
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
-        geometry = place_lookup.search(self.name)
+        geometry = place_lookup.search(
+            name=self.name,
+            place_type=self.type,
+            in_continent=self.in_continent,
+            in_country=self.in_country,
+            in_region=self.in_region,
+        )
         if geometry is None:
             # FUTURE change this into a specific kind of exception that we can show the user.
             raise Exception(f"Unable to find area with name [{self.name}]")

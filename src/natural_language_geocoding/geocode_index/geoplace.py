@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry.base import BaseGeometry
 
 
@@ -52,61 +52,25 @@ class GeoPlaceSource(BaseModel):
 class Hierarchy(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
-    borough_id: int | None = Field(
-        validation_alias=AliasChoices("borough_id", "borough"), default=None
-    )
-    continent_id: int | None = Field(
-        validation_alias=AliasChoices("continent_id", "continent"), default=None
-    )
-    country_id: int | None = Field(
-        validation_alias=AliasChoices("country_id", "country"), default=None
-    )
-    county_id: int | None = Field(
-        validation_alias=AliasChoices("county_id", "county"), default=None
-    )
-    dependency_id: int | None = Field(
-        validation_alias=AliasChoices("dependency_id", "dependency"), default=None
-    )
-    disputed_id: int | None = Field(
-        validation_alias=AliasChoices("disputed_id", "disputed"), default=None
-    )
-    empire_id: int | None = Field(
-        validation_alias=AliasChoices("empire_id", "empire"), default=None
-    )
-    localadmin_id: int | None = Field(
-        validation_alias=AliasChoices("localadmin_id", "localadmin"), default=None
-    )
-    locality_id: int | None = Field(
-        validation_alias=AliasChoices("locality_id", "locality"), default=None
-    )
-    macrocounty_id: int | None = Field(
-        validation_alias=AliasChoices("macrocounty_id", "macrocounty"), default=None
-    )
-    macrohood_id: int | None = Field(
-        validation_alias=AliasChoices("macrohood_id", "macrohood"), default=None
-    )
-    macroregion_id: int | None = Field(
-        validation_alias=AliasChoices("macroregion_id", "macroregion"), default=None
-    )
-    marinearea_id: int | None = Field(
-        validation_alias=AliasChoices("marinearea_id", "marinearea"), default=None
-    )
-    marketarea_id: int | None = Field(
-        validation_alias=AliasChoices("marketarea_id", "marketarea"), default=None
-    )
-    microhood_id: int | None = Field(
-        validation_alias=AliasChoices("microhood_id", "microhood"), default=None
-    )
-    neighbourhood_id: int | None = Field(
-        validation_alias=AliasChoices("neighbourhood_id", "neighbourhood"), default=None
-    )
-    ocean_id: int | None = Field(validation_alias=AliasChoices("ocean_id", "ocean"), default=None)
-    postalregion_id: int | None = Field(
-        validation_alias=AliasChoices("postalregion_id", "postalregion"), default=None
-    )
-    region_id: int | None = Field(
-        validation_alias=AliasChoices("region_id", "region"), default=None
-    )
+    borough_id: str | None = None
+    continent_id: str | None = None
+    country_id: str | None = None
+    county_id: str | None = None
+    dependency_id: str | None = None
+    disputed_id: str | None = None
+    empire_id: str | None = None
+    localadmin_id: str | None = None
+    locality_id: str | None = None
+    macrocounty_id: str | None = None
+    macrohood_id: str | None = None
+    macroregion_id: str | None = None
+    marinearea_id: str | None = None
+    marketarea_id: str | None = None
+    microhood_id: str | None = None
+    neighbourhood_id: str | None = None
+    ocean_id: str | None = None
+    postalregion_id: str | None = None
+    region_id: str | None = None
 
 
 class GeoPlace(BaseModel):

@@ -7,11 +7,11 @@ from enum import Enum
 from math import ceil
 from pathlib import Path
 from time import time
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import requests
 from e84_geoai_common.geojson import Feature
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
@@ -118,13 +118,13 @@ class WhosOnFirstPlaceType(Enum):
 
 DOWNLOADABLE_PLACETYPES = [
     # Commenting out already completed placetypes
-    # WhosOnFirstPlaceType.borough,  # (5.8 MB)
-    # WhosOnFirstPlaceType.continent,  # (5.0 MB)
-    # WhosOnFirstPlaceType.country,  # (202.4 MB)
-    # WhosOnFirstPlaceType.county,  # (563.1 MB)
-    # WhosOnFirstPlaceType.dependency,  # (1.2 MB)
-    # WhosOnFirstPlaceType.disputed,  # (1.5 MB)
-    # WhosOnFirstPlaceType.empire,  # (1.6 MB)
+    WhosOnFirstPlaceType.borough,  # (5.8 MB)
+    WhosOnFirstPlaceType.continent,  # (5.0 MB)
+    WhosOnFirstPlaceType.country,  # (202.4 MB)
+    WhosOnFirstPlaceType.county,  # (563.1 MB)
+    WhosOnFirstPlaceType.dependency,  # (1.2 MB)
+    WhosOnFirstPlaceType.disputed,  # (1.5 MB)
+    WhosOnFirstPlaceType.empire,  # (1.6 MB)
     WhosOnFirstPlaceType.localadmin,  # (948.3 MB)
     WhosOnFirstPlaceType.locality,  # (1.96 GB)
     WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
@@ -142,6 +142,35 @@ DOWNLOADABLE_PLACETYPES = [
     # WhosOnFirstPlaceType.campus  (72.2 MB)
     # WhosOnFirstPlaceType.timezone  (14.0 MB)
 ]
+
+VALID_WOF_HIERARCHY_KEYS = {
+    key for place_type in GeoPlaceType for key in [place_type.value, f"{place_type.value}_id"]
+}
+
+
+def _wof_hierarchy_parser(value: Any) -> Any:  # noqa: ANN401
+    """Handles parsing hierarchies from Who's on first.
+
+    They're not consistent and sometimes refer to ids with 'field_id' and sometimes 'field' or both.
+    This gets the value that is not -1 that's available. It ignores all other keys in the hierarchy
+    """
+    if isinstance(value, dict):
+        value_dict: dict[Any, Any] = value
+
+        def _pick_value(place_type: GeoPlaceType) -> str | None:
+            key_plain = place_type.value
+            key_id = f"{key_plain}_id"
+            plain_value = value_dict.get(key_plain)
+            id_value = value_dict.get(key_id)
+            if id_value is not None and isinstance(id_value, int) and id_value >= 0:
+                return f"wof_{id_value}"
+            if plain_value is not None and isinstance(plain_value, int) and plain_value >= 0:
+                return f"wof_{plain_value}"
+            return None
+
+        return {f"{place_type.value}_id": _pick_value(place_type) for place_type in GeoPlaceType}
+
+    return value
 
 
 class WhosOnFirstPlaceProperties(BaseModel):
@@ -177,6 +206,14 @@ class WhosOnFirstPlaceProperties(BaseModel):
     )
 
     hierarchies: list[Hierarchy] = Field(validation_alias="wof:hierarchy", default_factory=list)
+
+    @field_validator("hierarchies", mode="before")
+    @classmethod
+    def _wof_hierarchies_parser(cls, value: Any) -> Any:  # noqa: ANN401
+        if isinstance(value, list):
+            values: list[Any] = value
+            return [_wof_hierarchy_parser(item) for item in values]
+        return value
 
     def get_alternate_names(self) -> list[str]:
         return [
@@ -373,8 +410,8 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 
 def process_placetypes() -> None:
-    # index = GeocodeIndex()
-    # index.create_index(recreate=True)
+    index = GeocodeIndex()
+    index.create_index(recreate=True)
 
     for placetype in DOWNLOADABLE_PLACETYPES:
         placetype_file = _download_placetype(placetype)
@@ -382,6 +419,10 @@ def process_placetypes() -> None:
 
 
 if __name__ == "__main__":
+    import logging
+
+    logging.getLogger("opensearch").setLevel(logging.WARNING)
+
     process_placetypes()
 
 # Code for manual testing
