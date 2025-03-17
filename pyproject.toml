@@ -47,8 +47,7 @@ dev = [
   "pre-commit>=3.8.0",
   "pre-commit-hooks>=4.6.0",
 ]
-geocode_db = [
-  "psycopg2-binary",
+geocode_index = [
   "opensearch-py"
 ]
 
