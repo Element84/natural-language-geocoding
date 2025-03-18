@@ -4,6 +4,8 @@ altair==5.5.0
     # via streamlit
 annotated-types==0.7.0
     # via pydantic
+appnope==0.1.4
+    # via ipykernel
 asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
@@ -12,11 +14,11 @@ attrs==25.3.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.37.13
+boto3==1.37.14
     # via e84-geoai-common
 boto3-stubs==1.37.13
     # via e84-geoai-common
-botocore==1.37.13
+botocore==1.37.14
     # via
     #   boto3
     #   s3transfer
@@ -107,7 +109,7 @@ matplotlib-inline==0.1.7
     #   ipython
 mypy-boto3-bedrock-runtime==1.37.7
     # via boto3-stubs
-narwhals==1.30.0
+narwhals==1.31.0
     # via altair
 nest-asyncio==1.6.0
     # via ipykernel
@@ -228,6 +230,8 @@ streamlit==1.43.2
     #   streamlit-folium
 streamlit-folium==0.24.0
     # via natural-language-geocoding (pyproject.toml)
+tabulate==0.9.0
+    # via natural-language-geocoding (pyproject.toml)
 tenacity==9.0.0
     # via streamlit
 toml==0.10.2
@@ -269,9 +273,7 @@ urllib3==2.3.0
 virtualenv==20.29.3
     # via pre-commit
 watchdog==6.0.0
-    # via
-    #   natural-language-geocoding (pyproject.toml)
-    #   streamlit
+    # via natural-language-geocoding (pyproject.toml)
 wcwidth==0.2.13
     # via prompt-toolkit
 xyzservices==2025.1.0

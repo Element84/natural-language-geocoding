@@ -3,6 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry.base import BaseGeometry
+from tabulate import tabulate
 
 
 class GeoPlaceType(Enum):
@@ -94,3 +95,20 @@ class GeoPlace(BaseModel):
     alternate_names: list[str] = Field(default_factory=list)
     hierarchies: list[Hierarchy] = Field(default_factory=list)
     properties: dict[str, Any]
+
+
+def print_places_as_table(places: list[GeoPlace]) -> None:
+    """Prints places as a table. Useful for debugging."""
+    table_data: list[dict[str, Any]] = []
+    for place in places:
+        place_dict = {
+            "id": place.id,
+            "name": place.name,
+            "type": place.type.value,
+            "alternate_names": place.alternate_names,
+            "hierarchies": [{k: v for k, v in h if v is not None} for h in place.hierarchies],
+        }
+        table_data.append(place_dict)
+
+    # Print the table
+    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201

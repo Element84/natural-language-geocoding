@@ -28,15 +28,15 @@ _GEOPLACE_INDEX_MAPPINGS = {
     "dynamic": "strict",
     "properties": {
         "id": {"type": "keyword"},
-        "name": {"type": "text"},
+        "name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
         "type": {"type": "keyword"},
         # We may not need to search it as a geometry
-        # "geom": {"type": "geo_shape"},  # noqa: ERA001
+        # "geom": {"type": "geo_shape"},
         "geom": {"type": "keyword", "doc_values": False, "index": False},
         "source_id": {"type": "long"},
         "source_type": {"type": "keyword"},
         "source_path": {"type": "keyword"},
-        "alternate_names": {"type": "text"},
+        "alternate_names": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
         "properties": {"type": "keyword", "doc_values": False, "index": False},
         "hierarchies": {
             "type": "object",
@@ -137,19 +137,31 @@ class SearchRequest(BaseModel):
 
 class GeocodeIndex:
     def __init__(self) -> None:
+        # TODO include these env vars as part of the documentation
         host = get_env_var("GEOCODE_INDEX_HOST")
+        port = int(get_env_var("GEOCODE_INDEX_PORT", "443"))
         region = get_env_var("GEOCODE_INDEX_REGION")
         credentials = boto3.Session().get_credentials()
         auth = AWSV4SignerAuth(credentials, region, "es")
 
-        self.client = OpenSearch(
-            hosts=[{"host": host, "port": 443}],
-            http_auth=auth,
-            use_ssl=True,
-            verify_certs=True,
-            connection_class=RequestsHttpConnection,
-            pool_maxsize=20,
-        )
+        if host == "localhost":
+            # Allow tunneling for easy local testing.
+            self.client = OpenSearch(
+                hosts=[{"host": host, "port": port}],
+                use_ssl=True,
+                verify_certs=False,
+                connection_class=RequestsHttpConnection,
+                pool_maxsize=20,
+            )
+        else:
+            self.client = OpenSearch(
+                hosts=[{"host": host, "port": port}],
+                http_auth=auth,
+                use_ssl=True,
+                verify_certs=host != "localhost",
+                connection_class=RequestsHttpConnection,
+                pool_maxsize=20,
+            )
 
     def create_index(self, *, recreate: bool = False) -> None:
         if recreate and self.client.indices.exists(index=_GEOPLACE_INDEX_NAME):
@@ -179,7 +191,7 @@ class GeocodeIndex:
             print(json.dumps(resp))  # noqa: T201
             raise Exception("There were errors in the bulk index")
 
-    # TODO Updated timed function take a logger
+    # TODO Update the timed function to take a logger
     @timed_function
     def search(self, request: SearchRequest) -> SearchResponse:
         body: dict[str, Any] = {
@@ -244,7 +256,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         )
 
     @timed_function
-    def search(
+    def search_for_places(  # noqa: PLR0913
         self,
         *,
         name: str,
@@ -252,7 +264,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         in_continent: str | None = None,
         in_country: str | None = None,
         in_region: str | None = None,
-    ) -> BaseGeometry:
+        limit: int = 5,
+    ) -> list[GeoPlace]:
         conditions: list[QueryCondition] = [
             QueryDSL.or_conds(
                 QueryDSL.match("name", name),
@@ -275,12 +288,31 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             within_conds.append(QueryDSL.term("hierarchies.region_id", region_id))
 
         request = SearchRequest(
-            size=5,
+            size=limit,
             query=QueryDSL.and_conds(*conditions, *within_conds),
         )
         resp = self._index.search(request)
-        if len(resp.places) > 0:
-            return resp.places[0].geom
+        return resp.places
+
+    @timed_function
+    def search(
+        self,
+        *,
+        name: str,
+        place_type: GeoPlaceType | None = None,
+        in_continent: str | None = None,
+        in_country: str | None = None,
+        in_region: str | None = None,
+    ) -> BaseGeometry:
+        places = self.search_for_places(
+            name=name,
+            place_type=place_type,
+            in_continent=in_continent,
+            in_country=in_country,
+            in_region=in_region,
+        )
+        if len(places) > 0:
+            return places[0].geom
         raise Exception(
             f"Unable find place with name [{name}] "
             f"type [{place_type}] "
@@ -288,3 +320,19 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             f"in_country [{in_country}] "
             f"in_region [{in_region}] "
         )
+
+
+## Code for testing
+# ruff: noqa: ERA001
+# lookup = GeocodeIndexPlaceLookup()
+
+# places = lookup.search_for_places(name="Florida", place_type=GeoPlaceType.region, limit=20)
+
+# print_places_as_table(places)
+
+
+# display_geometry([places[0].geom])
+# display_geometry([places[1].geom])
+# display_geometry([places[2].geom])
+# display_geometry([places[3].geom])
+# display_geometry([places[4].geom])

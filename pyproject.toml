@@ -46,6 +46,7 @@ dev = [
   "build>=1.2.2",
   "pre-commit>=3.8.0",
   "pre-commit-hooks>=4.6.0",
+  "tabulate"
 ]
 geocode_index = [
   "opensearch-py"
@@ -105,6 +106,8 @@ ignore = [
   'TD002',
   'TD003',
   'TD004',
+  # Cause TODOs not be an error preventing commit
+  'FIX002'
 ]
 
 [tool.ruff.lint.per-file-ignores]
