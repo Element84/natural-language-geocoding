@@ -1,5 +1,5 @@
 import json
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict, cast
 
 import boto3
 from e84_geoai_common.geometry import geometry_from_geojson, geometry_to_geojson
@@ -37,6 +37,8 @@ _GEOPLACE_INDEX_MAPPINGS = {
         "source_type": {"type": "keyword"},
         "source_path": {"type": "keyword"},
         "alternate_names": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+        "population": {"type": "long"},
+        "area_sq_km": {"type": "double"},
         "properties": {"type": "keyword", "doc_values": False, "index": False},
         "hierarchies": {
             "type": "object",
@@ -66,11 +68,49 @@ _GEOPLACE_INDEX_MAPPINGS = {
     },
 }
 
+
+class HierarchyDoc(TypedDict):
+    borough_id: str | None
+    continent_id: str | None
+    country_id: str | None
+    county_id: str | None
+    dependency_id: str | None
+    disputed_id: str | None
+    empire_id: str | None
+    localadmin_id: str | None
+    locality_id: str | None
+    macrocounty_id: str | None
+    macrohood_id: str | None
+    macroregion_id: str | None
+    marinearea_id: str | None
+    marketarea_id: str | None
+    microhood_id: str | None
+    neighbourhood_id: str | None
+    ocean_id: str | None
+    postalregion_id: str | None
+    region_id: str | None
+
+
+class GeoPlaceDoc(TypedDict):
+    id: str
+    name: str
+    type: str
+    geom: str
+    source_id: int
+    source_type: str
+    source_path: str
+    alternate_names: list[str]
+    population: int | None
+    area_sq_km: float | None
+    properties: str
+    hierarchies: list[HierarchyDoc]
+
+
 _GEOPLACE_INDEX_NAME = "geoplaces"
 
 
-def _geo_place_to_doc(geoplace: GeoPlace) -> dict[str, Any]:
-    doc: dict[str, Any] = {
+def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
+    return {
         "id": geoplace.id,
         "name": geoplace.name,
         "type": geoplace.type.value,
@@ -80,13 +120,13 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> dict[str, Any]:
         "source_path": geoplace.source.source_path,
         "alternate_names": geoplace.alternate_names,
         "properties": json.dumps(geoplace.properties),
+        "hierarchies": cast("list[HierarchyDoc]", [h.model_dump() for h in geoplace.hierarchies]),
+        "area_sq_km": geoplace.area_sq_km,
+        "population": geoplace.population,
     }
-    if hierarchies := geoplace.hierarchies:
-        doc["hierarchies"] = [h.model_dump() for h in hierarchies]
-    return doc
 
 
-def _doc_to_geo_place(doc: dict[str, Any]) -> GeoPlace:
+def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
     return GeoPlace(
         id=doc["id"],
         name=doc["name"],
@@ -101,6 +141,8 @@ def _doc_to_geo_place(doc: dict[str, Any]) -> GeoPlace:
         hierarchies=[
             Hierarchy.model_validate(hierarchy) for hierarchy in doc.get("hierarchies", [])
         ],
+        population=doc["population"],
+        area_sq_km=doc["area_sq_km"],
     )
 
 

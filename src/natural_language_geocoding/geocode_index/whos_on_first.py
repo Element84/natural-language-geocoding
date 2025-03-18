@@ -204,6 +204,8 @@ class WhosOnFirstPlaceProperties(BaseModel):
     eng_x_variant: list[str | None] = Field(
         validation_alias="name:eng_x_variant", default_factory=list
     )
+    area_square_m: float | None = Field(validation_alias="geom:area_square_m", default=None)
+    population: int | None = Field(validation_alias="wof:population", default=None)
 
     hierarchies: list[Hierarchy] = Field(validation_alias="wof:hierarchy", default_factory=list)
 
@@ -238,23 +240,26 @@ class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
 
 
 def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> GeoPlace:
-    name = feature.properties.name
+    props = feature.properties
+    name = props.name
     if name is None:
         raise Exception(f"Can't convert feature [{feature.id}] to geoplace without a name.")
 
     return GeoPlace(
         id=f"wof_{feature.id}",
         name=name,
-        type=feature.properties.placetype.to_geoplace_type(),
+        type=props.placetype.to_geoplace_type(),
         geom=feature.geometry,
-        properties=feature.properties.model_dump(mode="json"),
+        properties=props.model_dump(mode="json"),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType.wof,
             source_path=source_path,
         ),
         source_id=feature.id,
-        hierarchies=feature.properties.hierarchies,
-        alternate_names=feature.properties.get_alternate_names(),
+        hierarchies=props.hierarchies,
+        alternate_names=props.get_alternate_names(),
+        area_sq_km=props.area_square_m / 1000.0 if props.area_square_m else None,
+        population=props.population,
     )
 
 

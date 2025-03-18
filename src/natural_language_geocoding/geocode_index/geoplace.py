@@ -94,6 +94,8 @@ class GeoPlace(BaseModel):
     source: GeoPlaceSource
     alternate_names: list[str] = Field(default_factory=list)
     hierarchies: list[Hierarchy] = Field(default_factory=list)
+    area_sq_km: float | None
+    population: int | None
     properties: dict[str, Any]
 
 
