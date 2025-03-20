@@ -1,14 +1,18 @@
 import json
+import logging
+import subprocess
+from collections.abc import Generator
 from typing import Any, Literal, TypedDict, cast
 
 import boto3
 from e84_geoai_common.geometry import geometry_from_geojson, geometry_to_geojson
-from e84_geoai_common.util import get_env_var, timed_function
+from e84_geoai_common.util import get_env_var, singleline, timed_function
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.geocode_index.geoplace import (
+    PLACE_TYPE_SORT_ORDER,
     GeoPlace,
     GeoPlaceSource,
     GeoPlaceSourceType,
@@ -147,22 +151,37 @@ def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
 
 
 class SearchResponse(BaseModel):
-    model_config = ConfigDict(
-        strict=True,
-        extra="forbid",
-        frozen=True,
-    )
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     took_ms: int
     hits: int
     places: list[GeoPlace]
+    body: dict[str, Any]
+    explanations: list[dict[str, Any]] | None
 
     @staticmethod
     def from_search_resp(body: dict[str, Any]) -> "SearchResponse":
+        explanations: list[dict[str, Any]] | None = None
+        hits = body["hits"]["hits"]
+        if len(hits) > 0 and "_explanation" in hits[0]:
+            explanations = [h["_explanation"] for h in hits]
+
         return SearchResponse(
+            body=body,
             took_ms=body["took"],
             hits=body["hits"]["total"]["value"],
-            places=[_doc_to_geo_place(hit["_source"]) for hit in body["hits"]["hits"]],
+            places=[_doc_to_geo_place(hit["_source"]) for hit in hits],
+            explanations=explanations,
         )
+
+
+class SortField(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    field: str
+    order: Literal["asc", "desc"] = "asc"
+
+    def to_opensearch(self) -> dict[str, Any]:
+        return {self.field: {"order": self.order}}
 
 
 class SearchRequest(BaseModel):
@@ -171,44 +190,87 @@ class SearchRequest(BaseModel):
         extra="forbid",
         frozen=True,
     )
+    search_type: Literal["query_then_fetch", "dfs_query_then_fetch"] = Field(
+        default="dfs_query_then_fetch",
+        description=singleline("""
+            Whether OpenSearch should use global term and document frequencies when calculating
+            relevance scores. dfs_query_then_fetch provides consistent scores calculated using the
+            whole index but may be slightly slower.
+        """),
+    )
+
     size: int = 10
     start_index: int = 0
-    sort: list[tuple[str, Literal["asc", "desc"]]] | None = None
+    sort: list[str | SortField | dict[str, Any]] | None = None
     query: dict[str, Any]
+    explain: bool = False
+
+    def to_opensearch_params(self) -> dict[str, Any]:
+        return {
+            "search_type": self.search_type,
+            "explain": str(self.explain).lower(),
+        }
+
+    def to_opensearch_body(self) -> dict[str, Any]:
+        def _to_sort_arg(sort_part: str | SortField | dict[str, Any]) -> str | dict[str, Any]:
+            if isinstance(sort_part, str):
+                return sort_part
+            if isinstance(sort_part, dict):
+                return sort_part
+            return sort_part.to_opensearch()
+
+        body: dict[str, Any] = {
+            "query": self.query,
+            "size": self.size,
+            "from": self.start_index,
+        }
+        if self.sort:
+            body["sort"] = [_to_sort_arg(sort_part) for sort_part in self.sort]
+        return body
+
+
+def _create_opensearch_client() -> OpenSearch:
+    # TODO include these env vars as part of the documentation
+    host = get_env_var("GEOCODE_INDEX_HOST")
+    port = int(get_env_var("GEOCODE_INDEX_PORT", "443"))
+    region = get_env_var("GEOCODE_INDEX_REGION")
+    credentials = boto3.Session().get_credentials()
+    auth = AWSV4SignerAuth(credentials, region, "es")
+
+    if host == "localhost":
+        # Allow tunneling for easy local testing.
+        return OpenSearch(
+            hosts=[{"host": host, "port": port}],
+            use_ssl=True,
+            verify_certs=False,
+            connection_class=RequestsHttpConnection,
+            pool_maxsize=20,
+        )
+    return OpenSearch(
+        hosts=[{"host": host, "port": port}],
+        http_auth=auth,
+        use_ssl=True,
+        verify_certs=host != "localhost",
+        connection_class=RequestsHttpConnection,
+        pool_maxsize=20,
+    )
 
 
 class GeocodeIndex:
-    def __init__(self) -> None:
-        # TODO include these env vars as part of the documentation
-        host = get_env_var("GEOCODE_INDEX_HOST")
-        port = int(get_env_var("GEOCODE_INDEX_PORT", "443"))
-        region = get_env_var("GEOCODE_INDEX_REGION")
-        credentials = boto3.Session().get_credentials()
-        auth = AWSV4SignerAuth(credentials, region, "es")
+    logger = logging.getLogger(f"{__name__}.{__qualname__}")
+    client: OpenSearch
 
-        if host == "localhost":
-            # Allow tunneling for easy local testing.
-            self.client = OpenSearch(
-                hosts=[{"host": host, "port": port}],
-                use_ssl=True,
-                verify_certs=False,
-                connection_class=RequestsHttpConnection,
-                pool_maxsize=20,
-            )
-        else:
-            self.client = OpenSearch(
-                hosts=[{"host": host, "port": port}],
-                http_auth=auth,
-                use_ssl=True,
-                verify_certs=host != "localhost",
-                connection_class=RequestsHttpConnection,
-                pool_maxsize=20,
-            )
+    def __init__(self) -> None:
+        self.client = _create_opensearch_client()
 
     def create_index(self, *, recreate: bool = False) -> None:
         if recreate and self.client.indices.exists(index=_GEOPLACE_INDEX_NAME):
+            self.logger.warning(
+                "Deleting the existing index %s before creating it", _GEOPLACE_INDEX_NAME
+            )
             self.client.indices.delete(index=_GEOPLACE_INDEX_NAME)
 
+        self.logger.info("Creating index %s", _GEOPLACE_INDEX_NAME)
         self.client.indices.create(
             _GEOPLACE_INDEX_NAME,
             {
@@ -233,18 +295,15 @@ class GeocodeIndex:
             print(json.dumps(resp))  # noqa: T201
             raise Exception("There were errors in the bulk index")
 
-    # TODO Update the timed function to take a logger
-    @timed_function
+    @timed_function(logger)
     def search(self, request: SearchRequest) -> SearchResponse:
-        body: dict[str, Any] = {
-            "query": request.query,
-            "size": request.size,
-            "from": request.start_index,
-        }
-        if request.sort:
-            body["sort"] = [f"{field}:{direction}" for field, direction in request.sort]
+        params = request.to_opensearch_params()
+        body = request.to_opensearch_body()
 
-        resp = self.client.search(index=_GEOPLACE_INDEX_NAME, body=body)
+        self.logger.info(
+            "Searching for geoplaces with params %s and body %s", params, json.dumps(body)
+        )
+        resp = self.client.search(index=_GEOPLACE_INDEX_NAME, params=params, body=body)
         return SearchResponse.from_search_resp(resp)
 
 
@@ -261,44 +320,158 @@ class QueryDSL:
         return {"bool": {"should": conds}}
 
     @staticmethod
-    def match(field: str, text: str, *, fuzzy: bool = False) -> QueryCondition:
-        inner_cond = {"query": text}
+    def dis_max(*conds: QueryCondition) -> QueryCondition:
+        """Combines conjunctions into a dis_max query.
+
+        See https://opensearch.org/docs/latest/query-dsl/compound/disjunction-max/
+        """
+        return {"dis_max": {"queries": conds}}
+
+    @staticmethod
+    def match(
+        field: str, text: str, *, fuzzy: bool = False, boost: float | None = None
+    ) -> QueryCondition:
+        inner_cond: dict[str, str | int | float] = {"query": text}
         if fuzzy:
             inner_cond["fuzziness"] = "AUTO"
+        if boost is not None:
+            inner_cond["boost"] = boost
         return {"match": {field: inner_cond}}
 
     @staticmethod
-    def term(field: str, value: str) -> QueryCondition:
-        return {"term": {field: {"value": value}}}
+    def term(field: str, value: str, *, boost: float | None = None) -> QueryCondition:
+        inner_cond: dict[str, str | float] = {"value": value}
+        if boost is not None:
+            inner_cond["boost"] = boost
+
+        return {"term": {field: inner_cond}}
+
+    @staticmethod
+    def terms(field: str, values: list[str], *, boost: float | None = None) -> QueryCondition:
+        if len(values) == 0:
+            raise ValueError("Must have one or more values")
+        inner_cond: dict[str, float | list[str]] = {field: values}
+
+        if boost is not None:
+            inner_cond["boost"] = boost
+
+        return {"terms": inner_cond}
+
+
+class Hit(TypedDict):
+    _id: str
+    _source: dict[str, Any]
+
+
+def _scroll_fetch_all(
+    client: OpenSearch,
+    *,
+    query: QueryCondition,
+    source_fields: list[str],
+) -> Generator[Hit, None, None]:
+    body = {"query": query, "_source": source_fields, "size": 1000}
+
+    # Initialize the scroll
+    scroll_resp: dict[str, Any] = client.search(
+        index=_GEOPLACE_INDEX_NAME, body=body, params={"scroll": "2m"}
+    )
+
+    hits = scroll_resp["hits"]["hits"]
+    hits_count = len(hits)
+    scroll_id = scroll_resp["_scroll_id"]
+
+    # Continue scrolling until no more hits are returned
+    while hits_count > 0:
+        scroll_resp = client.scroll(scroll_id=scroll_id, params={"scroll": "2m"})
+        hits = scroll_resp["hits"]["hits"]
+        hits_count = len(hits)
+        scroll_id = scroll_resp["_scroll_id"]
+        yield from hits
+
+    # Clear the scroll to free resources
+    client.clear_scroll(scroll_id=scroll_id)
+
+
+class HierarchicalPlaceCache:
+    _id_to_name_place: dict[str, tuple[str, GeoPlaceType]]
+    _name_place_to_id: dict[tuple[str, GeoPlaceType], str]
+    _supported_place_types: set[GeoPlaceType]
+
+    def __init__(self, supported_place_types: set[GeoPlaceType] | None = None) -> None:
+        self._id_to_name_place = {}
+        self._name_place_to_id = {}
+        # Counts of placetypes during initial implementation
+        # continent - 8
+        # empire - 11
+        # country - 219
+        # region - 4865
+        self._supported_place_types = supported_place_types or {
+            GeoPlaceType.continent,
+            GeoPlaceType.empire,
+            GeoPlaceType.country,
+            GeoPlaceType.region,
+        }
+
+    @timed_function
+    def populate(self) -> None:
+        client = _create_opensearch_client()
+
+        self._id_to_name_place = {}
+        self._name_place_to_id = {}
+
+        for hit in _scroll_fetch_all(
+            client,
+            query=QueryDSL.terms("type", [p.value for p in self._supported_place_types]),
+            source_fields=["name", "type"],
+        ):
+            feature_id = hit["_id"]
+            place_type = GeoPlaceType(hit["_source"]["type"])
+            name = hit["_source"]["name"]
+            self._id_to_name_place[feature_id] = (name, place_type)
+            self._name_place_to_id[(name, place_type)] = feature_id
+
+    def find_id_by_name_and_type(self, name: str, place_type: GeoPlaceType) -> str | None:
+        return self._name_place_to_id.get((name, place_type))
+
+    def find_name_and_type_by_id(self, feature_id: str) -> tuple[str, GeoPlaceType] | None:
+        return self._id_to_name_place.get(feature_id)
+
+
+type_order_values = [f"    '{pt.value}': {index}" for index, pt in enumerate(PLACE_TYPE_SORT_ORDER)]
+type_order_values_str = "\n,".join(type_order_values)
+
+_TYPE_SORT_COND_SCRIPT = f"""
+def typeOrder = [
+    {type_order_values_str}
+];
+return typeOrder.containsKey(doc['type'].value) ? typeOrder[doc['type'].value] : 999;
+""".strip()
+
+_TYPE_SORT_COND = {
+    "_script": {
+        "type": "number",
+        "script": {
+            "source": _TYPE_SORT_COND_SCRIPT,
+            "lang": "painless",
+        },
+        "order": "asc",
+    }
+}
 
 
 class GeocodeIndexPlaceLookup(PlaceLookup):
+    logger = logging.getLogger(f"{__name__}.{__qualname__}")
+
     _index: GeocodeIndex
+    _place_cache: HierarchicalPlaceCache
 
     def __init__(self) -> None:
         self._index = GeocodeIndex()
+        self._place_cache = HierarchicalPlaceCache()
+        self._place_cache.populate()
 
-    def _find_by_name_and_type(
-        self, name: str, place_type: GeoPlaceType, other_conditions: list[QueryCondition]
-    ) -> str:
-        request = SearchRequest(
-            size=5,
-            query=QueryDSL.and_conds(
-                QueryDSL.match("name", name),
-                QueryDSL.term("type", place_type.value),
-                *other_conditions,
-            ),
-        )
-        resp = self._index.search(request)
-        if len(resp.places) > 0:
-            return resp.places[0].id
-        raise Exception(
-            f"Unable find place with name [{name}] type [{place_type}] and other conditions "
-            f"[{json.dumps(other_conditions)}]"
-        )
-
-    @timed_function
-    def search_for_places(  # noqa: PLR0913
+    @timed_function(logger)
+    def search_for_places_raw(  # noqa: PLR0913
         self,
         *,
         name: str,
@@ -307,36 +480,53 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         in_country: str | None = None,
         in_region: str | None = None,
         limit: int = 5,
-    ) -> list[GeoPlace]:
-        conditions: list[QueryCondition] = [
-            QueryDSL.or_conds(
-                QueryDSL.match("name", name),
-                QueryDSL.match("alternate_names", name),
-            )
-        ]
+        explain: bool = False,
+    ) -> SearchResponse:
+        # Dis_max is used so that the score will come from only the highest matching condition.
+        name_match = QueryDSL.dis_max(
+            QueryDSL.term("name.keyword", name, boost=10.0),
+            QueryDSL.term("alternate_names.keyword", name, boost=5.0),
+            QueryDSL.match("name", name, fuzzy=True, boost=2.0),
+            QueryDSL.match("alternate_names", name, fuzzy=True, boost=1.0),
+        )
+        conditions: list[QueryCondition] = [name_match]
         if place_type:
             conditions.append(QueryDSL.term("type", place_type.value))
 
         within_conds: list[QueryCondition] = []
 
         if in_continent:
-            continent_id = self._find_by_name_and_type(in_continent, GeoPlaceType.continent, [])
+            continent_id = self._place_cache.find_id_by_name_and_type(
+                in_continent, GeoPlaceType.continent
+            )
+            if continent_id is None:
+                raise ValueError(f"Unable to find continent with name [{in_continent}]")
             within_conds.append(QueryDSL.term("hierarchies.continent_id", continent_id))
         if in_country:
-            country_id = self._find_by_name_and_type(in_country, GeoPlaceType.country, within_conds)
+            country_id = self._place_cache.find_id_by_name_and_type(
+                in_country, GeoPlaceType.country
+            )
+            if country_id is None:
+                raise ValueError(f"Unable to find country with name [{in_country}]")
             within_conds.append(QueryDSL.term("hierarchies.country_id", country_id))
         if in_region:
-            region_id = self._find_by_name_and_type(in_region, GeoPlaceType.region, within_conds)
+            region_id = self._place_cache.find_id_by_name_and_type(in_region, GeoPlaceType.region)
+            if region_id is None:
+                raise ValueError(f"Unable to find region with name [{in_region}]")
             within_conds.append(QueryDSL.term("hierarchies.region_id", region_id))
 
         request = SearchRequest(
             size=limit,
             query=QueryDSL.and_conds(*conditions, *within_conds),
+            sort=[
+                SortField(field="_score", order="desc"),
+                _TYPE_SORT_COND,
+                SortField(field="population", order="desc"),
+            ],
+            explain=explain,
         )
-        resp = self._index.search(request)
-        return resp.places
+        return self._index.search(request)
 
-    @timed_function
     def search(
         self,
         *,
@@ -346,13 +536,14 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         in_country: str | None = None,
         in_region: str | None = None,
     ) -> BaseGeometry:
-        places = self.search_for_places(
+        search_resp = self.search_for_places_raw(
             name=name,
             place_type=place_type,
             in_continent=in_continent,
             in_country=in_country,
             in_region=in_region,
         )
+        places = search_resp.places
         if len(places) > 0:
             return places[0].geom
         raise Exception(
@@ -364,14 +555,52 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         )
 
 
+def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
+    """A utility for explaining the differences between search result order.
+
+    Explanations must be enabled on the search results. Writes the explanations to local files and
+    then opens the files in vscode.
+    """
+    if resp.explanations is None:
+        raise Exception("explanations are not present")
+    place1 = resp.places[index1]
+    place2 = resp.places[index2]
+    exp1 = resp.explanations[index1]
+    exp2 = resp.explanations[index2]
+
+    def to_compare_str(place: GeoPlace, exp: dict[str, Any]) -> str:
+        return json.dumps(
+            {
+                "name": place.name,
+                "type": place.type.value,
+                "alternate_names": place.alternate_names,
+                "explanation": exp,
+            },
+            indent=2,
+        )
+
+    with open("temp/compare1.json", "w") as f:  # noqa: PTH123
+        f.write(to_compare_str(place1, exp1))
+    with open("temp/compare2.json", "w") as f:  # noqa: PTH123
+        f.write(to_compare_str(place2, exp2))
+
+    subprocess.run(["code", "temp/compare1.json"], check=True)  # noqa: S603, S607
+    subprocess.run(["code", "temp/compare2.json"], check=True)  # noqa: S603, S607
+
+
 ## Code for testing
 # ruff: noqa: ERA001
+
+
 # lookup = GeocodeIndexPlaceLookup()
 
-# places = lookup.search_for_places(name="Florida", place_type=GeoPlaceType.region, limit=20)
+# resp = lookup.search_for_places_raw(name="Florida", limit=30, explain=True)
+# places = resp.places
+# print_places_as_table(resp.places)
 
-# print_places_as_table(places)
+# diff_explanations(resp, 0, 20)
 
+# print(json.dumps(resp.body, indent=2))
 
 # display_geometry([places[0].geom])
 # display_geometry([places[1].geom])

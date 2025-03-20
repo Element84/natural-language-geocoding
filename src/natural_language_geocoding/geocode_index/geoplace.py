@@ -33,6 +33,21 @@ class GeoPlaceType(Enum):
     region = "region"
 
 
+# The sort order for search results by place type. If the place type is not in this list then it
+# should appear after any of these
+PLACE_TYPE_SORT_ORDER = [
+    GeoPlaceType.continent,
+    GeoPlaceType.country,
+    GeoPlaceType.empire,
+    GeoPlaceType.region,
+    GeoPlaceType.locality,
+    GeoPlaceType.county,
+    GeoPlaceType.marinearea,
+    GeoPlaceType.ocean,
+    GeoPlaceType.postalregion,
+]
+
+
 class GeoPlaceSourceType(Enum):
     wof = "wof"
 
@@ -102,8 +117,9 @@ class GeoPlace(BaseModel):
 def print_places_as_table(places: list[GeoPlace]) -> None:
     """Prints places as a table. Useful for debugging."""
     table_data: list[dict[str, Any]] = []
-    for place in places:
+    for index, place in enumerate(places):
         place_dict = {
+            "index": index,
             "id": place.id,
             "name": place.name,
             "type": place.type.value,

@@ -11,6 +11,7 @@ from typing import Any, TypeVar
 
 import requests
 from e84_geoai_common.geojson import Feature
+from e84_geoai_common.util import chunk_items, unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from natural_language_geocoding.geocode_index.geoplace import (
@@ -27,17 +28,6 @@ from natural_language_geocoding.geocode_index.index import GeocodeIndex
 
 
 TEMP_DIR = Path("temp")
-
-
-def chunk_items[T](seq: Iterator[T], chunk_size: int) -> Generator[list[T], None, None]:
-    chunk: list[T] = []
-    for item in seq:
-        chunk.append(item)
-        if len(chunk) >= chunk_size:
-            yield chunk
-            chunk = []
-    if len(chunk) > 0:
-        yield chunk
 
 
 # Documentation copied from https://whosonfirst.org/docs/placetypes/
@@ -337,18 +327,6 @@ def filter_items(
             print("Filtered out", item)
 
 
-def unique_by(items: Iterator[T], key_fn: Callable[[T], K]) -> Iterator[T]:
-    keys: set[K] = set()
-
-    for item in items:
-        key = key_fn(item)
-        if key in keys:
-            print("Skipping duplicate key", key)
-        else:
-            keys.add(key)
-            yield item
-
-
 def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
     features_iter = find_all_wof_features(placetype_file)
     features_iter = counting_generator(features_iter)
@@ -359,7 +337,11 @@ def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
         log_not_matching=True,
     )
     # Who's on first places are sometimes duplicated with similar information.
-    features_iter = unique_by(features_iter, lambda p: p.id)
+    features_iter = unique_by(
+        features_iter,
+        key_fn=lambda p: p.id,
+        duplicate_handler_fn=lambda _f, feature_id: print(f"Skipping duplicate id {feature_id}"),
+    )
     count = 0
 
     for features in chunk_items(features_iter, 50):
@@ -384,7 +366,11 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
         log_not_matching=True,
     )
     # Who's on first places are sometimes duplicated with similar information.
-    features_iter = unique_by(features_iter, lambda p: p.id)
+    features_iter = unique_by(
+        features_iter,
+        key_fn=lambda p: p.id,
+        duplicate_handler_fn=lambda _f, feature_id: print(f"Skipping duplicate id {feature_id}"),
+    )
 
     thread_local = threading.local()
     all_conns: set[GeocodeIndex] = set()

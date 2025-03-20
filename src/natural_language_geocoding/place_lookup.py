@@ -33,9 +33,9 @@ class PlaceLookup(ABC):
 
 
 class NominatimAPI(PlaceLookup):
-    logger = logging.getLogger(f"{__name__}.NominatimAPI")
+    logger = logging.getLogger(f"{__name__}.{__qualname__}")
 
-    @timed_function
+    @timed_function(logger)
     def search(
         self,
         *,

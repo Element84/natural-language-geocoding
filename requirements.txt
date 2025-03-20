@@ -14,15 +14,15 @@ attrs==25.3.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.37.14
+boto3==1.37.15
     # via e84-geoai-common
-boto3-stubs==1.37.13
+boto3-stubs==1.37.15
     # via e84-geoai-common
-botocore==1.37.14
+botocore==1.37.15
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.37.13
+botocore-stubs==1.37.15
     # via boto3-stubs
 branca==0.8.1
     # via
@@ -50,7 +50,7 @@ decorator==5.2.1
     # via ipython
 distlib==0.3.9
     # via virtualenv
-e84-geoai-common==0.0.5
+e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@7982d4f876a54c463393e88250a2e2cb42a2d2e9
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
     # via opensearch-py
@@ -101,14 +101,20 @@ jupyter-core==5.7.2
     # via
     #   ipykernel
     #   jupyter-client
+markdown-it-py==3.0.0
+    # via rich
 markupsafe==3.0.2
     # via jinja2
 matplotlib-inline==0.1.7
     # via
     #   ipykernel
     #   ipython
+mdurl==0.1.2
+    # via markdown-it-py
 mypy-boto3-bedrock-runtime==1.37.7
-    # via boto3-stubs
+    # via
+    #   boto3-stubs
+    #   e84-geoai-common
 narwhals==1.31.0
     # via altair
 nest-asyncio==1.6.0
@@ -148,7 +154,7 @@ platformdirs==4.3.6
     #   virtualenv
 pluggy==1.5.0
     # via pytest
-pre-commit==4.1.0
+pre-commit==4.2.0
     # via natural-language-geocoding (pyproject.toml)
 pre-commit-hooks==5.0.0
     # via natural-language-geocoding (pyproject.toml)
@@ -174,9 +180,10 @@ pygments==2.19.1
     # via
     #   ipython
     #   ipython-pygments-lexers
+    #   rich
 pyproject-hooks==1.2.0
     # via build
-pyright==1.1.396
+pyright==1.1.397
     # via natural-language-geocoding (pyproject.toml)
 pytest==8.3.5
     # via natural-language-geocoding (pyproject.toml)
@@ -204,6 +211,8 @@ requests==2.32.3
     #   folium
     #   opensearch-py
     #   streamlit
+rich==13.9.4
+    # via e84-geoai-common
 rpds-py==0.23.1
     # via
     #   jsonschema
