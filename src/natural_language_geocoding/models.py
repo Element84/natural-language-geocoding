@@ -45,7 +45,10 @@ class NamedPlace(SpatialNodeType):
     )
     in_region: str | None = Field(
         default=None,
-        description="Indicates to search within a specific region such as a specific US state.",
+        description=(
+            "Indicates to search within a specific region such as a specific US state. "
+            "Region names are not globally unique so in_country must be specified as well."
+        ),
     )
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:

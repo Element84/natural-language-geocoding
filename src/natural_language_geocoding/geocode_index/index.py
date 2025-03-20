@@ -2,6 +2,8 @@ import json
 import logging
 import subprocess
 from collections.abc import Generator
+from pathlib import Path
+from time import time
 from typing import Any, Literal, TypedDict, cast
 
 import boto3
@@ -392,28 +394,45 @@ def _scroll_fetch_all(
     client.clear_scroll(scroll_id=scroll_id)
 
 
+# The problem with this current approach is that there are duplicates. We need a way to ensure there
+# are no duplicates. It won't be duplicated by hierachy probably so we can do that.
+
+
 class HierarchicalPlaceCache:
     _id_to_name_place: dict[str, tuple[str, GeoPlaceType]]
     _name_place_to_id: dict[tuple[str, GeoPlaceType], str]
     _supported_place_types: set[GeoPlaceType]
+    _cache_file: Path
+    _cache_ttl: int  # Time to live in seconds
 
-    def __init__(self, supported_place_types: set[GeoPlaceType] | None = None) -> None:
+    def __init__(
+        self,
+        supported_place_types: set[GeoPlaceType] | None = None,
+        cache_dir: str | Path = "./temp",
+        cache_ttl: int = 86400,  # 24 hours by default
+    ) -> None:
         self._id_to_name_place = {}
         self._name_place_to_id = {}
-        # Counts of placetypes during initial implementation
-        # continent - 8
-        # empire - 11
-        # country - 219
-        # region - 4865
         self._supported_place_types = supported_place_types or {
             GeoPlaceType.continent,
             GeoPlaceType.empire,
             GeoPlaceType.country,
             GeoPlaceType.region,
         }
+        self._cache_ttl = cache_ttl
+
+        # Create cache filename based on supported place types
+        cache_key = "_".join(sorted(p.value for p in self._supported_place_types))
+        self._cache_file = Path(cache_dir) / f"hierarchical_place_cache_{cache_key}.json"
 
     @timed_function
-    def populate(self) -> None:
+    def populate(self, *, force_reload: bool = False) -> None:
+        """Populate the cache, optionally loading from disk if available."""
+        # Try to load from cache file if it exists and is recent
+        if not force_reload and self._try_load_from_cache():
+            return
+
+        # Otherwise, populate from OpenSearch
         client = _create_opensearch_client()
 
         self._id_to_name_place = {}
@@ -430,6 +449,48 @@ class HierarchicalPlaceCache:
             self._id_to_name_place[feature_id] = (name, place_type)
             self._name_place_to_id[(name, place_type)] = feature_id
 
+        # Save to cache
+        self._save_to_cache()
+
+    def _try_load_from_cache(self) -> bool:
+        """Try to load the cache from disk if available and not expired.
+
+        Returns:
+            bool: True if cache was successfully loaded, False otherwise.
+        """
+        if not self._cache_file.exists():
+            return False
+
+        # Check if cache is expired
+        mod_time = self._cache_file.stat().st_mtime
+        if time() - mod_time > self._cache_ttl:
+            return False
+
+        # Load cache from disk
+        with self._cache_file.open() as f:
+            cache_data: list[tuple[str, str, str]] = json.load(f)
+
+        self._id_to_name_place = {}
+        self._name_place_to_id = {}
+        for feature_id, name, place_type_s in cache_data:
+            place_type = GeoPlaceType(place_type_s)
+            self._id_to_name_place[feature_id] = (name, place_type)
+            self._name_place_to_id[(name, place_type)] = feature_id
+
+        return True
+
+    def _save_to_cache(self) -> None:
+        """Save the current cache to disk."""
+        # Make sure the directory exists
+        self._cache_file.parent.mkdir(exist_ok=True)
+        cache_data = [
+            (feature_id, name, place_type.value)
+            for feature_id, (name, place_type) in self._id_to_name_place.items()
+        ]
+
+        with self._cache_file.open("w") as f:
+            json.dump(cache_data, f, indent=True)
+
     def find_id_by_name_and_type(self, name: str, place_type: GeoPlaceType) -> str | None:
         return self._name_place_to_id.get((name, place_type))
 
@@ -440,6 +501,8 @@ class HierarchicalPlaceCache:
 type_order_values = [f"    '{pt.value}': {index}" for index, pt in enumerate(PLACE_TYPE_SORT_ORDER)]
 type_order_values_str = "\n,".join(type_order_values)
 
+# Note that using a script for sorting is slow. Eventually we should switch this to an indexed id
+# to improve performance.
 _TYPE_SORT_COND_SCRIPT = f"""
 def typeOrder = [
     {type_order_values_str}
