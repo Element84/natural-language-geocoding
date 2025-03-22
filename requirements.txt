@@ -14,15 +14,15 @@ attrs==25.3.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.37.15
+boto3==1.37.18
     # via e84-geoai-common
-boto3-stubs==1.37.15
+boto3-stubs==1.37.18
     # via e84-geoai-common
-botocore==1.37.15
+botocore==1.37.18
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.37.15
+botocore-stubs==1.37.18
     # via boto3-stubs
 branca==0.8.1
     # via
@@ -42,6 +42,8 @@ charset-normalizer==3.4.1
     # via requests
 click==8.1.8
     # via streamlit
+colorama==0.4.6
+    # via pytest-watch
 comm==0.2.2
     # via ipykernel
 debugpy==1.8.13
@@ -50,6 +52,8 @@ decorator==5.2.1
     # via ipython
 distlib==0.3.9
     # via virtualenv
+docopt==0.6.2
+    # via pytest-watch
 e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@7982d4f876a54c463393e88250a2e2cb42a2d2e9
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
@@ -70,7 +74,7 @@ identify==2.6.9
     # via pre-commit
 idna==3.10
     # via requests
-iniconfig==2.0.0
+iniconfig==2.1.0
     # via pytest
 ipykernel==6.29.5
     # via natural-language-geocoding (pyproject.toml)
@@ -148,7 +152,7 @@ pexpect==4.9.0
     # via ipython
 pillow==11.1.0
     # via streamlit
-platformdirs==4.3.6
+platformdirs==4.3.7
     # via
     #   jupyter-core
     #   virtualenv
@@ -160,7 +164,7 @@ pre-commit-hooks==5.0.0
     # via natural-language-geocoding (pyproject.toml)
 prompt-toolkit==3.0.50
     # via ipython
-protobuf==5.29.3
+protobuf==5.29.4
     # via streamlit
 psutil==7.0.0
     # via ipykernel
@@ -186,6 +190,10 @@ pyproject-hooks==1.2.0
 pyright==1.1.397
     # via natural-language-geocoding (pyproject.toml)
 pytest==8.3.5
+    # via
+    #   natural-language-geocoding (pyproject.toml)
+    #   pytest-watch
+pytest-watch==4.2.0
     # via natural-language-geocoding (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
@@ -221,7 +229,7 @@ ruamel-yaml==0.18.10
     # via pre-commit-hooks
 ruamel-yaml-clib==0.2.12
     # via ruamel-yaml
-ruff==0.11.0
+ruff==0.11.2
     # via natural-language-geocoding (pyproject.toml)
 s3transfer==0.11.4
     # via boto3
@@ -282,7 +290,9 @@ urllib3==2.3.0
 virtualenv==20.29.3
     # via pre-commit
 watchdog==6.0.0
-    # via natural-language-geocoding (pyproject.toml)
+    # via
+    #   natural-language-geocoding (pyproject.toml)
+    #   pytest-watch
 wcwidth==0.2.13
     # via prompt-toolkit
 xyzservices==2025.1.0

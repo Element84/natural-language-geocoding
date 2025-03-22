@@ -79,7 +79,47 @@ for fid, name, place_type, hierarchies in [
 
 
 def test_find_by_name_type() -> None:
+    # Find None by name
+    assert cache.find_ids(name="fake", place_type=GeoPlaceType.region) == []
+    # Find None by place type
+    assert cache.find_ids(name="United States", place_type=GeoPlaceType.region) == []
+
+    # Find one continent
+    assert cache.find_ids(name="North America", place_type=GeoPlaceType.continent) == ["na_id"]
+    # Find one country
+    assert cache.find_ids(name="United States", place_type=GeoPlaceType.country) == ["us_id"]
+
+    # Find multiple regions
     assert cache.find_ids(name="Maryland", place_type=GeoPlaceType.region) == [
         "maryland_id",
         "maryland_uk_id",
     ]
+
+
+def find_by_name_type_continent() -> None:
+    # Find None
+    assert (
+        cache.find_ids(
+            name="United States", place_type=GeoPlaceType.country, continent_ids=["eu_id"]
+        )
+        == []
+    )
+    # Find one continent
+    assert cache.find_ids(
+        name="North America", place_type=GeoPlaceType.continent, continent_ids=["na_id"]
+    ) == ["na_id"]
+    # Find one country
+    assert cache.find_ids(
+        name="United States", place_type=GeoPlaceType.country, continent_ids=["na_id"]
+    ) == ["us_id"]
+
+    # Find regions
+    assert cache.find_ids(
+        name="Maryland", place_type=GeoPlaceType.region, continent_ids=["na_id"]
+    ) == ["maryland_id"]
+    assert cache.find_ids(
+        name="Maryland", place_type=GeoPlaceType.region, continent_ids=["eu_id"]
+    ) == ["maryland_uk_id"]
+    assert cache.find_ids(
+        name="Maryland", place_type=GeoPlaceType.region, continent_ids=["eu_id", "na_id"]
+    ) == ["maryland_uk_id", "maryland_id"]
