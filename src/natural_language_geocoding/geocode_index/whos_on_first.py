@@ -23,8 +23,8 @@ from natural_language_geocoding.geocode_index.geoplace import (
 )
 from natural_language_geocoding.geocode_index.index import GeocodeIndex
 
+# TODO reenable these ruff items
 # ruff: noqa: D103,T201,BLE001,FIX002,ERA001,E501
-# TODO reenable this
 
 
 TEMP_DIR = Path("temp")
