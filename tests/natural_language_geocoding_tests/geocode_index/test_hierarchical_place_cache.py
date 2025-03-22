@@ -123,3 +123,66 @@ def find_by_name_type_continent() -> None:
     assert cache.find_ids(
         name="Maryland", place_type=GeoPlaceType.region, continent_ids=["eu_id", "na_id"]
     ) == ["maryland_uk_id", "maryland_id"]
+
+
+def find_by_name_type_country() -> None:
+    # Find None
+    assert (
+        cache.find_ids(name="Maryland", place_type=GeoPlaceType.region, country_ids=["mex_id"])
+        == []
+    )
+    # Find one country
+    assert cache.find_ids(
+        name="United States", place_type=GeoPlaceType.country, country_ids=["us_id"]
+    ) == ["us_id"]
+
+    # Find regions
+    assert cache.find_ids(
+        name="Maryland", place_type=GeoPlaceType.region, country_ids=["us_id"]
+    ) == ["maryland_id"]
+    assert cache.find_ids(
+        name="Maryland", place_type=GeoPlaceType.region, country_ids=["uk_id"]
+    ) == ["maryland_uk_id"]
+    assert cache.find_ids(
+        name="Maryland", place_type=GeoPlaceType.region, country_ids=["us_id", "uk_ids"]
+    ) == ["maryland_uk_id", "maryland_id"]
+
+
+def find_by_name_type_continent_country() -> None:
+    # Find None
+    assert (
+        cache.find_ids(
+            name="Maryland",
+            place_type=GeoPlaceType.region,
+            continent_ids=["na_id"],
+            country_ids=["mex_id"],
+        )
+        == []
+    )
+    # Find one country
+    assert cache.find_ids(
+        name="United States",
+        place_type=GeoPlaceType.country,
+        continent_ids=["na_id"],
+        country_ids=["us_id"],
+    ) == ["us_id"]
+
+    # Find regions
+    assert cache.find_ids(
+        name="Maryland",
+        place_type=GeoPlaceType.region,
+        continent_ids=["na_id"],
+        country_ids=["us_id"],
+    ) == ["maryland_id"]
+    assert cache.find_ids(
+        name="Maryland",
+        place_type=GeoPlaceType.region,
+        continent_ids=["eu_id"],
+        country_ids=["uk_id"],
+    ) == ["maryland_uk_id"]
+    assert cache.find_ids(
+        name="Maryland",
+        place_type=GeoPlaceType.region,
+        continent_ids=["na_id", "eu_id"],
+        country_ids=["us_id", "uk_ids"],
+    ) == ["maryland_uk_id", "maryland_id"]

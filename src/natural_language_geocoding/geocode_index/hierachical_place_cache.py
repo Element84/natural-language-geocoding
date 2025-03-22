@@ -78,6 +78,12 @@ class HierchicalPlaceCache:
         continent_ids: list[str] | None = None,
         country_ids: list[str] | None = None,
     ) -> list[str]:
+        # Validate args
+        if continent_ids is not None and len(continent_ids) == 0:
+            raise ValueError("if continent_ids are provided at least one must be specified")
+        if country_ids is not None and len(country_ids) == 0:
+            raise ValueError("if country_ids are provided at least one must be specified")
+
         if continent_ids:
             if country_ids:
                 matches = [
