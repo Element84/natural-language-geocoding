@@ -1,27 +1,23 @@
 import json
 import logging
 import subprocess
-from collections.abc import Generator
-from pathlib import Path
-from time import time
 from typing import Any, Literal, TypedDict, cast
 
-import boto3
 from e84_geoai_common.geometry import geometry_from_geojson, geometry_to_geojson
 from e84_geoai_common.util import get_env_var, singleline, timed_function
-from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
+from opensearchpy import OpenSearch
 from pydantic import BaseModel, ConfigDict, Field
-from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.geocode_index.geoplace import (
-    PLACE_TYPE_SORT_ORDER,
     GeoPlace,
     GeoPlaceSource,
     GeoPlaceSourceType,
     GeoPlaceType,
     Hierarchy,
 )
-from natural_language_geocoding.place_lookup import PlaceLookup
+from natural_language_geocoding.geocode_index.opensearch_utils import (
+    create_opensearch_client,
+)
 
 _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
     "index": {
@@ -37,7 +33,7 @@ _GEOPLACE_INDEX_MAPPINGS = {
         "name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
         "type": {"type": "keyword"},
         # We may not need to search it as a geometry
-        # "geom": {"type": "geo_shape"},
+        # "geom": {"type": "geo_shape"},  # noqa: ERA001
         "geom": {"type": "keyword", "doc_values": False, "index": False},
         "source_id": {"type": "long"},
         "source_type": {"type": "keyword"},
@@ -112,7 +108,7 @@ class GeoPlaceDoc(TypedDict):
     hierarchies: list[HierarchyDoc]
 
 
-_GEOPLACE_INDEX_NAME = "geoplaces"
+GEOPLACE_INDEX_NAME = "geoplaces"
 
 
 def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
@@ -231,50 +227,23 @@ class SearchRequest(BaseModel):
         return body
 
 
-def _create_opensearch_client() -> OpenSearch:
-    # TODO include these env vars as part of the documentation
-    host = get_env_var("GEOCODE_INDEX_HOST")
-    port = int(get_env_var("GEOCODE_INDEX_PORT", "443"))
-    region = get_env_var("GEOCODE_INDEX_REGION")
-    credentials = boto3.Session().get_credentials()
-    auth = AWSV4SignerAuth(credentials, region, "es")
-
-    if host == "localhost":
-        # Allow tunneling for easy local testing.
-        return OpenSearch(
-            hosts=[{"host": host, "port": port}],
-            use_ssl=True,
-            verify_certs=False,
-            connection_class=RequestsHttpConnection,
-            pool_maxsize=20,
-        )
-    return OpenSearch(
-        hosts=[{"host": host, "port": port}],
-        http_auth=auth,
-        use_ssl=True,
-        verify_certs=host != "localhost",
-        connection_class=RequestsHttpConnection,
-        pool_maxsize=20,
-    )
-
-
 class GeocodeIndex:
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
     client: OpenSearch
 
     def __init__(self) -> None:
-        self.client = _create_opensearch_client()
+        self.client = create_opensearch_client()
 
     def create_index(self, *, recreate: bool = False) -> None:
-        if recreate and self.client.indices.exists(index=_GEOPLACE_INDEX_NAME):
+        if recreate and self.client.indices.exists(index=GEOPLACE_INDEX_NAME):
             self.logger.warning(
-                "Deleting the existing index %s before creating it", _GEOPLACE_INDEX_NAME
+                "Deleting the existing index %s before creating it", GEOPLACE_INDEX_NAME
             )
-            self.client.indices.delete(index=_GEOPLACE_INDEX_NAME)
+            self.client.indices.delete(index=GEOPLACE_INDEX_NAME)
 
-        self.logger.info("Creating index %s", _GEOPLACE_INDEX_NAME)
+        self.logger.info("Creating index %s", GEOPLACE_INDEX_NAME)
         self.client.indices.create(
-            _GEOPLACE_INDEX_NAME,
+            GEOPLACE_INDEX_NAME,
             {
                 "settings": _GEOPLACE_INDEX_SETTINGS,
                 "mappings": _GEOPLACE_INDEX_MAPPINGS,
@@ -286,7 +255,7 @@ class GeocodeIndex:
             json.dumps(bulk_line)
             for place in places
             for bulk_line in [
-                {"index": {"_index": _GEOPLACE_INDEX_NAME, "_id": place.id}},
+                {"index": {"_index": GEOPLACE_INDEX_NAME, "_id": place.id}},
                 _geo_place_to_doc(place),
             ]
         ]
@@ -305,317 +274,8 @@ class GeocodeIndex:
         self.logger.info(
             "Searching for geoplaces with params %s and body %s", params, json.dumps(body)
         )
-        resp = self.client.search(index=_GEOPLACE_INDEX_NAME, params=params, body=body)
+        resp = self.client.search(index=GEOPLACE_INDEX_NAME, params=params, body=body)
         return SearchResponse.from_search_resp(resp)
-
-
-QueryCondition = dict[str, Any]
-
-
-class QueryDSL:
-    @staticmethod
-    def and_conds(*conds: QueryCondition) -> QueryCondition:
-        return {"bool": {"must": conds}}
-
-    @staticmethod
-    def or_conds(*conds: QueryCondition) -> QueryCondition:
-        return {"bool": {"should": conds}}
-
-    @staticmethod
-    def dis_max(*conds: QueryCondition) -> QueryCondition:
-        """Combines conjunctions into a dis_max query.
-
-        See https://opensearch.org/docs/latest/query-dsl/compound/disjunction-max/
-        """
-        return {"dis_max": {"queries": conds}}
-
-    @staticmethod
-    def match(
-        field: str, text: str, *, fuzzy: bool = False, boost: float | None = None
-    ) -> QueryCondition:
-        inner_cond: dict[str, str | int | float] = {"query": text}
-        if fuzzy:
-            inner_cond["fuzziness"] = "AUTO"
-        if boost is not None:
-            inner_cond["boost"] = boost
-        return {"match": {field: inner_cond}}
-
-    @staticmethod
-    def term(field: str, value: str, *, boost: float | None = None) -> QueryCondition:
-        inner_cond: dict[str, str | float] = {"value": value}
-        if boost is not None:
-            inner_cond["boost"] = boost
-
-        return {"term": {field: inner_cond}}
-
-    @staticmethod
-    def terms(field: str, values: list[str], *, boost: float | None = None) -> QueryCondition:
-        if len(values) == 0:
-            raise ValueError("Must have one or more values")
-        inner_cond: dict[str, float | list[str]] = {field: values}
-
-        if boost is not None:
-            inner_cond["boost"] = boost
-
-        return {"terms": inner_cond}
-
-
-class Hit(TypedDict):
-    _id: str
-    _source: dict[str, Any]
-
-
-def _scroll_fetch_all(
-    client: OpenSearch,
-    *,
-    query: QueryCondition,
-    source_fields: list[str],
-) -> Generator[Hit, None, None]:
-    body = {"query": query, "_source": source_fields, "size": 1000}
-
-    # Initialize the scroll
-    scroll_resp: dict[str, Any] = client.search(
-        index=_GEOPLACE_INDEX_NAME, body=body, params={"scroll": "2m"}
-    )
-
-    hits = scroll_resp["hits"]["hits"]
-    hits_count = len(hits)
-    scroll_id = scroll_resp["_scroll_id"]
-
-    # Continue scrolling until no more hits are returned
-    while hits_count > 0:
-        scroll_resp = client.scroll(scroll_id=scroll_id, params={"scroll": "2m"})
-        hits = scroll_resp["hits"]["hits"]
-        hits_count = len(hits)
-        scroll_id = scroll_resp["_scroll_id"]
-        yield from hits
-
-    # Clear the scroll to free resources
-    client.clear_scroll(scroll_id=scroll_id)
-
-
-# The problem with this current approach is that there are duplicates. We need a way to ensure there
-# are no duplicates. It won't be duplicated by hierachy probably so we can do that.
-
-
-class HierarchicalPlaceCache:
-    _id_to_name_place: dict[str, tuple[str, GeoPlaceType]]
-    _name_place_to_id: dict[tuple[str, GeoPlaceType], str]
-    _supported_place_types: set[GeoPlaceType]
-    _cache_file: Path
-    _cache_ttl: int  # Time to live in seconds
-
-    def __init__(
-        self,
-        supported_place_types: set[GeoPlaceType] | None = None,
-        cache_dir: str | Path = "./temp",
-        cache_ttl: int = 86400,  # 24 hours by default
-    ) -> None:
-        self._id_to_name_place = {}
-        self._name_place_to_id = {}
-        self._supported_place_types = supported_place_types or {
-            GeoPlaceType.continent,
-            GeoPlaceType.empire,
-            GeoPlaceType.country,
-            GeoPlaceType.region,
-        }
-        self._cache_ttl = cache_ttl
-
-        # Create cache filename based on supported place types
-        cache_key = "_".join(sorted(p.value for p in self._supported_place_types))
-        self._cache_file = Path(cache_dir) / f"hierarchical_place_cache_{cache_key}.json"
-
-    @timed_function
-    def populate(self, *, force_reload: bool = False) -> None:
-        """Populate the cache, optionally loading from disk if available."""
-        # Try to load from cache file if it exists and is recent
-        if not force_reload and self._try_load_from_cache():
-            return
-
-        # Otherwise, populate from OpenSearch
-        client = _create_opensearch_client()
-
-        self._id_to_name_place = {}
-        self._name_place_to_id = {}
-
-        for hit in _scroll_fetch_all(
-            client,
-            query=QueryDSL.terms("type", [p.value for p in self._supported_place_types]),
-            source_fields=["name", "type"],
-        ):
-            feature_id = hit["_id"]
-            place_type = GeoPlaceType(hit["_source"]["type"])
-            name = hit["_source"]["name"]
-            self._id_to_name_place[feature_id] = (name, place_type)
-            self._name_place_to_id[(name, place_type)] = feature_id
-
-        # Save to cache
-        self._save_to_cache()
-
-    def _try_load_from_cache(self) -> bool:
-        """Try to load the cache from disk if available and not expired.
-
-        Returns:
-            bool: True if cache was successfully loaded, False otherwise.
-        """
-        if not self._cache_file.exists():
-            return False
-
-        # Check if cache is expired
-        mod_time = self._cache_file.stat().st_mtime
-        if time() - mod_time > self._cache_ttl:
-            return False
-
-        # Load cache from disk
-        with self._cache_file.open() as f:
-            cache_data: list[tuple[str, str, str]] = json.load(f)
-
-        self._id_to_name_place = {}
-        self._name_place_to_id = {}
-        for feature_id, name, place_type_s in cache_data:
-            place_type = GeoPlaceType(place_type_s)
-            self._id_to_name_place[feature_id] = (name, place_type)
-            self._name_place_to_id[(name, place_type)] = feature_id
-
-        return True
-
-    def _save_to_cache(self) -> None:
-        """Save the current cache to disk."""
-        # Make sure the directory exists
-        self._cache_file.parent.mkdir(exist_ok=True)
-        cache_data = [
-            (feature_id, name, place_type.value)
-            for feature_id, (name, place_type) in self._id_to_name_place.items()
-        ]
-
-        with self._cache_file.open("w") as f:
-            json.dump(cache_data, f, indent=True)
-
-    def find_id_by_name_and_type(self, name: str, place_type: GeoPlaceType) -> str | None:
-        return self._name_place_to_id.get((name, place_type))
-
-    def find_name_and_type_by_id(self, feature_id: str) -> tuple[str, GeoPlaceType] | None:
-        return self._id_to_name_place.get(feature_id)
-
-
-type_order_values = [f"    '{pt.value}': {index}" for index, pt in enumerate(PLACE_TYPE_SORT_ORDER)]
-type_order_values_str = "\n,".join(type_order_values)
-
-# Note that using a script for sorting is slow. Eventually we should switch this to an indexed id
-# to improve performance.
-_TYPE_SORT_COND_SCRIPT = f"""
-def typeOrder = [
-    {type_order_values_str}
-];
-return typeOrder.containsKey(doc['type'].value) ? typeOrder[doc['type'].value] : 999;
-""".strip()
-
-_TYPE_SORT_COND = {
-    "_script": {
-        "type": "number",
-        "script": {
-            "source": _TYPE_SORT_COND_SCRIPT,
-            "lang": "painless",
-        },
-        "order": "asc",
-    }
-}
-
-
-class GeocodeIndexPlaceLookup(PlaceLookup):
-    logger = logging.getLogger(f"{__name__}.{__qualname__}")
-
-    _index: GeocodeIndex
-    _place_cache: HierarchicalPlaceCache
-
-    def __init__(self) -> None:
-        self._index = GeocodeIndex()
-        self._place_cache = HierarchicalPlaceCache()
-        self._place_cache.populate()
-
-    @timed_function(logger)
-    def search_for_places_raw(  # noqa: PLR0913
-        self,
-        *,
-        name: str,
-        place_type: GeoPlaceType | None = None,
-        in_continent: str | None = None,
-        in_country: str | None = None,
-        in_region: str | None = None,
-        limit: int = 5,
-        explain: bool = False,
-    ) -> SearchResponse:
-        # Dis_max is used so that the score will come from only the highest matching condition.
-        name_match = QueryDSL.dis_max(
-            QueryDSL.term("name.keyword", name, boost=10.0),
-            QueryDSL.term("alternate_names.keyword", name, boost=5.0),
-            QueryDSL.match("name", name, fuzzy=True, boost=2.0),
-            QueryDSL.match("alternate_names", name, fuzzy=True, boost=1.0),
-        )
-        conditions: list[QueryCondition] = [name_match]
-        if place_type:
-            conditions.append(QueryDSL.term("type", place_type.value))
-
-        within_conds: list[QueryCondition] = []
-
-        if in_continent:
-            continent_id = self._place_cache.find_id_by_name_and_type(
-                in_continent, GeoPlaceType.continent
-            )
-            if continent_id is None:
-                raise ValueError(f"Unable to find continent with name [{in_continent}]")
-            within_conds.append(QueryDSL.term("hierarchies.continent_id", continent_id))
-        if in_country:
-            country_id = self._place_cache.find_id_by_name_and_type(
-                in_country, GeoPlaceType.country
-            )
-            if country_id is None:
-                raise ValueError(f"Unable to find country with name [{in_country}]")
-            within_conds.append(QueryDSL.term("hierarchies.country_id", country_id))
-        if in_region:
-            region_id = self._place_cache.find_id_by_name_and_type(in_region, GeoPlaceType.region)
-            if region_id is None:
-                raise ValueError(f"Unable to find region with name [{in_region}]")
-            within_conds.append(QueryDSL.term("hierarchies.region_id", region_id))
-
-        request = SearchRequest(
-            size=limit,
-            query=QueryDSL.and_conds(*conditions, *within_conds),
-            sort=[
-                SortField(field="_score", order="desc"),
-                _TYPE_SORT_COND,
-                SortField(field="population", order="desc"),
-            ],
-            explain=explain,
-        )
-        return self._index.search(request)
-
-    def search(
-        self,
-        *,
-        name: str,
-        place_type: GeoPlaceType | None = None,
-        in_continent: str | None = None,
-        in_country: str | None = None,
-        in_region: str | None = None,
-    ) -> BaseGeometry:
-        search_resp = self.search_for_places_raw(
-            name=name,
-            place_type=place_type,
-            in_continent=in_continent,
-            in_country=in_country,
-            in_region=in_region,
-        )
-        places = search_resp.places
-        if len(places) > 0:
-            return places[0].geom
-        raise Exception(
-            f"Unable find place with name [{name}] "
-            f"type [{place_type}] "
-            f"in_continent [{in_continent}] "
-            f"in_country [{in_country}] "
-            f"in_region [{in_region}] "
-        )
 
 
 def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
@@ -649,24 +309,3 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
 
     subprocess.run(["code", "temp/compare1.json"], check=True)  # noqa: S603, S607
     subprocess.run(["code", "temp/compare2.json"], check=True)  # noqa: S603, S607
-
-
-## Code for testing
-# ruff: noqa: ERA001
-
-
-# lookup = GeocodeIndexPlaceLookup()
-
-# resp = lookup.search_for_places_raw(name="Florida", limit=30, explain=True)
-# places = resp.places
-# print_places_as_table(resp.places)
-
-# diff_explanations(resp, 0, 20)
-
-# print(json.dumps(resp.body, indent=2))
-
-# display_geometry([places[0].geom])
-# display_geometry([places[1].geom])
-# display_geometry([places[2].geom])
-# display_geometry([places[3].geom])
-# display_geometry([places[4].geom])

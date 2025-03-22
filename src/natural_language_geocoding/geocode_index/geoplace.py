@@ -88,6 +88,9 @@ class Hierarchy(BaseModel):
     postalregion_id: str | None = None
     region_id: str | None = None
 
+    def get_by_place_type(self, place_type: GeoPlaceType) -> str | None:
+        return getattr(self, f"{place_type.value}_id")
+
 
 class GeoPlace(BaseModel):
     model_config = ConfigDict(

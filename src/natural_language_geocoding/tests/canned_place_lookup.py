@@ -7,6 +7,7 @@ from e84_geoai_common.geometry import geometry_from_geojson_dict
 from shapely import Polygon
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.place_lookup import PlaceLookup
 
 _STATES_TO_GEOM_FILE = Path(__file__).parent / "states_to_geom.yaml"
@@ -88,7 +89,15 @@ class CannedPlaceLookup(PlaceLookup):
             "delta": DELTA,
         }
 
-    def search(self, name: str) -> BaseGeometry:
+    def search(
+        self,
+        *,
+        name: str,
+        place_type: GeoPlaceType | None = None,  # noqa: ARG002
+        in_continent: str | None = None,  # noqa: ARG002
+        in_country: str | None = None,  # noqa: ARG002
+        in_region: str | None = None,  # noqa: ARG002
+    ) -> BaseGeometry:
         # Help make the name more consistent for when testing with a real LLM.
         lower_name = name.lower().replace("USA", "").strip()
 
