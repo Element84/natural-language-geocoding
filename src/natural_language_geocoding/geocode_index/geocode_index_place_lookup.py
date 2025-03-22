@@ -94,7 +94,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             )
             if len(country_ids) == 0:
                 raise ValueError(f"Unable to find country with name [{country_name}]")
-            within_conds.append(QueryDSL.terms("hierarchies.region_ids", country_ids))
+            within_conds.append(QueryDSL.terms("hierarchies.country_id", country_ids))
 
         if region_name:
             region_ids = self._place_cache.find_ids(
@@ -106,7 +106,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
             if len(region_ids) == 0:
                 raise ValueError(f"Unable to find region with name [{region_name}]")
-            within_conds.append(QueryDSL.terms("hierarchies.region_ids", region_ids))
+            within_conds.append(QueryDSL.terms("hierarchies.region_id", region_ids))
 
         request = SearchRequest(
             size=limit,

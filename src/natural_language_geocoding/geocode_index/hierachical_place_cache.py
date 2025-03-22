@@ -114,7 +114,12 @@ class HierchicalPlaceCache:
 
     def to_json(self, *, indent: int | str | None = None) -> str:
         rows = [
-            (feature_id, name, place_type.value, [h.model_dump() for h in hierarchies])
+            (
+                feature_id,
+                name,
+                place_type.value,
+                [h.model_dump(exclude_none=True) for h in hierarchies],
+            )
             for feature_id, (
                 name,
                 place_type,
@@ -195,3 +200,11 @@ class PlaceCache:
             continent_ids=continent_ids,
             country_ids=country_ids,
         )
+
+
+## Code for manual testing
+# ruff: noqa: ERA001
+
+# cache = _populate()
+
+# cache.find_ids(name="France", place_type=GeoPlaceType.country)

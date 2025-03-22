@@ -106,6 +106,7 @@ def scroll_fetch_all(
     hits = scroll_resp["hits"]["hits"]
     hits_count = len(hits)
     scroll_id = scroll_resp["_scroll_id"]
+    yield from hits
 
     # Continue scrolling until no more hits are returned
     while hits_count > 0:
