@@ -54,7 +54,7 @@ distlib==0.3.9
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@7982d4f876a54c463393e88250a2e2cb42a2d2e9
+e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@6a58a90da4f0ad5df408ab9256faf5aa43f64339
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
     # via opensearch-py
@@ -280,7 +280,7 @@ typing-extensions==4.12.2
     #   pyright
     #   referencing
     #   streamlit
-tzdata==2025.1
+tzdata==2025.2
     # via pandas
 urllib3==2.3.0
     # via

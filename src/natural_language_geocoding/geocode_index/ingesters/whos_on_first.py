@@ -1,13 +1,14 @@
+"""TODO document this module."""
+
 import json
+import logging
 import tarfile
 import threading
 from collections.abc import Callable, Generator, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
-from math import ceil
 from pathlib import Path
-from time import time
-from typing import Any, TypeVar
+from typing import Any
 
 import requests
 from e84_geoai_common.geojson import Feature
@@ -22,12 +23,15 @@ from natural_language_geocoding.geocode_index.geoplace import (
     Hierarchy,
 )
 from natural_language_geocoding.geocode_index.index import GeocodeIndex
+from natural_language_geocoding.geocode_index.ingesters.ingest_utils import counting_generator
 
 # TODO reenable these ruff items
 # ruff: noqa: D103,T201,BLE001,FIX002,ERA001,E501
 
 
 TEMP_DIR = Path("temp")
+
+logger = logging.getLogger(__name__)
 
 
 # Documentation copied from https://whosonfirst.org/docs/placetypes/
@@ -245,7 +249,6 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
             source_type=GeoPlaceSourceType.wof,
             source_path=source_path,
         ),
-        source_id=feature.id,
         hierarchies=props.hierarchies,
         alternate_names=props.get_alternate_names(),
         area_sq_km=props.area_square_m / 1000.0 if props.area_square_m else None,
@@ -263,7 +266,7 @@ def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
     url = f"https://data.geocode.earth/wof/dist/legacy/{filename}"
 
     # Download file
-    print(f"Downloading {url}")
+    logger.info("Downloading %s", url)
     response = requests.get(url, stream=True, timeout=10)
     with place_type_file.open("wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
@@ -278,7 +281,7 @@ def find_all_geojson_features_files(tar: tarfile.TarFile) -> Generator[tarfile.T
 
 
 def find_all_wof_features(source_tar: Path) -> Generator[WhosOnFirstFeature, None, None]:
-    print("Opening tar", source_tar)
+    logger.info("Opening tar %s", source_tar)
     with tarfile.open(source_tar, "r:bz2") as tar:
         for member in find_all_geojson_features_files(tar):
             f = tar.extractfile(member)
@@ -289,47 +292,19 @@ def find_all_wof_features(source_tar: Path) -> Generator[WhosOnFirstFeature, Non
                     raise Exception(f"Failed loading {member.name}") from e
 
 
-T = TypeVar("T")
-K = TypeVar("K")
-
-
-def counting_generator(items: Iterator[T], *, log_after_secs: int = 10) -> Generator[T, None, None]:
-    start_time = time()
-    last_logged = time()
-    count = 0
-
-    def _log() -> None:
-        now = time()
-        elapsed = now - start_time
-        rate_per_sec = count / elapsed
-        rate_per_min = rate_per_sec * 60
-        print(
-            f"Processed {count} items. Rate: {ceil(rate_per_min)} per min. Elapsed time: {ceil(elapsed / 60)} mins"
-        )
-
-    for item in items:
-        yield item
-        count += 1
-        if time() - last_logged >= log_after_secs:
-            _log()
-            last_logged = time()
-
-    _log()
-
-
-def filter_items(
+def filter_items[T](
     items: Iterator[T], filter_fn: Callable[[T], bool], *, log_not_matching: bool = False
 ) -> Generator[T, None, None]:
     for item in items:
         if filter_fn(item):
             yield item
         elif log_not_matching:
-            print("Filtered out", item)
+            logger.info("Filtered out %s", item)
 
 
 def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
     features_iter = find_all_wof_features(placetype_file)
-    features_iter = counting_generator(features_iter)
+    features_iter = counting_generator(features_iter, logger=logger)
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
     features_iter = filter_items(
         features_iter,
@@ -340,7 +315,9 @@ def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
     features_iter = unique_by(
         features_iter,
         key_fn=lambda p: p.id,
-        duplicate_handler_fn=lambda _f, feature_id: print(f"Skipping duplicate id {feature_id}"),
+        duplicate_handler_fn=lambda _f, feature_id: logger.info(
+            "Skipping duplicate id %s", feature_id
+        ),
     )
     count = 0
 
@@ -349,16 +326,18 @@ def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
             places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
             index.bulk_index(places)
         except:
-            print("failed places:")
-            print(json.dumps([f.model_dump(mode="json") for f in features], indent=2))
+            logger.info(
+                "failed places: %s",
+                json.dumps([f.model_dump(mode="json") for f in features], indent=2),
+            )
             raise
         count += len(places)
-    print(f"Finished {placetype_file} and saved {count}")
+    logger.info("Finished %s and saved %s", placetype_file, count)
 
 
 def process_placetype_file_multithread(placetype_file: Path) -> None:
     features_iter = find_all_wof_features(placetype_file)
-    features_iter = counting_generator(features_iter)
+    features_iter = counting_generator(features_iter, logger=logger)
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
     features_iter = filter_items(
         features_iter,
@@ -369,7 +348,9 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
     features_iter = unique_by(
         features_iter,
         key_fn=lambda p: p.id,
-        duplicate_handler_fn=lambda _f, feature_id: print(f"Skipping duplicate id {feature_id}"),
+        duplicate_handler_fn=lambda _f, feature_id: logger.info(
+            "Skipping duplicate id %s", feature_id
+        ),
     )
 
     thread_local = threading.local()
@@ -388,8 +369,10 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
             places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
             index.bulk_index(places)
         except:
-            print("failed places:")
-            print(json.dumps([f.model_dump(mode="json") for f in features], indent=2))
+            logger.info(
+                "failed places: %s",
+                json.dumps([f.model_dump(mode="json") for f in features], indent=2),
+            )
             raise
 
     with ThreadPoolExecutor(max_workers=5) as e:
@@ -410,8 +393,6 @@ def process_placetypes() -> None:
 
 
 if __name__ == "__main__":
-    import logging
-
     logging.getLogger("opensearch").setLevel(logging.WARNING)
 
     process_placetypes()

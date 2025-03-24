@@ -1,9 +1,11 @@
+"""TODO document this module."""
+
 import json
 import logging
 import subprocess
 from typing import Any, Literal, TypedDict, cast
 
-from e84_geoai_common.geometry import geometry_from_geojson, geometry_to_geojson
+from e84_geoai_common.geometry import geometry_from_geojson_dict
 from e84_geoai_common.util import get_env_var, singleline, timed_function
 from opensearchpy import OpenSearch
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,9 +34,7 @@ _GEOPLACE_INDEX_MAPPINGS = {
         "id": {"type": "keyword"},
         "name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
         "type": {"type": "keyword"},
-        # We may not need to search it as a geometry
-        # "geom": {"type": "geo_shape"},  # noqa: ERA001
-        "geom": {"type": "keyword", "doc_values": False, "index": False},
+        "geom": {"type": "geo_shape"},
         "source_id": {"type": "long"},
         "source_type": {"type": "keyword"},
         "source_path": {"type": "keyword"},
@@ -97,8 +97,7 @@ class GeoPlaceDoc(TypedDict):
     id: str
     name: str
     type: str
-    geom: str
-    source_id: int
+    geom: dict[str, Any]
     source_type: str
     source_path: str
     alternate_names: list[str]
@@ -116,8 +115,7 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
         "id": geoplace.id,
         "name": geoplace.name,
         "type": geoplace.type.value,
-        "geom": geometry_to_geojson(geoplace.geom),
-        "source_id": geoplace.source_id,
+        "geom": geoplace.geom.__geo_interface__,
         "source_type": geoplace.source.source_type.value,
         "source_path": geoplace.source.source_path,
         "alternate_names": geoplace.alternate_names,
@@ -133,8 +131,7 @@ def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
         id=doc["id"],
         name=doc["name"],
         type=GeoPlaceType(doc["type"]),
-        geom=geometry_from_geojson(doc["geom"]),
-        source_id=doc["source_id"],
+        geom=geometry_from_geojson_dict(doc["geom"]),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType(doc["source_type"]), source_path=doc["source_path"]
         ),

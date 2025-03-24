@@ -1,3 +1,5 @@
+"""TODO document this module."""
+
 import json
 from pathlib import Path
 

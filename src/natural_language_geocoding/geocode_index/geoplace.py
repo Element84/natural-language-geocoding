@@ -1,3 +1,5 @@
+"""TODO document this module."""
+
 from enum import Enum
 from typing import Any
 
@@ -32,6 +34,12 @@ class GeoPlaceType(Enum):
     postalregion = "postalregion"
     region = "region"
 
+    port = "port"
+    airport = "airport"
+    lake = "lake"
+    national_park = "national_park"
+    river = "river"
+
 
 # The sort order for search results by place type. If the place type is not in this list then it
 # should appear after any of these
@@ -49,7 +57,10 @@ PLACE_TYPE_SORT_ORDER = [
 
 
 class GeoPlaceSourceType(Enum):
+    # Who's on First
     wof = "wof"
+    # Natural Earth
+    ne = "ne"
 
 
 class GeoPlaceSource(BaseModel):
@@ -108,12 +119,11 @@ class GeoPlace(BaseModel):
     name: str
     type: GeoPlaceType
     geom: BaseGeometry
-    source_id: int
     source: GeoPlaceSource
     alternate_names: list[str] = Field(default_factory=list)
     hierarchies: list[Hierarchy] = Field(default_factory=list)
-    area_sq_km: float | None
-    population: int | None
+    area_sq_km: float | None = None
+    population: int | None = None
     properties: dict[str, Any]
 
 
