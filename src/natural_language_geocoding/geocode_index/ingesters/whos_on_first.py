@@ -14,6 +14,12 @@ import requests
 from e84_geoai_common.geojson import Feature
 from e84_geoai_common.util import chunk_items, unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from shapely import (
+    LineString,
+    MultiPolygon,
+    Polygon,
+    remove_repeated_points,  # type: ignore[reportUnknownVariableTypes]
+)
 
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
@@ -151,18 +157,17 @@ def _wof_hierarchy_parser(value: Any) -> Any:  # noqa: ANN401
     if isinstance(value, dict):
         value_dict: dict[Any, Any] = value
 
-        def _pick_value(place_type: GeoPlaceType) -> str | None:
-            key_plain = place_type.value
-            key_id = f"{key_plain}_id"
+        def _pick_value(hierarchy_field: str) -> str | None:
+            id_value = value_dict.get(hierarchy_field)
+            key_plain = hierarchy_field.replace("_id", "")
             plain_value = value_dict.get(key_plain)
-            id_value = value_dict.get(key_id)
             if id_value is not None and isinstance(id_value, int) and id_value >= 0:
                 return f"wof_{id_value}"
             if plain_value is not None and isinstance(plain_value, int) and plain_value >= 0:
                 return f"wof_{plain_value}"
             return None
 
-        return {f"{place_type.value}_id": _pick_value(place_type) for place_type in GeoPlaceType}
+        return {field: _pick_value(field) for field in Hierarchy.model_fields}
 
     return value
 
@@ -239,11 +244,16 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
     if name is None:
         raise Exception(f"Can't convert feature [{feature.id}] to geoplace without a name.")
 
+    geom = feature.geometry
+
+    if isinstance(geom, (Polygon, MultiPolygon, LineString)):
+        geom = remove_repeated_points(geom)
+
     return GeoPlace(
         id=f"wof_{feature.id}",
         name=name,
         type=props.placetype.to_geoplace_type(),
-        geom=feature.geometry,
+        geom=geom,
         properties=props.model_dump(mode="json"),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType.wof,
@@ -399,13 +409,9 @@ if __name__ == "__main__":
 
 # Code for manual testing
 
-# placetype_file = Path("temp/whosonfirst-data-country-latest.tar.bz2")
+# placetype_file = Path("temp/whosonfirst-data-borough-latest.tar.bz2")
 
 # index = GeocodeIndex()
 # index.create_index(recreate=True)
 # # process_placetype_file(index, placetype_file)
 # process_placetype_file_multithread(placetype_file)
-
-# Initial 159 per minute (10 per bulk request, default refresh, default number of replicas)
-# 170 per minute (10 per bulk request, refresh 30s, 0 replicas)
-# 187 per minute (50 per bulk request, refresh 30s, 0 replicas)
