@@ -260,8 +260,9 @@ class GeocodeIndex:
         resp = self.client.bulk(bulk_body)
 
         if resp["errors"]:
-            print(json.dumps(resp))  # noqa: T201
-            raise Exception("There were errors in the bulk index")
+            failed_items = [item["index"] for item in resp["items"] if "error" in item["index"]]
+            self.logger.error("Failed ingesting items: %s", json.dumps(failed_items, indent=2))
+            raise Exception("There were errors in the bulk index. See log")
 
     @timed_function(logger)
     def search(self, request: SearchRequest) -> SearchResponse:

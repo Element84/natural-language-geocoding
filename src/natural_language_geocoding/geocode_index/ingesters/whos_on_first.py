@@ -1,6 +1,5 @@
 """TODO document this module."""
 
-import json
 import logging
 import tarfile
 import threading
@@ -15,11 +14,10 @@ from e84_geoai_common.geojson import Feature
 from e84_geoai_common.util import chunk_items, unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from shapely import (
-    LineString,
-    MultiPolygon,
-    Polygon,
     remove_repeated_points,  # type: ignore[reportUnknownVariableTypes]
 )
+from shapely.geometry.base import BaseGeometry
+from shapely.validation import explain_validity
 
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
@@ -119,14 +117,16 @@ class WhosOnFirstPlaceType(Enum):
 
 
 DOWNLOADABLE_PLACETYPES = [
-    # Commenting out already completed placetypes
-    WhosOnFirstPlaceType.borough,  # (5.8 MB)
-    WhosOnFirstPlaceType.continent,  # (5.0 MB)
-    WhosOnFirstPlaceType.country,  # (202.4 MB)
-    WhosOnFirstPlaceType.county,  # (563.1 MB)
-    WhosOnFirstPlaceType.dependency,  # (1.2 MB)
-    WhosOnFirstPlaceType.disputed,  # (1.5 MB)
-    WhosOnFirstPlaceType.empire,  # (1.6 MB)
+    # TODO temporarily skipping already completed placetypes
+    # WhosOnFirstPlaceType.borough,  # (5.8 MB)
+    # WhosOnFirstPlaceType.continent,  # (5.0 MB)
+    # WhosOnFirstPlaceType.country,  # (202.4 MB)
+    # WhosOnFirstPlaceType.county,  # (563.1 MB)
+    # WhosOnFirstPlaceType.dependency,  # (1.2 MB)
+    # WhosOnFirstPlaceType.disputed,  # (1.5 MB)
+    # WhosOnFirstPlaceType.empire,  # (1.6 MB)
+    ##############################################
+    ##############################################
     WhosOnFirstPlaceType.localadmin,  # (948.3 MB)
     WhosOnFirstPlaceType.locality,  # (1.96 GB)
     WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
@@ -240,22 +240,39 @@ class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
         return self.properties.edtf_deprecated is not None
 
 
+def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
+    geom = feature.geometry
+    # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
+    geom = remove_repeated_points(geom)
+
+    if not geom.is_valid:
+        # Sometimes geometry points are too close together and considered duplicates
+        geom = remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
+
+        if not geom.is_valid:
+            # One last approach is to create a buffer of 0 distance from an object. This can fix
+            # some invalid geometry
+            geom = geom.buffer(0)
+
+    if not geom.is_valid:
+        # If it's still not valid or wasn't fixed raise an error
+        reason = explain_validity(geom)
+        raise ValueError(f"Geometry for feature {feature.id} is not valid due to {reason}")
+
+    return geom
+
+
 def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> GeoPlace:
     props = feature.properties
     name = props.name
     if name is None:
         raise Exception(f"Can't convert feature [{feature.id}] to geoplace without a name.")
 
-    geom = feature.geometry
-
-    if isinstance(geom, (Polygon, MultiPolygon, LineString)):
-        geom = remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
-
     return GeoPlace(
         id=f"wof_{feature.id}",
         name=name,
         type=props.placetype.to_geoplace_type(),
-        geom=geom,
+        geom=_fix_geometry(feature),
         properties=props.model_dump(mode="json"),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType.wof,
@@ -346,15 +363,8 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
     def _bulk_index(features: list[WhosOnFirstFeature]) -> None:
         index = _get_index()
-        try:
-            places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
-            index.bulk_index(places)
-        except:
-            logger.info(
-                "failed places: %s",
-                json.dumps([f.model_dump(mode="json") for f in features], indent=2),
-            )
-            raise
+        places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
+        index.bulk_index(places)
 
     features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
@@ -367,8 +377,9 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 
 def process_placetypes() -> None:
-    index = GeocodeIndex()
-    index.create_index(recreate=True)
+    # TODO temporarily skipping
+    # index = GeocodeIndex()
+    # index.create_index(recreate=True)
 
     for placetype in DOWNLOADABLE_PLACETYPES:
         placetype_file = _download_placetype(placetype)
@@ -381,24 +392,51 @@ if __name__ == "__main__":
     process_placetypes()
 
 # Code for manual testing
-# ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004
+# ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
-# placetype_file = Path("temp/whosonfirst-data-borough-latest.tar.bz2")
+# placetype_file = Path("temp/whosonfirst-data-county-latest.tar.bz2")
 
 # features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
 # feature: WhosOnFirstFeature | None = None
 
 # for f in features_iter:
-#     if f.id == 1108955739:
+#     try:
+#         _wof_feature_to_geoplace(f, "foo")
+#     except Exception as e:
+#         print(e)
 #         feature = f
 #         break
 
 # assert feature is not None
 
+# g = feature.geometry
 
-# feature.geometry.is_valid
-# explain_validity(feature.geometry)
+# g.is_valid
+# explain_validity(g)
+
+# g.__geo_interface__
+
+# display_geometry([g])
+
+# fixed = remove_repeated_points(g, _DUPLICATE_POINT_TOLERANCE).buffer(0)
+# fixed.is_valid
+# g == fixed  # type: ignore
+# explain_validity(fixed)
+
+# fixed.__geo_interface__
+
+# display_geometry([fixed])
+
+# print(json.dumps(fixed.__geo_interface__, indent=2))
+
+# fixed.is_valid
+
+
+# geom = remove_repeated_points(feature.geometry, _DUPLICATE_POINT_TOLERANCE)
+
+# geom.is_valid
+# explain_validity(geom)
 
 
 # index = GeocodeIndex()
