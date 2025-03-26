@@ -4,7 +4,7 @@ import json
 import logging
 import tarfile
 import threading
-from collections.abc import Callable, Generator, Iterator
+from collections.abc import Callable, Generator, Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from pathlib import Path
@@ -39,6 +39,8 @@ TEMP_DIR = Path("temp")
 
 logger = logging.getLogger(__name__)
 
+# Used for removing repeated points so that shapely and opensearch will consider them valid.
+_DUPLICATE_POINT_TOLERANCE = 0.00001
 
 # Documentation copied from https://whosonfirst.org/docs/placetypes/
 
@@ -247,7 +249,7 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
     geom = feature.geometry
 
     if isinstance(geom, (Polygon, MultiPolygon, LineString)):
-        geom = remove_repeated_points(geom)
+        geom = remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
 
     return GeoPlace(
         id=f"wof_{feature.id}",
@@ -312,7 +314,7 @@ def filter_items[T](
             logger.info("Filtered out %s", item)
 
 
-def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
+def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[WhosOnFirstFeature]:
     features_iter = find_all_wof_features(placetype_file)
     features_iter = counting_generator(features_iter, logger=logger)
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
@@ -322,47 +324,16 @@ def process_placetype_file(index: GeocodeIndex, placetype_file: Path) -> None:
         log_not_matching=True,
     )
     # Who's on first places are sometimes duplicated with similar information.
-    features_iter = unique_by(
+    return unique_by(
         features_iter,
         key_fn=lambda p: p.id,
         duplicate_handler_fn=lambda _f, feature_id: logger.info(
             "Skipping duplicate id %s", feature_id
         ),
     )
-    count = 0
-
-    for features in chunk_items(features_iter, 50):
-        try:
-            places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
-            index.bulk_index(places)
-        except:
-            logger.info(
-                "failed places: %s",
-                json.dumps([f.model_dump(mode="json") for f in features], indent=2),
-            )
-            raise
-        count += len(places)
-    logger.info("Finished %s and saved %s", placetype_file, count)
 
 
 def process_placetype_file_multithread(placetype_file: Path) -> None:
-    features_iter = find_all_wof_features(placetype_file)
-    features_iter = counting_generator(features_iter, logger=logger)
-    features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
-    features_iter = filter_items(
-        features_iter,
-        filter_fn=lambda f: f.properties.name is not None,
-        log_not_matching=True,
-    )
-    # Who's on first places are sometimes duplicated with similar information.
-    features_iter = unique_by(
-        features_iter,
-        key_fn=lambda p: p.id,
-        duplicate_handler_fn=lambda _f, feature_id: logger.info(
-            "Skipping duplicate id %s", feature_id
-        ),
-    )
-
     thread_local = threading.local()
     all_conns: set[GeocodeIndex] = set()
 
@@ -384,6 +355,8 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
                 json.dumps([f.model_dump(mode="json") for f in features], indent=2),
             )
             raise
+
+    features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
     with ThreadPoolExecutor(max_workers=5) as e:
         futures = [e.submit(_bulk_index, features) for features in chunk_items(features_iter, 50)]
@@ -408,8 +381,25 @@ if __name__ == "__main__":
     process_placetypes()
 
 # Code for manual testing
+# ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004
 
 # placetype_file = Path("temp/whosonfirst-data-borough-latest.tar.bz2")
+
+# features_iter = _placetype_file_to_features_for_ingest(placetype_file)
+
+# feature: WhosOnFirstFeature | None = None
+
+# for f in features_iter:
+#     if f.id == 1108955739:
+#         feature = f
+#         break
+
+# assert feature is not None
+
+
+# feature.geometry.is_valid
+# explain_validity(feature.geometry)
+
 
 # index = GeocodeIndex()
 # index.create_index(recreate=True)
