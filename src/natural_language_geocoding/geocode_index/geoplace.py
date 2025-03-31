@@ -68,6 +68,7 @@ class GeoPlaceSource(BaseModel):
         strict=True,
         extra="forbid",
         frozen=True,
+        # TODO this is depreceated. Move to a different implementations
         json_encoders={
             GeoPlaceSourceType: lambda x: x.value,
         },
@@ -76,7 +77,7 @@ class GeoPlaceSource(BaseModel):
     source_path: str
 
 
-class Hierarchy(BaseModel):
+class Hierarchy(BaseModel, frozen=True):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     borough_id: str | None = None
@@ -102,6 +103,12 @@ class Hierarchy(BaseModel):
     def get_by_place_type(self, place_type: GeoPlaceType) -> str | None:
         return getattr(self, f"{place_type.value}_id")
 
+    def with_id(self, feature_id: str, place_type: GeoPlaceType) -> "Hierarchy":
+        """Creates a new hierarchy with the specified id set."""
+        model = self.model_dump()
+        model[f"{place_type.value}_id"] = feature_id
+        return Hierarchy.model_validate(model)
+
 
 class GeoPlace(BaseModel):
     model_config = ConfigDict(
@@ -109,6 +116,7 @@ class GeoPlace(BaseModel):
         extra="forbid",
         frozen=True,
         arbitrary_types_allowed=True,
+        # TODO this is depreceated. Move to a different implementations
         json_encoders={
             GeoPlaceType: lambda x: x.value,
             BaseGeometry: lambda x: x.__geo_interface__,
@@ -126,6 +134,14 @@ class GeoPlace(BaseModel):
     population: int | None = None
     properties: dict[str, Any]
 
+    # TODO test this
+    def self_as_hierarchies(self) -> list[Hierarchy]:
+        """Returns a set of hierarchies representing this place as a hierarchy."""
+        if len(self.hierarchies) > 0:
+            return [h.with_id(self.id, self.type) for h in self.hierarchies]
+        model = {f"{self.type.value}_id": self.id}
+        return [Hierarchy.model_validate(model)]
+
 
 def print_places_as_table(places: list[GeoPlace]) -> None:
     """Prints places as a table. Useful for debugging."""
@@ -140,6 +156,14 @@ def print_places_as_table(places: list[GeoPlace]) -> None:
             "hierarchies": [{k: v for k, v in h if v is not None} for h in place.hierarchies],
         }
         table_data.append(place_dict)
+
+    # Print the table
+    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
+
+
+def print_hierarchies_as_table(hierarchies: list[Hierarchy]) -> None:
+    """Prints hierarchies as a table. Useful for debugging."""
+    table_data: list[dict[str, Any]] = [h.model_dump(exclude_none=True) for h in hierarchies]
 
     # Print the table
     print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201

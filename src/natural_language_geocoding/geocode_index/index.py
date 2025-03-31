@@ -3,6 +3,7 @@
 import json
 import logging
 import subprocess
+from abc import ABC, abstractmethod
 from typing import Any, Literal, TypedDict, cast
 
 from e84_geoai_common.geometry import geometry_from_geojson_dict
@@ -18,6 +19,7 @@ from natural_language_geocoding.geocode_index.geoplace import (
     Hierarchy,
 )
 from natural_language_geocoding.geocode_index.opensearch_utils import (
+    IndexField,
     create_opensearch_client,
 )
 
@@ -28,43 +30,90 @@ _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
         "number_of_replicas": 0,
     }
 }
+
+
+class GeoPlaceIndexField(IndexField):
+    id = "id"
+    place_name = "place_name"
+    type = "type"
+    geom = "geom"
+    source_id = "source_id"
+    source_type = "source_type"
+    source_path = "source_path"
+    alternate_names = "alternate_names"
+    population = "population"
+    area_sq_km = "area_sq_km"
+    properties = "properties"
+    hierarchies = "hierarchies"
+
+    hierarchies_borough_id = ("hierarchies", "borough_id")
+    hierarchies_continent_id = ("hierarchies", "continent_id")
+    hierarchies_country_id = ("hierarchies", "country_id")
+    hierarchies_county_id = ("hierarchies", "county_id")
+    hierarchies_dependency_id = ("hierarchies", "dependency_id")
+    hierarchies_disputed_id = ("hierarchies", "disputed_id")
+    hierarchies_empire_id = ("hierarchies", "empire_id")
+    hierarchies_localadmin_id = ("hierarchies", "localadmin_id")
+    hierarchies_locality_id = ("hierarchies", "locality_id")
+    hierarchies_macrocounty_id = ("hierarchies", "macrocounty_id")
+    hierarchies_macrohood_id = ("hierarchies", "macrohood_id")
+    hierarchies_macroregion_id = ("hierarchies", "macroregion_id")
+    hierarchies_marinearea_id = ("hierarchies", "marinearea_id")
+    hierarchies_marketarea_id = ("hierarchies", "marketarea_id")
+    hierarchies_microhood_id = ("hierarchies", "microhood_id")
+    hierarchies_neighbourhood_id = ("hierarchies", "neighbourhood_id")
+    hierarchies_ocean_id = ("hierarchies", "ocean_id")
+    hierarchies_postalregion_id = ("hierarchies", "postalregion_id")
+    hierarchies_region_id = ("hierarchies", "region_id")
+
+
 _GEOPLACE_INDEX_MAPPINGS = {
     "dynamic": "strict",
     "properties": {
-        "id": {"type": "keyword"},
-        "name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-        "type": {"type": "keyword"},
-        "geom": {"type": "geo_shape"},
-        "source_id": {"type": "long"},
-        "source_type": {"type": "keyword"},
-        "source_path": {"type": "keyword"},
-        "alternate_names": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-        "population": {"type": "long"},
-        "area_sq_km": {"type": "double"},
-        "properties": {"type": "keyword", "doc_values": False, "index": False},
-        "hierarchies": {
+        GeoPlaceIndexField.id.name: {"type": "keyword"},
+        GeoPlaceIndexField.place_name.name: {
+            "type": "text",
+            "fields": {"keyword": {"type": "keyword"}},
+        },
+        GeoPlaceIndexField.type.name: {"type": "keyword"},
+        GeoPlaceIndexField.geom.name: {"type": "geo_shape"},
+        GeoPlaceIndexField.source_id.name: {"type": "long"},
+        GeoPlaceIndexField.source_type.name: {"type": "keyword"},
+        GeoPlaceIndexField.source_path.name: {"type": "keyword"},
+        GeoPlaceIndexField.alternate_names.name: {
+            "type": "text",
+            "fields": {"keyword": {"type": "keyword"}},
+        },
+        GeoPlaceIndexField.population.name: {"type": "long"},
+        GeoPlaceIndexField.area_sq_km.name: {"type": "double"},
+        GeoPlaceIndexField.properties.name: {
+            "type": "keyword",
+            "doc_values": False,
+            "index": False,
+        },
+        GeoPlaceIndexField.hierarchies.name: {
             "type": "object",
             "dynamic": "strict",
             "properties": {
-                "borough_id": {"type": "keyword"},
-                "continent_id": {"type": "keyword"},
-                "country_id": {"type": "keyword"},
-                "county_id": {"type": "keyword"},
-                "dependency_id": {"type": "keyword"},
-                "disputed_id": {"type": "keyword"},
-                "empire_id": {"type": "keyword"},
-                "localadmin_id": {"type": "keyword"},
-                "locality_id": {"type": "keyword"},
-                "macrocounty_id": {"type": "keyword"},
-                "macrohood_id": {"type": "keyword"},
-                "macroregion_id": {"type": "keyword"},
-                "marinearea_id": {"type": "keyword"},
-                "marketarea_id": {"type": "keyword"},
-                "microhood_id": {"type": "keyword"},
-                "neighbourhood_id": {"type": "keyword"},
-                "ocean_id": {"type": "keyword"},
-                "postalregion_id": {"type": "keyword"},
-                "region_id": {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_borough_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_continent_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_country_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_county_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_dependency_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_disputed_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_empire_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_localadmin_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_locality_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_macrocounty_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_macrohood_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_macroregion_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_marinearea_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_marketarea_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_microhood_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_neighbourhood_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_ocean_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_postalregion_id.name: {"type": "keyword"},
+                GeoPlaceIndexField.hierarchies_region_id.name: {"type": "keyword"},
             },
         },
     },
@@ -198,7 +247,12 @@ class SearchRequest(BaseModel):
     start_index: int = 0
     sort: list[str | SortField | dict[str, Any]] | None = None
     query: dict[str, Any]
-    explain: bool = False
+    explain: bool = Field(
+        description=(
+            "If set to true opensearch will explain why each item appears in a particular order"
+        ),
+        default=False,
+    )
 
     def to_opensearch_params(self) -> dict[str, Any]:
         return {
@@ -224,7 +278,18 @@ class SearchRequest(BaseModel):
         return body
 
 
-class GeocodeIndex:
+class GeocodeIndexBase(ABC):
+    @abstractmethod
+    def create_index(self, *, recreate: bool = False) -> None: ...
+
+    @abstractmethod
+    def bulk_index(self, places: list[GeoPlace]) -> None: ...
+
+    @abstractmethod
+    def search(self, request: SearchRequest) -> SearchResponse: ...
+
+
+class GeocodeIndex(GeocodeIndexBase):
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
     client: OpenSearch
 

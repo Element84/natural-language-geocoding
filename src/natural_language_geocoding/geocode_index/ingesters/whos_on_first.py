@@ -179,6 +179,7 @@ class WhosOnFirstPlaceProperties(BaseModel):
         strict=True,
         extra="allow",
         frozen=True,
+        # TODO this is depreceated. Move to a different implementations
         json_encoders={WhosOnFirstPlaceType: lambda x: x.value},
     )
 

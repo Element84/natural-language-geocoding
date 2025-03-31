@@ -1,9 +1,11 @@
 from collections.abc import Generator
-from typing import Any, TypedDict
+from enum import Enum
+from typing import Any, Literal, TypedDict
 
 import boto3
 from e84_geoai_common.util import get_env_var
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
+from shapely.geometry.base import BaseGeometry
 
 
 def create_opensearch_client() -> OpenSearch:
@@ -37,6 +39,33 @@ def create_opensearch_client() -> OpenSearch:
 QueryCondition = dict[str, Any]
 
 
+class IndexField(Enum):
+    parent: str | None
+    _name: str
+
+    def __init__(self, parent_or_name: str, subname: str | None = None) -> None:
+        if subname:
+            self.parent = parent_or_name
+            self._name = subname
+        else:
+            self._name = parent_or_name
+            self.parent = None
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def path(self) -> str:
+        if self.parent:
+            return f"{self.parent}.{self._name}"
+        return self._name
+
+    @property
+    def is_nested(self) -> bool:
+        return self.parent is not None
+
+
 class QueryDSL:
     @staticmethod
     def and_conds(*conds: QueryCondition) -> QueryCondition:
@@ -56,33 +85,44 @@ class QueryDSL:
 
     @staticmethod
     def match(
-        field: str, text: str, *, fuzzy: bool = False, boost: float | None = None
+        field: IndexField, text: str, *, fuzzy: bool = False, boost: float | None = None
     ) -> QueryCondition:
         inner_cond: dict[str, str | int | float] = {"query": text}
         if fuzzy:
             inner_cond["fuzziness"] = "AUTO"
         if boost is not None:
             inner_cond["boost"] = boost
-        return {"match": {field: inner_cond}}
+        return {"match": {field.path: inner_cond}}
 
     @staticmethod
-    def term(field: str, value: str, *, boost: float | None = None) -> QueryCondition:
+    def term(field: IndexField, value: str, *, boost: float | None = None) -> QueryCondition:
         inner_cond: dict[str, str | float] = {"value": value}
         if boost is not None:
             inner_cond["boost"] = boost
 
-        return {"term": {field: inner_cond}}
+        return {"term": {field.path: inner_cond}}
 
     @staticmethod
-    def terms(field: str, values: list[str], *, boost: float | None = None) -> QueryCondition:
+    def terms(
+        field: IndexField, values: list[str], *, boost: float | None = None
+    ) -> QueryCondition:
         if len(values) == 0:
             raise ValueError("Must have one or more values")
-        inner_cond: dict[str, float | list[str]] = {field: values}
+        inner_cond: dict[str, float | list[str]] = {field.path: values}
 
         if boost is not None:
             inner_cond["boost"] = boost
 
         return {"terms": inner_cond}
+
+    @staticmethod
+    def geo_shape(
+        field: IndexField,
+        geom: BaseGeometry,
+        *,
+        relation: Literal["CONTAINS", "WITHIN", "DISJOINT", "INTERSECTS"] = "INTERSECTS",
+    ) -> QueryCondition:
+        return {"geo_shape": {field.path: {"shape": geom.__geo_interface__, "relation": relation}}}
 
 
 class Hit(TypedDict):
