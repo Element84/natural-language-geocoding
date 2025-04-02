@@ -6,14 +6,18 @@ import threading
 from collections.abc import Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
+from functools import singledispatch
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import requests
 from e84_geoai_common.geojson import Feature
 from e84_geoai_common.util import chunk_items, unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from shapely import (
+    LinearRing,
+    MultiPolygon,
+    Polygon,
     remove_repeated_points,  # type: ignore[reportUnknownVariableTypes]
 )
 from shapely.geometry.base import BaseGeometry
@@ -42,6 +46,12 @@ logger = logging.getLogger(__name__)
 
 # Used for removing repeated points so that shapely and opensearch will consider them valid.
 _DUPLICATE_POINT_TOLERANCE = 0.00001
+
+
+_KNOWN_BAD_WOF_GEOMS__: set[int] = {
+    # Pontes e Lacerda, a small town in Brazil. Opensearch rejects the polygon's 40th interior ring.
+    101961007
+}
 
 # Documentation copied from https://whosonfirst.org/docs/placetypes/
 
@@ -123,14 +133,14 @@ class WhosOnFirstPlaceType(Enum):
 
 DOWNLOADABLE_PLACETYPES = [
     # TODO temporarily skipping already completed placetypes
-    WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
-    WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
-    WhosOnFirstPlaceType.country,  # (202.4 MB) 232 records
-    WhosOnFirstPlaceType.county,  # (563.1 MB) 47,645 records
-    WhosOnFirstPlaceType.dependency,  # (1.2 MB) 43 records
-    WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
-    WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
-    WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
+    # WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
+    # WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
+    # WhosOnFirstPlaceType.country,  # (202.4 MB) 232 records
+    # WhosOnFirstPlaceType.county,  # (563.1 MB) 47,645 records
+    # WhosOnFirstPlaceType.dependency,  # (1.2 MB) 43 records
+    # WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
+    # WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
+    # WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
     WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
     WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
     WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
@@ -189,7 +199,9 @@ class WhosOnFirstPlaceProperties(BaseModel):
     )
 
     name: str | None = Field(validation_alias=AliasChoices("name", "wof:name"))
-    placetype: WhosOnFirstPlaceType = Field(validation_alias="wof:placetype")
+    placetype: WhosOnFirstPlaceType = Field(
+        validation_alias=AliasChoices("wof:placetype", "placetype")
+    )
     edtf_deprecated: str | None = Field(
         validation_alias="edtf:deprecated",
         default=None,
@@ -248,6 +260,27 @@ class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
         return self.properties.edtf_deprecated is not None
 
 
+T_Geom = TypeVar("T_Geom", bound=BaseGeometry)
+
+
+@singledispatch
+def _remove_duplicate_points(geom: T_Geom) -> T_Geom:
+    return remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
+
+
+@_remove_duplicate_points.register
+def _(geom: Polygon) -> Polygon:
+    fixed_exterior: LinearRing = _remove_duplicate_points(geom.exterior)
+    fixed_interiors: list[LinearRing] = [_remove_duplicate_points(i) for i in geom.interiors]
+
+    return Polygon(shell=fixed_exterior, holes=fixed_interiors)
+
+
+@_remove_duplicate_points.register
+def _(geom: MultiPolygon) -> MultiPolygon:
+    return MultiPolygon([_remove_duplicate_points(geom) for geom in geom.geoms])
+
+
 def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
     """TODO docs."""
     geom = feature.geometry
@@ -256,12 +289,14 @@ def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
 
     if not geom.is_valid:
         # Sometimes geometry points are too close together and considered duplicates
-        geom = remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
+        geom = _remove_duplicate_points(geom)
 
         if not geom.is_valid:
             # One last approach is to create a buffer of 0 distance from an object. This can fix
             # some invalid geometry
             geom = geom.buffer(0)
+            # We must remove any new duplicates this might add
+            geom = _remove_duplicate_points(geom)
 
     if not geom.is_valid:
         # If it's still not valid or wasn't fixed raise an error
@@ -338,11 +373,17 @@ def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[Who
     """TODO docs."""
     features_iter = find_all_wof_features(placetype_file)
     features_iter = counting_generator(features_iter, logger=logger)
+    # Exclude deprecated places
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
+    # Exclude any places with no name.
     features_iter = filter_items(
         features_iter,
         filter_fn=lambda f: f.properties.name is not None,
         logger=logger,
+    )
+    # Exclude any places with known bad geometries
+    features_iter = filter_items(
+        features_iter, filter_fn=lambda f: f.id not in _KNOWN_BAD_WOF_GEOMS__
     )
     # Who's on first places are sometimes duplicated with similar information.
     return unique_by(
@@ -383,8 +424,9 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 def process_placetypes() -> None:
     """TODO docs."""
-    index = GeocodeIndex()
-    index.create_index(recreate=True)
+    # TODO temporarily commented out
+    # index = GeocodeIndex()
+    # index.create_index(recreate=True)
 
     for placetype in DOWNLOADABLE_PLACETYPES:
         placetype_file = _download_placetype(placetype)
@@ -399,6 +441,7 @@ if __name__ == "__main__":
 # Code for manual testing
 # ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
+
 # placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 
 # features_iter = _placetype_file_to_features_for_ingest(placetype_file)
@@ -408,45 +451,98 @@ if __name__ == "__main__":
 # with open("temp/found_bad_geoms.jsonld", "w") as f:
 #     for feature in features_iter:
 #         try:
-#             _wof_feature_to_geoplace(feature, "foo")
+#             place = _wof_feature_to_geoplace(feature, "foo")
+#             bad = place.id == "wof_101960967" or place.id == "wof_101961007"
 #         except Exception as e:
 #             print(e)
 #             bad = True
 
+#         if bad:
 #             found_features.append(feature)
 #             f.write(feature.model_dump_json())
 
+# with open("temp/found_bad_geoms.jsonld") as f:
+#     found_features = [WhosOnFirstFeature.model_validate_json(line.strip()) for line in f]
+
+
+# feature = found_features[1]
+# feature.properties.name
+# feature.properties.placetype
 
 # g = feature.geometry
-
 # g.is_valid
-# explain_validity(g)
-
-# g.__geo_interface__
-
 # display_geometry([g])
 
-# fixed = remove_repeated_points(g, _DUPLICATE_POINT_TOLERANCE).buffer(0)
-# fixed.is_valid
-# g == fixed  # type: ignore
-# explain_validity(fixed)
-
-# fixed.__geo_interface__
-
-# display_geometry([fixed])
-
-# print(json.dumps(fixed.__geo_interface__, indent=2))
-
-# fixed.is_valid
+# fg: Polygon = cast("Polygon", _fix_geometry(feature))
 
 
-# geom = remove_repeated_points(feature.geometry, _DUPLICATE_POINT_TOLERANCE)
-
-# geom.is_valid
-# explain_validity(geom)
-
-
+# next_id: int = 0
 # index = GeocodeIndex()
-# index.create_index(recreate=True)
-# # process_placetype_file(index, placetype_file)
-# process_placetype_file_multithread(placetype_file)
+
+
+# def test_geometry(geom: BaseGeometry) -> bool:
+#     global next_id
+#     if not geom.is_valid:
+#         raise Exception("Geometry is not valid")
+#     next_id += 1
+#     feature = WhosOnFirstFeature(
+#         id=next_id,
+#         geometry=geom,
+#         properties=WhosOnFirstPlaceProperties(
+#             name="Test Geom", placetype=WhosOnFirstPlaceType.borough
+#         ),
+#     )
+#     place = _wof_feature_to_geoplace(feature, "test")
+
+#     try:
+#         index.bulk_index([place])
+#         success = True
+#     except Exception:
+#         success = False
+#     return success
+
+
+# # Original geom should fail
+# test_geometry(fg)
+
+# p_without_interiors = Polygon(fg.exterior)
+# test_geometry(p_without_interiors)
+# display_geometry([p_without_interiors])
+
+
+# def find_bad_interior(interiors: list[LinearRing], start_index: int, end_index: int) -> int:
+#     print(f"Running with indexes: {start_index}, {end_index}")
+#     # Base case: If we've narrowed down to a single interior ring
+#     if start_index == end_index:
+#         test_polygon = Polygon(fg.exterior, holes=[interiors[start_index]])
+#         if not test_geometry(test_polygon):
+#             raise Exception("Logic error")
+#         return start_index
+
+#     # Find the midpoint for binary search
+#     mid = (start_index + end_index) // 2
+
+#     # Test the first half of the interior rings
+#     first_half_interiors = interiors[start_index : mid + 1]
+#     test_polygon = Polygon(fg.exterior, holes=first_half_interiors)
+
+#     # If the first half fails the test, the problematic ring is in that half
+#     if not test_geometry(test_polygon):
+#         return find_bad_interior(interiors, start_index, mid)
+
+#     # Otherwise, the problematic ring is in the second half
+#     return find_bad_interior(interiors, mid + 1, end_index)
+
+
+# bad_index = find_bad_interior(list(fg.interiors), 0, len(fg.interiors) - 1)
+
+# bad_index
+
+# bad_interior = fg.interiors[39]
+
+# bad_interior.__geo_interface__
+# bad_interior.is_valid
+
+# bad_poly = Polygon(fg.exterior, [bad_interior])
+
+# display_geometry([bad_poly])
