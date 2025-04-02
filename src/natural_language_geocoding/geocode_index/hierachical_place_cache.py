@@ -6,7 +6,7 @@ from pathlib import Path
 from e84_geoai_common.util import timed_function
 
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType, Hierarchy
-from natural_language_geocoding.geocode_index.index import GEOPLACE_INDEX_NAME
+from natural_language_geocoding.geocode_index.index import GEOPLACE_INDEX_NAME, GeoPlaceIndexField
 from natural_language_geocoding.geocode_index.opensearch_utils import (
     QueryDSL,
     create_opensearch_client,
@@ -152,7 +152,7 @@ def _populate() -> HierchicalPlaceCache:
         client,
         index=GEOPLACE_INDEX_NAME,
         query=QueryDSL.terms(
-            "type",
+            GeoPlaceIndexField.type,
             [
                 GeoPlaceType.continent.value,
                 GeoPlaceType.country.value,

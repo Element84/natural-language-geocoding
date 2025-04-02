@@ -35,12 +35,14 @@ _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
 class GeoPlaceIndexField(IndexField):
     id = "id"
     place_name = "place_name"
+    place_name_keyword = ("place_name", "keyword")
     type = "type"
     geom = "geom"
     source_id = "source_id"
     source_type = "source_type"
     source_path = "source_path"
     alternate_names = "alternate_names"
+    alternate_names_keyword = ("alternate_names", "keyword")
     population = "population"
     area_sq_km = "area_sq_km"
     properties = "properties"
@@ -73,7 +75,7 @@ _GEOPLACE_INDEX_MAPPINGS = {
         GeoPlaceIndexField.id.name: {"type": "keyword"},
         GeoPlaceIndexField.place_name.name: {
             "type": "text",
-            "fields": {"keyword": {"type": "keyword"}},
+            "fields": {GeoPlaceIndexField.place_name_keyword.name: {"type": "keyword"}},
         },
         GeoPlaceIndexField.type.name: {"type": "keyword"},
         GeoPlaceIndexField.geom.name: {"type": "geo_shape"},
@@ -82,7 +84,7 @@ _GEOPLACE_INDEX_MAPPINGS = {
         GeoPlaceIndexField.source_path.name: {"type": "keyword"},
         GeoPlaceIndexField.alternate_names.name: {
             "type": "text",
-            "fields": {"keyword": {"type": "keyword"}},
+            "fields": {GeoPlaceIndexField.alternate_names_keyword.name: {"type": "keyword"}},
         },
         GeoPlaceIndexField.population.name: {"type": "long"},
         GeoPlaceIndexField.area_sq_km.name: {"type": "double"},

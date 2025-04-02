@@ -395,21 +395,21 @@ if __name__ == "__main__":
 # Code for manual testing
 # ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
-# placetype_file = Path("temp/whosonfirst-data-county-latest.tar.bz2")
+placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 
-# features_iter = _placetype_file_to_features_for_ingest(placetype_file)
+features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
-# feature: WhosOnFirstFeature | None = None
+found_features: list[WhosOnFirstFeature] = []
 
-# for f in features_iter:
-#     try:
-#         _wof_feature_to_geoplace(f, "foo")
-#     except Exception as e:
-#         print(e)
-#         feature = f
-#         break
+with open("temp/found_bad_geoms.jsonld", "w") as f:
+    for feature in features_iter:
+        try:
+            _wof_feature_to_geoplace(feature, "foo")
+        except Exception as e:
+            print(e)
+            found_features.append(feature)
+            f.write(feature.model_dump_json())
 
-# assert feature is not None
 
 # g = feature.geometry
 

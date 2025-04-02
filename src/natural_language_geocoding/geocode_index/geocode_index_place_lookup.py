@@ -9,6 +9,7 @@ from natural_language_geocoding.geocode_index.geoplace import PLACE_TYPE_SORT_OR
 from natural_language_geocoding.geocode_index.hierachical_place_cache import PlaceCache
 from natural_language_geocoding.geocode_index.index import (
     GeocodeIndex,
+    GeoPlaceIndexField,
     SearchRequest,
     SearchResponse,
     SortField,
@@ -64,14 +65,14 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
     ) -> SearchResponse:
         # Dis_max is used so that the score will come from only the highest matching condition.
         name_match = QueryDSL.dis_max(
-            QueryDSL.term("name.keyword", name, boost=10.0),
-            QueryDSL.term("alternate_names.keyword", name, boost=5.0),
-            QueryDSL.match("name", name, fuzzy=True, boost=2.0),
-            QueryDSL.match("alternate_names", name, fuzzy=True, boost=1.0),
+            QueryDSL.term(GeoPlaceIndexField.place_name_keyword, name, boost=10.0),
+            QueryDSL.term(GeoPlaceIndexField.alternate_names_keyword, name, boost=5.0),
+            QueryDSL.match(GeoPlaceIndexField.place_name, name, fuzzy=True, boost=2.0),
+            QueryDSL.match(GeoPlaceIndexField.alternate_names, name, fuzzy=True, boost=1.0),
         )
         conditions: list[QueryCondition] = [name_match]
         if place_type:
-            conditions.append(QueryDSL.term("type", place_type.value))
+            conditions.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
 
         within_conds: list[QueryCondition] = []
 
@@ -88,7 +89,9 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
                 raise Exception(
                     f"Unexpectedly found multiple continents with name [{continent_name}]"
                 )
-            within_conds.append(QueryDSL.term("hierarchies.continent_id", continent_ids[0]))
+            within_conds.append(
+                QueryDSL.term(GeoPlaceIndexField.hierarchies_continent_id, continent_ids[0])
+            )
 
         if country_name:
             country_ids = self._place_cache.find_ids(
@@ -96,7 +99,9 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             )
             if len(country_ids) == 0:
                 raise ValueError(f"Unable to find country with name [{country_name}]")
-            within_conds.append(QueryDSL.terms("hierarchies.country_id", country_ids))
+            within_conds.append(
+                QueryDSL.terms(GeoPlaceIndexField.hierarchies_country_id, country_ids)
+            )
 
         if region_name:
             region_ids = self._place_cache.find_ids(
@@ -108,7 +113,9 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
             if len(region_ids) == 0:
                 raise ValueError(f"Unable to find region with name [{region_name}]")
-            within_conds.append(QueryDSL.terms("hierarchies.region_id", region_ids))
+            within_conds.append(
+                QueryDSL.terms(GeoPlaceIndexField.hierarchies_region_id, region_ids)
+            )
 
         request = SearchRequest(
             size=limit,
