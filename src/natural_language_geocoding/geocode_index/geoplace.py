@@ -133,9 +133,8 @@ class GeoPlace(BaseModel):
     def _shapely_geometry_to_json(self, g: BaseGeometry) -> dict[str, Any]:
         return g.__geo_interface__
 
-    # TODO test this
     def self_as_hierarchies(self) -> list[Hierarchy]:
-        """Returns a set of hierarchies representing this place as a hierarchy."""
+        """Returns a set of hierarchies representing this place in the hierarchy."""
         if len(self.hierarchies) > 0:
             return [h.with_id(self.id, self.type) for h in self.hierarchies]
         model = {f"{self.type.value}_id": self.id}
