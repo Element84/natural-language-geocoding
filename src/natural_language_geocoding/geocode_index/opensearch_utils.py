@@ -40,6 +40,8 @@ QueryCondition = dict[str, Any]
 
 
 class IndexField(Enum):
+    """TODO docs."""
+
     parent: str | None
     _name: str
 
@@ -57,22 +59,28 @@ class IndexField(Enum):
 
     @property
     def path(self) -> str:
+        """TODO docs."""
         if self.parent:
             return f"{self.parent}.{self._name}"
         return self._name
 
     @property
     def is_nested(self) -> bool:
+        """TODO docs."""
         return self.parent is not None
 
 
 class QueryDSL:
+    """TODO docs."""
+
     @staticmethod
     def and_conds(*conds: QueryCondition) -> QueryCondition:
+        """TODO docs."""
         return {"bool": {"must": conds}}
 
     @staticmethod
     def or_conds(*conds: QueryCondition) -> QueryCondition:
+        """TODO docs."""
         return {"bool": {"should": conds}}
 
     @staticmethod
@@ -87,6 +95,7 @@ class QueryDSL:
     def match(
         field: IndexField, text: str, *, fuzzy: bool = False, boost: float | None = None
     ) -> QueryCondition:
+        """TODO docs."""
         inner_cond: dict[str, str | int | float] = {"query": text}
         if fuzzy:
             inner_cond["fuzziness"] = "AUTO"
@@ -96,6 +105,7 @@ class QueryDSL:
 
     @staticmethod
     def term(field: IndexField, value: str, *, boost: float | None = None) -> QueryCondition:
+        """TODO docs."""
         inner_cond: dict[str, str | float] = {"value": value}
         if boost is not None:
             inner_cond["boost"] = boost
@@ -106,6 +116,7 @@ class QueryDSL:
     def terms(
         field: IndexField, values: list[str], *, boost: float | None = None
     ) -> QueryCondition:
+        """TODO docs."""
         if len(values) == 0:
             raise ValueError("Must have one or more values")
         inner_cond: dict[str, float | list[str]] = {field.path: values}
@@ -122,10 +133,13 @@ class QueryDSL:
         *,
         relation: Literal["CONTAINS", "WITHIN", "DISJOINT", "INTERSECTS"] = "INTERSECTS",
     ) -> QueryCondition:
+        """TODO docs."""
         return {"geo_shape": {field.path: {"shape": geom.__geo_interface__, "relation": relation}}}
 
 
 class Hit(TypedDict):
+    """TODO docs."""
+
     _id: str
     _source: dict[str, Any]
 

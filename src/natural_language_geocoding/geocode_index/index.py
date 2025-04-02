@@ -1,4 +1,4 @@
-"""TODO document this module."""
+"""Provides types for creating, ingest, and searching geospatial places in an opensearch index."""
 
 import json
 import logging
@@ -33,6 +33,8 @@ _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
 
 
 class GeoPlaceIndexField(IndexField):
+    """Defines the different index fields on the GeoPlace index."""
+
     id = "id"
     place_name = "place_name"
     place_name_keyword = ("place_name", "keyword")
@@ -123,6 +125,8 @@ _GEOPLACE_INDEX_MAPPINGS = {
 
 
 class HierarchyDoc(TypedDict):
+    """Identifies the ids of parent places for a geoplace."""
+
     borough_id: str | None
     continent_id: str | None
     country_id: str | None
@@ -145,6 +149,8 @@ class HierarchyDoc(TypedDict):
 
 
 class GeoPlaceDoc(TypedDict):
+    """Represents an indexed geoplace."""
+
     id: str
     place_name: str
     type: str
@@ -162,6 +168,7 @@ GEOPLACE_INDEX_NAME = "geoplaces"
 
 
 def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
+    """Converts a GeoPlace model into an opensearch document for indexing."""
     return {
         "id": geoplace.id,
         "place_name": geoplace.place_name,
@@ -178,6 +185,7 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
 
 
 def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
+    """Converts an opensearch document to the GeoPlace model."""
     return GeoPlace(
         id=doc["id"],
         place_name=doc["place_name"],
@@ -197,6 +205,8 @@ def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
 
 
 class SearchResponse(BaseModel):
+    """Contains results of a search for geoplaces."""
+
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     took_ms: int
     hits: int
@@ -221,6 +231,8 @@ class SearchResponse(BaseModel):
 
 
 class SortField(BaseModel):
+    """Represents a field for sorting and a direction."""
+
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     field: str
@@ -231,6 +243,8 @@ class SortField(BaseModel):
 
 
 class SearchRequest(BaseModel):
+    """A search request for finding geoplaces."""
+
     model_config = ConfigDict(
         strict=True,
         extra="forbid",
@@ -245,10 +259,14 @@ class SearchRequest(BaseModel):
         """),
     )
 
-    size: int = 10
+    size: int = Field(description="The number of results to return", default=10)
+
     start_index: int = 0
+
     sort: list[str | SortField | dict[str, Any]] | None = None
+
     query: dict[str, Any]
+
     explain: bool = Field(
         description=(
             "If set to true opensearch will explain why each item appears in a particular order"
@@ -257,12 +275,15 @@ class SearchRequest(BaseModel):
     )
 
     def to_opensearch_params(self) -> dict[str, Any]:
+        """Returns the opensearch query parameters for this search.."""
         return {
             "search_type": self.search_type,
             "explain": str(self.explain).lower(),
         }
 
     def to_opensearch_body(self) -> dict[str, Any]:
+        """Converts this to an opensearch search request body."""
+
         def _to_sort_arg(sort_part: str | SortField | dict[str, Any]) -> str | dict[str, Any]:
             if isinstance(sort_part, str):
                 return sort_part
@@ -281,17 +302,62 @@ class SearchRequest(BaseModel):
 
 
 class GeocodeIndexBase(ABC):
-    @abstractmethod
-    def create_index(self, *, recreate: bool = False) -> None: ...
+    """Abstract base class for geospatial place indexing and search operations.
+
+    This class defines the interface for creating, populating, and searching an index
+    of geospatial places. Implementations of this class handle the specific details
+    of interacting with the underlying search engine (such as OpenSearch).
+    """
 
     @abstractmethod
-    def bulk_index(self, places: list[GeoPlace]) -> None: ...
+    def create_index(self, *, recreate: bool = False) -> None:
+        """Create the geospatial place index.
+
+        This method initializes the index with the appropriate schema and settings.
+        If the index already exists, the behavior depends on the recreate parameter.
+
+        Args:
+            recreate: If True, delete any existing index before creating a new one.
+                     If False, keep the existing index if it exists.
+        """
+        ...
 
     @abstractmethod
-    def search(self, request: SearchRequest) -> SearchResponse: ...
+    def bulk_index(self, places: list[GeoPlace]) -> None:
+        """Index multiple geospatial places in a single operation.
+
+        This method adds or updates a batch of places in the index.
+
+        Args:
+            places: List of GeoPlace objects to index.
+
+        Raises:
+            Exception: If the indexing operation fails.
+        """
+        ...
+
+    @abstractmethod
+    def search(self, request: SearchRequest) -> SearchResponse:
+        """Search for geospatial places matching the given criteria.
+
+        This method executes a search against the index using the parameters
+        specified in the request.
+
+        Args:
+            request: A SearchRequest object containing the search parameters.
+
+        Returns:
+            A SearchResponse object containing the search results.
+        """
+        ...
 
 
 class GeocodeIndex(GeocodeIndexBase):
+    """Implementation of GeocodeIndexBase against opensearch cluster.
+
+    See base class for documentation.
+    """
+
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
     client: OpenSearch
 

@@ -42,6 +42,8 @@ _TYPE_SORT_COND = {
 
 
 class GeocodeIndexPlaceLookup(PlaceLookup):
+    """TODO docs."""
+
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
 
     _index: GeocodeIndex
@@ -63,6 +65,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         limit: int = 5,
         explain: bool = False,
     ) -> SearchResponse:
+        """TODO docs."""
         # Dis_max is used so that the score will come from only the highest matching condition.
         name_match = QueryDSL.dis_max(
             QueryDSL.term(GeoPlaceIndexField.place_name_keyword, name, boost=10.0),
@@ -138,6 +141,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         in_country: str | None = None,
         in_region: str | None = None,
     ) -> BaseGeometry:
+        """TODO docs."""
         search_resp = self.search_for_places_raw(
             name=name,
             place_type=place_type,

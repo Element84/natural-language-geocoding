@@ -1,4 +1,4 @@
-from collections.abc import Generator, Iterator
+from collections.abc import Callable, Generator, Iterator
 from logging import Logger
 from math import ceil
 from time import time
@@ -32,3 +32,14 @@ def counting_generator[T](
             last_logged = time()
 
     _log()
+
+
+def filter_items[T](
+    items: Iterator[T], filter_fn: Callable[[T], bool], *, logger: Logger | None = None
+) -> Generator[T, None, None]:
+    """TODO docs."""
+    for item in items:
+        if filter_fn(item):
+            yield item
+        elif logger:
+            logger.info("Filtered out %s", item)

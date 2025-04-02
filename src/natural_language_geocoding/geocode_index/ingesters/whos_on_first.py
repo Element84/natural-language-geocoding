@@ -3,7 +3,7 @@
 import logging
 import tarfile
 import threading
-from collections.abc import Callable, Generator, Iterable, Iterator
+from collections.abc import Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from pathlib import Path
@@ -27,7 +27,10 @@ from natural_language_geocoding.geocode_index.geoplace import (
     Hierarchy,
 )
 from natural_language_geocoding.geocode_index.index import GeocodeIndex
-from natural_language_geocoding.geocode_index.ingesters.ingest_utils import counting_generator
+from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
+    counting_generator,
+    filter_items,
+)
 
 # TODO reenable these ruff items
 # ruff: noqa: D103,T201,BLE001,FIX002,ERA001,E501
@@ -44,6 +47,8 @@ _DUPLICATE_POINT_TOLERANCE = 0.00001
 
 
 class WhosOnFirstPlaceType(Enum):
+    """TODO docs."""
+
     address = "address"
     arcade = "arcade"
     borough = "borough"
@@ -173,6 +178,8 @@ def _wof_hierarchy_parser(value: Any) -> Any:  # noqa: ANN401
 
 
 class WhosOnFirstPlaceProperties(BaseModel):
+    """TODO docs."""
+
     model_config = ConfigDict(
         strict=True,
         extra="allow",
@@ -232,6 +239,8 @@ class WhosOnFirstPlaceProperties(BaseModel):
 
 
 class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
+    """TODO docs."""
+
     id: int
 
     @property
@@ -240,6 +249,7 @@ class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
 
 
 def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
+    """TODO docs."""
     geom = feature.geometry
     # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
     geom = remove_repeated_points(geom)
@@ -262,6 +272,7 @@ def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
 
 
 def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> GeoPlace:
+    """TODO docs."""
     props = feature.properties
     name = props.name
     if name is None:
@@ -285,6 +296,7 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
 
 
 def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
+    """TODO docs."""
     filename = f"whosonfirst-data-{place_type.value}-latest.tar.bz2"
     place_type_file = TEMP_DIR / filename
 
@@ -303,12 +315,14 @@ def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
 
 
 def find_all_geojson_features_files(tar: tarfile.TarFile) -> Generator[tarfile.TarInfo, None, None]:
+    """TODO docs."""
     for member in tar.getmembers():
         if "-alt-" not in member.name and member.name.endswith(".geojson"):
             yield member
 
 
 def find_all_wof_features(source_tar: Path) -> Generator[WhosOnFirstFeature, None, None]:
+    """TODO docs."""
     logger.info("Opening tar %s", source_tar)
     with tarfile.open(source_tar, "r:bz2") as tar:
         for member in find_all_geojson_features_files(tar):
@@ -320,24 +334,15 @@ def find_all_wof_features(source_tar: Path) -> Generator[WhosOnFirstFeature, Non
                     raise Exception(f"Failed loading {member.name}") from e
 
 
-def filter_items[T](
-    items: Iterator[T], filter_fn: Callable[[T], bool], *, log_not_matching: bool = False
-) -> Generator[T, None, None]:
-    for item in items:
-        if filter_fn(item):
-            yield item
-        elif log_not_matching:
-            logger.info("Filtered out %s", item)
-
-
 def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[WhosOnFirstFeature]:
+    """TODO docs."""
     features_iter = find_all_wof_features(placetype_file)
     features_iter = counting_generator(features_iter, logger=logger)
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
     features_iter = filter_items(
         features_iter,
         filter_fn=lambda f: f.properties.name is not None,
-        log_not_matching=True,
+        logger=logger,
     )
     # Who's on first places are sometimes duplicated with similar information.
     return unique_by(
@@ -350,6 +355,7 @@ def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[Who
 
 
 def process_placetype_file_multithread(placetype_file: Path) -> None:
+    """TODO docs."""
     thread_local = threading.local()
     all_conns: set[GeocodeIndex] = set()
 
@@ -376,6 +382,7 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 
 def process_placetypes() -> None:
+    """TODO docs."""
     index = GeocodeIndex()
     index.create_index(recreate=True)
 

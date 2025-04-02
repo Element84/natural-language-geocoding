@@ -1,9 +1,10 @@
-"""TODO document this module."""
+"""Defines types that represent places on the earth."""
 
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any, cast
 
-from pydantic import BaseModel, ConfigDict, Field
+from e84_geoai_common.geometry import geometry_from_geojson_dict
+from pydantic import BaseModel, ConfigDict, Field, SkipValidation, field_serializer, field_validator
 from shapely.geometry.base import BaseGeometry
 from tabulate import tabulate
 
@@ -64,15 +65,7 @@ class GeoPlaceSourceType(Enum):
 
 
 class GeoPlaceSource(BaseModel):
-    model_config = ConfigDict(
-        strict=True,
-        extra="forbid",
-        frozen=True,
-        # TODO this is depreceated. Move to a different implementations
-        json_encoders={
-            GeoPlaceSourceType: lambda x: x.value,
-        },
-    )
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     source_type: GeoPlaceSourceType
     source_path: str
 
@@ -112,27 +105,33 @@ class Hierarchy(BaseModel, frozen=True):
 
 class GeoPlace(BaseModel):
     model_config = ConfigDict(
-        strict=True,
-        extra="forbid",
-        frozen=True,
-        arbitrary_types_allowed=True,
-        # TODO this is depreceated. Move to a different implementations
-        json_encoders={
-            GeoPlaceType: lambda x: x.value,
-            BaseGeometry: lambda x: x.__geo_interface__,
-        },
+        strict=True, extra="forbid", frozen=True, arbitrary_types_allowed=True
     )
 
     id: str
     place_name: str
     type: GeoPlaceType
-    geom: BaseGeometry
+    geom: Annotated[BaseGeometry, SkipValidation]
     source: GeoPlaceSource
     alternate_names: list[str] = Field(default_factory=list)
     hierarchies: list[Hierarchy] = Field(default_factory=list)
     area_sq_km: float | None = None
     population: int | None = None
     properties: dict[str, Any]
+
+    @field_validator("geom", mode="before")
+    @classmethod
+    def _parse_shapely_geometry(cls, d: Any) -> BaseGeometry:  # noqa: ANN401
+        if isinstance(d, dict):
+            return geometry_from_geojson_dict(cast("dict[str, Any]", d))
+        if isinstance(d, BaseGeometry):
+            return d
+        msg = "geometry must be a geojson feature dictionary or a shapely geometry."
+        raise TypeError(msg)
+
+    @field_serializer("geom")
+    def _shapely_geometry_to_json(self, g: BaseGeometry) -> dict[str, Any]:
+        return g.__geo_interface__
 
     # TODO test this
     def self_as_hierarchies(self) -> list[Hierarchy]:

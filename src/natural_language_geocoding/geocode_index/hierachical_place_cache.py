@@ -21,6 +21,8 @@ def _append_to_dict[K](d: dict[K, list[str]], key: K, item: str) -> None:
 
 
 class HierchicalPlaceCache:
+    """TODO docs."""
+
     _id_to_name_place_hierarchies: dict[str, tuple[str, GeoPlaceType, list[Hierarchy]]]
     _name_place_to_ids: dict[tuple[str, GeoPlaceType], list[str]]
     _name_place_continent_to_ids: dict[tuple[str, GeoPlaceType, str], list[str]]
@@ -41,6 +43,7 @@ class HierchicalPlaceCache:
         place_type: GeoPlaceType,
         hierarchies: list[Hierarchy],
     ) -> None:
+        """TODO docs."""
         # A sanity check
         if feature_id in self._id_to_name_place_hierarchies:
             raise Exception(
@@ -80,6 +83,7 @@ class HierchicalPlaceCache:
         continent_ids: list[str] | None = None,
         country_ids: list[str] | None = None,
     ) -> list[str]:
+        """TODO docs."""
         # Validate args
         if continent_ids is not None and len(continent_ids) == 0:
             raise ValueError("if continent_ids are provided at least one must be specified")
@@ -115,6 +119,7 @@ class HierchicalPlaceCache:
         return matches
 
     def to_json(self, *, indent: int | str | None = None) -> str:
+        """TODO docs."""
         rows = [
             (
                 feature_id,
@@ -132,6 +137,7 @@ class HierchicalPlaceCache:
 
     @staticmethod
     def from_json(json_str: str) -> "HierchicalPlaceCache":
+        """TODO docs."""
         dicts = HierchicalPlaceCache()
         rows = json.loads(json_str)
         for feature_id, name, place_type_str, hierarchies_data in rows:
@@ -143,6 +149,7 @@ class HierchicalPlaceCache:
 
 @timed_function
 def _populate() -> HierchicalPlaceCache:
+    """TODO docs."""
     # Otherwise, populate from OpenSearch
     client = create_opensearch_client()
 
@@ -171,6 +178,8 @@ def _populate() -> HierchicalPlaceCache:
 
 
 class PlaceCache:
+    """TODO docs."""
+
     # The problem with this current approach is that there are duplicates. We need a way to ensure
     # there are no duplicates. It won't be duplicated by hierachy probably so we can do that.
     _dicts: HierchicalPlaceCache
@@ -196,6 +205,7 @@ class PlaceCache:
         continent_ids: list[str] | None = None,
         country_ids: list[str] | None = None,
     ) -> list[str]:
+        """TODO docs."""
         return self._dicts.find_ids(
             name=name,
             place_type=place_type,
