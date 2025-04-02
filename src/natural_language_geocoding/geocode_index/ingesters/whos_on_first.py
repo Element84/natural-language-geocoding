@@ -118,27 +118,25 @@ class WhosOnFirstPlaceType(Enum):
 
 DOWNLOADABLE_PLACETYPES = [
     # TODO temporarily skipping already completed placetypes
-    # WhosOnFirstPlaceType.borough,  # (5.8 MB)
-    # WhosOnFirstPlaceType.continent,  # (5.0 MB)
-    # WhosOnFirstPlaceType.country,  # (202.4 MB)
-    # WhosOnFirstPlaceType.county,  # (563.1 MB)
-    # WhosOnFirstPlaceType.dependency,  # (1.2 MB)
-    # WhosOnFirstPlaceType.disputed,  # (1.5 MB)
-    # WhosOnFirstPlaceType.empire,  # (1.6 MB)
-    ##############################################
-    ##############################################
-    WhosOnFirstPlaceType.localadmin,  # (948.3 MB)
-    WhosOnFirstPlaceType.locality,  # (1.96 GB)
-    WhosOnFirstPlaceType.macrocounty,  # (23.7 MB)
-    WhosOnFirstPlaceType.macrohood,  # (8.7 MB)
-    WhosOnFirstPlaceType.macroregion,  # (32.9 MB)
-    WhosOnFirstPlaceType.marinearea,  # (4.6 MB)
-    WhosOnFirstPlaceType.marketarea,  # (12.5 MB)
-    WhosOnFirstPlaceType.microhood,  # (5.6 MB)
-    WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB)
-    WhosOnFirstPlaceType.ocean,  # (110 KB)
-    WhosOnFirstPlaceType.postalregion,  # (49.5 MB)
-    WhosOnFirstPlaceType.region,  # (259.7 MB)
+    WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
+    WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
+    WhosOnFirstPlaceType.country,  # (202.4 MB) 232 records
+    WhosOnFirstPlaceType.county,  # (563.1 MB) 47,645 records
+    WhosOnFirstPlaceType.dependency,  # (1.2 MB) 43 records
+    WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
+    WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
+    WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
+    WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
+    WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
+    WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
+    WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
+    WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
+    WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
+    WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
+    WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
+    WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
+    WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
+    WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
     # We won't download these
     # WhosOnFirstPlaceType.planet (3 KB)
     # WhosOnFirstPlaceType.campus  (72.2 MB)
@@ -271,7 +269,7 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
 
     return GeoPlace(
         id=f"wof_{feature.id}",
-        name=name,
+        place_name=name,
         type=props.placetype.to_geoplace_type(),
         geom=_fix_geometry(feature),
         properties=props.model_dump(mode="json"),
@@ -378,9 +376,8 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 
 def process_placetypes() -> None:
-    # TODO temporarily skipping
-    # index = GeocodeIndex()
-    # index.create_index(recreate=True)
+    index = GeocodeIndex()
+    index.create_index(recreate=True)
 
     for placetype in DOWNLOADABLE_PLACETYPES:
         placetype_file = _download_placetype(placetype)
@@ -395,20 +392,22 @@ if __name__ == "__main__":
 # Code for manual testing
 # ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
-placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
+# placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 
-features_iter = _placetype_file_to_features_for_ingest(placetype_file)
+# features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
-found_features: list[WhosOnFirstFeature] = []
+# found_features: list[WhosOnFirstFeature] = []
 
-with open("temp/found_bad_geoms.jsonld", "w") as f:
-    for feature in features_iter:
-        try:
-            _wof_feature_to_geoplace(feature, "foo")
-        except Exception as e:
-            print(e)
-            found_features.append(feature)
-            f.write(feature.model_dump_json())
+# with open("temp/found_bad_geoms.jsonld", "w") as f:
+#     for feature in features_iter:
+#         try:
+#             _wof_feature_to_geoplace(feature, "foo")
+#         except Exception as e:
+#             print(e)
+#             bad = True
+
+#             found_features.append(feature)
+#             f.write(feature.model_dump_json())
 
 
 # g = feature.geometry

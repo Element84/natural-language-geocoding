@@ -124,7 +124,7 @@ class GeoPlace(BaseModel):
     )
 
     id: str
-    name: str
+    place_name: str
     type: GeoPlaceType
     geom: BaseGeometry
     source: GeoPlaceSource
@@ -150,7 +150,7 @@ def print_places_as_table(places: list[GeoPlace]) -> None:
         place_dict = {
             "index": index,
             "id": place.id,
-            "name": place.name,
+            "name": place.place_name,
             "type": place.type.value,
             "alternate_names": place.alternate_names,
             "hierarchies": [{k: v for k, v in h if v is not None} for h in place.hierarchies],

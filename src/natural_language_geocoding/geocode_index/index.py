@@ -146,7 +146,7 @@ class HierarchyDoc(TypedDict):
 
 class GeoPlaceDoc(TypedDict):
     id: str
-    name: str
+    place_name: str
     type: str
     geom: dict[str, Any]
     source_type: str
@@ -164,7 +164,7 @@ GEOPLACE_INDEX_NAME = "geoplaces"
 def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
     return {
         "id": geoplace.id,
-        "name": geoplace.name,
+        "place_name": geoplace.place_name,
         "type": geoplace.type.value,
         "geom": geoplace.geom.__geo_interface__,
         "source_type": geoplace.source.source_type.value,
@@ -180,7 +180,7 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
 def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
     return GeoPlace(
         id=doc["id"],
-        name=doc["name"],
+        place_name=doc["place_name"],
         type=GeoPlaceType(doc["type"]),
         geom=geometry_from_geojson_dict(doc["geom"]),
         source=GeoPlaceSource(
@@ -359,7 +359,7 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
     def to_compare_str(place: GeoPlace, exp: dict[str, Any]) -> str:
         return json.dumps(
             {
-                "name": place.name,
+                "name": place.place_name,
                 "type": place.type.value,
                 "alternate_names": place.alternate_names,
                 "explanation": exp,

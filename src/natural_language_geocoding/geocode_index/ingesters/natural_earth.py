@@ -226,7 +226,7 @@ def _ne_feature_to_geoplace(source: NESourceFile, feature: NEFeature) -> GeoPlac
 
     return GeoPlace(
         id=feature.id,
-        name=name,
+        place_name=name,
         type=props.place_type.to_geoplace_type(),
         geom=feature.geometry,
         properties=props.model_dump(mode="json"),
@@ -325,7 +325,7 @@ def get_hierarchies(index: GeocodeIndex, place: GeoPlace) -> set[Hierarchy]:
     )
     resp = index.search(request)
     if resp.hits > max_parents:
-        raise Exception(f"Found more than {max_parents} for place {place.name} {place.type}")
+        raise Exception(f"Found more than {max_parents} for place {place.place_name} {place.type}")
 
     tracker = _ContinentCountryRegionTracker()
     for parent in resp.places:
