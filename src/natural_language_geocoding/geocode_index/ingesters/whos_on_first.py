@@ -56,7 +56,7 @@ _KNOWN_BAD_WOF_GEOMS__: set[int] = {
 # Documentation copied from https://whosonfirst.org/docs/placetypes/
 
 
-class WhosOnFirstPlaceType(Enum):
+class _WhosOnFirstPlaceType(Enum):
     """TODO docs."""
 
     address = "address"
@@ -131,7 +131,7 @@ class WhosOnFirstPlaceType(Enum):
         return GeoPlaceType(self.value)
 
 
-DOWNLOADABLE_PLACETYPES = [
+_DOWNLOADABLE_PLACETYPES = [
     # TODO temporarily skipping already completed placetypes
     # WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
     # WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
@@ -141,24 +141,24 @@ DOWNLOADABLE_PLACETYPES = [
     # WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
     # WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
     # WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
-    WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
-    WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
-    WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
-    WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
-    WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
-    WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
-    WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
-    WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
-    WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
-    WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
-    WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
+    _WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
+    _WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
+    _WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
+    _WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
+    _WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
+    _WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
+    _WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
+    _WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
+    _WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
+    _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
+    _WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
     # We won't download these
     # WhosOnFirstPlaceType.planet (3 KB)
     # WhosOnFirstPlaceType.campus  (72.2 MB)
     # WhosOnFirstPlaceType.timezone  (14.0 MB)
 ]
 
-VALID_WOF_HIERARCHY_KEYS = {
+_VALID_WOF_HIERARCHY_KEYS = {
     key for place_type in GeoPlaceType for key in [place_type.value, f"{place_type.value}_id"]
 }
 
@@ -187,7 +187,7 @@ def _wof_hierarchy_parser(value: Any) -> Any:  # noqa: ANN401
     return value
 
 
-class WhosOnFirstPlaceProperties(BaseModel):
+class _WhosOnFirstPlaceProperties(BaseModel):
     """TODO docs."""
 
     model_config = ConfigDict(
@@ -195,11 +195,11 @@ class WhosOnFirstPlaceProperties(BaseModel):
         extra="allow",
         frozen=True,
         # TODO this is depreceated. Move to a different implementations
-        json_encoders={WhosOnFirstPlaceType: lambda x: x.value},
+        json_encoders={_WhosOnFirstPlaceType: lambda x: x.value},
     )
 
     name: str | None = Field(validation_alias=AliasChoices("name", "wof:name"))
-    placetype: WhosOnFirstPlaceType = Field(
+    placetype: _WhosOnFirstPlaceType = Field(
         validation_alias=AliasChoices("wof:placetype", "placetype")
     )
     edtf_deprecated: str | None = Field(
@@ -250,7 +250,7 @@ class WhosOnFirstPlaceProperties(BaseModel):
         ]
 
 
-class WhosOnFirstFeature(Feature[WhosOnFirstPlaceProperties]):
+class _WhosOnFirstFeature(Feature[_WhosOnFirstPlaceProperties]):
     """TODO docs."""
 
     id: int
@@ -281,7 +281,7 @@ def _(geom: MultiPolygon) -> MultiPolygon:
     return MultiPolygon([_remove_duplicate_points(geom) for geom in geom.geoms])
 
 
-def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
+def _fix_geometry(feature: _WhosOnFirstFeature) -> BaseGeometry:
     """TODO docs."""
     geom = feature.geometry
     # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
@@ -306,7 +306,7 @@ def _fix_geometry(feature: WhosOnFirstFeature) -> BaseGeometry:
     return geom
 
 
-def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> GeoPlace:
+def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> GeoPlace:
     """TODO docs."""
     props = feature.properties
     name = props.name
@@ -330,7 +330,7 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
     )
 
 
-def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
+def _download_placetype(place_type: _WhosOnFirstPlaceType) -> Path:
     """TODO docs."""
     filename = f"whosonfirst-data-{place_type.value}-latest.tar.bz2"
     place_type_file = _LOCAL_TEMP_DIR / filename
@@ -349,29 +349,33 @@ def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
     return place_type_file
 
 
-def find_all_geojson_features_files(tar: tarfile.TarFile) -> Generator[tarfile.TarInfo, None, None]:
+def _find_all_geojson_features_files(
+    tar: tarfile.TarFile,
+) -> Generator[tarfile.TarInfo, None, None]:
     """TODO docs."""
-    for member in tar.getmembers():
+    member = tar.next()
+    while member is not None:
         if "-alt-" not in member.name and member.name.endswith(".geojson"):
             yield member
+        member = tar.next()
 
 
-def find_all_wof_features(source_tar: Path) -> Generator[WhosOnFirstFeature, None, None]:
+def _find_all_wof_features(source_tar: Path) -> Generator[_WhosOnFirstFeature, None, None]:
     """TODO docs."""
     logger.info("Opening tar %s", source_tar)
     with tarfile.open(source_tar, "r:bz2") as tar:
-        for member in find_all_geojson_features_files(tar):
+        for member in _find_all_geojson_features_files(tar):
             f = tar.extractfile(member)
             if f is not None:
                 try:
-                    yield WhosOnFirstFeature.model_validate_json(f.read())
+                    yield _WhosOnFirstFeature.model_validate_json(f.read())
                 except Exception as e:
                     raise Exception(f"Failed loading {member.name}") from e
 
 
-def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[WhosOnFirstFeature]:
+def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[_WhosOnFirstFeature]:
     """TODO docs."""
-    features_iter = find_all_wof_features(placetype_file)
+    features_iter = _find_all_wof_features(placetype_file)
     features_iter = counting_generator(features_iter, logger=logger)
     # Exclude deprecated places
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
@@ -395,7 +399,7 @@ def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[Who
     )
 
 
-def process_placetype_file_multithread(placetype_file: Path) -> None:
+def _process_placetype_file_multithread(placetype_file: Path) -> None:
     """TODO docs."""
     thread_local = threading.local()
     all_conns: set[GeocodeIndex] = set()
@@ -407,7 +411,7 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
         return thread_local.index
 
-    def _bulk_index(features: list[WhosOnFirstFeature]) -> None:
+    def _bulk_index(features: list[_WhosOnFirstFeature]) -> None:
         index = _get_index()
         places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
         index.bulk_index(places)
@@ -416,13 +420,14 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
     # Performance notes
     # 5 workers, 15 chunk size, 20 max in flight: Processed 768278 items. Rate: 48098 per min. Elapsed time: 16 mins
+    # 10 workers, 25 chunk size, 20 max in flight: Processed 768278 items. Rate: 48098 per min. Elapsed time: 16 mins
 
-    with ThreadPoolExecutor(max_workers=5) as e:
+    with ThreadPoolExecutor(max_workers=10) as e:
         # The maximum number of concurrent future to queue before waiting.
         max_inflight = 20
         futures: list[Future[None]] = []
 
-        for features in chunk_items(features_iter, 15):
+        for features in chunk_items(features_iter, 25):
             futures.append(e.submit(_bulk_index, features))
 
             # We only append until the maximum number of futures is reached to avoid OOM errors
@@ -444,13 +449,12 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
 
 def process_placetypes() -> None:
     """TODO docs."""
-    # TODO temporarily commented out
-    # index = GeocodeIndex()
-    # index.create_index(recreate=True)
+    index = GeocodeIndex()
+    index.create_index(recreate=True)
 
-    for placetype in DOWNLOADABLE_PLACETYPES:
+    for placetype in _DOWNLOADABLE_PLACETYPES:
         placetype_file = _download_placetype(placetype)
-        process_placetype_file_multithread(placetype_file)
+        _process_placetype_file_multithread(placetype_file)
 
 
 if __name__ == "__main__":

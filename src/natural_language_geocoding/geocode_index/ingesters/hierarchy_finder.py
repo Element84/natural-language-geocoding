@@ -104,12 +104,14 @@ def get_hierarchies(index: GeocodeIndex, place: GeoPlace) -> set[Hierarchy]:
             QueryDSL.terms(
                 GeoPlaceIndexField.type,
                 [
+                    # Note if adding more types here in the future they also need to be indexed
+                    # spatially. The current implementation only indexes shapes for these areas.
                     GeoPlaceType.continent.value,
                     GeoPlaceType.country.value,
                     GeoPlaceType.region.value,
                 ],
             ),
-            QueryDSL.geo_shape(GeoPlaceIndexField.geom, place.geom),
+            QueryDSL.geo_shape(GeoPlaceIndexField.geom_spatial, place.geom),
         ),
     )
     resp = index.search(request)

@@ -6,7 +6,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Any, Literal, TypedDict, cast
 
-from e84_geoai_common.geometry import geometry_from_geojson_dict
+from e84_geoai_common.geometry import geometry_from_geojson
 from e84_geoai_common.util import get_env_var, singleline, timed_function
 from opensearchpy import OpenSearch
 from pydantic import BaseModel, ConfigDict, Field
@@ -39,7 +39,8 @@ class GeoPlaceIndexField(IndexField):
     place_name = "place_name"
     place_name_keyword = ("place_name", "keyword")
     type = "type"
-    geom = "geom"
+    geom_str = "geom_str"
+    geom_spatial = "geom_spatial"
     source_id = "source_id"
     source_type = "source_type"
     source_path = "source_path"
@@ -80,7 +81,10 @@ _GEOPLACE_INDEX_MAPPINGS = {
             "fields": {GeoPlaceIndexField.place_name_keyword.name: {"type": "keyword"}},
         },
         GeoPlaceIndexField.type.name: {"type": "keyword"},
-        GeoPlaceIndexField.geom.name: {"type": "geo_shape"},
+        # The geometry of the place as an indexed geo shape
+        GeoPlaceIndexField.geom_spatial.name: {"type": "geo_shape"},
+        # The geometry of the place as a JSON string.
+        GeoPlaceIndexField.geom_str.name: {"type": "keyword", "doc_values": False, "index": False},
         GeoPlaceIndexField.source_id.name: {"type": "long"},
         GeoPlaceIndexField.source_type.name: {"type": "keyword"},
         GeoPlaceIndexField.source_path.name: {"type": "keyword"},
@@ -154,7 +158,8 @@ class GeoPlaceDoc(TypedDict):
     id: str
     place_name: str
     type: str
-    geom: dict[str, Any]
+    geom_spatial: dict[str, Any] | None
+    geom_str: str
     source_type: str
     source_path: str
     alternate_names: list[str]
@@ -166,14 +171,20 @@ class GeoPlaceDoc(TypedDict):
 
 GEOPLACE_INDEX_NAME = "geoplaces"
 
+# The set of geo place types for which we'll index geometry spatially.
+# We don't do this for all types due to some issues getting everything to index. In the future, we
+# may index more.
+_SPATIAL_INDEXED_TYPES = {GeoPlaceType.continent, GeoPlaceType.country, GeoPlaceType.region}
+
 
 def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
     """Converts a GeoPlace model into an opensearch document for indexing."""
-    return {
+    doc: GeoPlaceDoc = {
         "id": geoplace.id,
         "place_name": geoplace.place_name,
         "type": geoplace.type.value,
-        "geom": geoplace.geom.__geo_interface__,
+        "geom_str": json.dumps(geoplace.geom.__geo_interface__),
+        "geom_spatial": None,
         "source_type": geoplace.source.source_type.value,
         "source_path": geoplace.source.source_path,
         "alternate_names": geoplace.alternate_names,
@@ -182,6 +193,9 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
         "area_sq_km": geoplace.area_sq_km,
         "population": geoplace.population,
     }
+    if geoplace.type in _SPATIAL_INDEXED_TYPES:
+        doc["geom_spatial"] = geoplace.geom.__geo_interface__
+    return doc
 
 
 def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
@@ -190,7 +204,7 @@ def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
         id=doc["id"],
         place_name=doc["place_name"],
         type=GeoPlaceType(doc["type"]),
-        geom=geometry_from_geojson_dict(doc["geom"]),
+        geom=geometry_from_geojson(doc["geom_str"]),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType(doc["source_type"]), source_path=doc["source_path"]
         ),

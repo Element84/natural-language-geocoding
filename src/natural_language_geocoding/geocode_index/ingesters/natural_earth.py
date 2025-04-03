@@ -113,7 +113,7 @@ class EnumWithValueLookup(Enum):
         return cls._value_lookup.get(value)
 
 
-class NEPlaceType(EnumWithValueLookup):
+class _NEPlaceType(EnumWithValueLookup):
     airport = "Airport"
     alkaline_lake = "Alkaline Lake"
     lake = "Lake"
@@ -124,7 +124,7 @@ class NEPlaceType(EnumWithValueLookup):
     river = "River"
 
     @classmethod
-    def from_feature_cla(cls, feature_cla: str) -> "NEPlaceType | None":
+    def from_feature_cla(cls, feature_cla: str) -> "_NEPlaceType | None":
         if feature_cla.startswith("Intermittent") or feature_cla.endswith("Intermittent"):
             feature_cla = feature_cla.replace("Intermittent", "").strip()
         elif feature_cla.endswith("(Intermittent)"):
@@ -133,14 +133,14 @@ class NEPlaceType(EnumWithValueLookup):
 
     def to_geoplace_type(self) -> GeoPlaceType:
         _place_type_map = {
-            NEPlaceType.airport: GeoPlaceType.airport,
-            NEPlaceType.alkaline_lake: GeoPlaceType.lake,
-            NEPlaceType.lake: GeoPlaceType.lake,
-            NEPlaceType.lake_centerline: GeoPlaceType.lake,
-            NEPlaceType.reservoir: GeoPlaceType.lake,
-            NEPlaceType.national_park_service: GeoPlaceType.national_park,
-            NEPlaceType.port: GeoPlaceType.port,
-            NEPlaceType.river: GeoPlaceType.river,
+            _NEPlaceType.airport: GeoPlaceType.airport,
+            _NEPlaceType.alkaline_lake: GeoPlaceType.lake,
+            _NEPlaceType.lake: GeoPlaceType.lake,
+            _NEPlaceType.lake_centerline: GeoPlaceType.lake,
+            _NEPlaceType.reservoir: GeoPlaceType.lake,
+            _NEPlaceType.national_park_service: GeoPlaceType.national_park,
+            _NEPlaceType.port: GeoPlaceType.port,
+            _NEPlaceType.river: GeoPlaceType.river,
         }
 
         if self in _place_type_map:
@@ -148,7 +148,7 @@ class NEPlaceType(EnumWithValueLookup):
         raise NotImplementedError(f"Missing mapping from NEPlaceType to GeoPlaceType for {self}")
 
 
-class NEPlaceProperties(BaseModel):
+class _NEPlaceProperties(BaseModel):
     model_config = ConfigDict(strict=True, extra="allow", frozen=True)
 
     # TODO add the additional name fields I found
@@ -162,15 +162,15 @@ class NEPlaceProperties(BaseModel):
     @field_validator("featurecla")
     @classmethod
     def validate_featurecla(cls, v: str) -> str:
-        place_type = NEPlaceType.from_feature_cla(v)
+        place_type = _NEPlaceType.from_feature_cla(v)
         if place_type is None:
             raise ValueError(f"Unknown feature class: {v}")
         return v
 
     @cached_property
-    def place_type(self) -> NEPlaceType:
+    def place_type(self) -> _NEPlaceType:
         # This will always be valid because of the validator above
-        place_type = NEPlaceType.from_feature_cla(self.featurecla)
+        place_type = _NEPlaceType.from_feature_cla(self.featurecla)
         if place_type is None:
             raise ValueError(f"Unknown feature class: {self.featurecla}")
         return place_type
@@ -183,7 +183,7 @@ class NEPlaceProperties(BaseModel):
         return [name for name in [self.name_abb, self.name_alt] if name is not None]
 
 
-class NEFeature(Feature[NEPlaceProperties]):
+class _NEFeature(Feature[_NEPlaceProperties]):
     id: str = Field(
         description=(
             "Unique identifier for a natural earth feature. "
@@ -194,7 +194,7 @@ class NEFeature(Feature[NEPlaceProperties]):
 
 def _get_ne_features_from_source(
     source_idx: int, source: NESourceFile
-) -> Generator[NEFeature, None, None]:
+) -> Generator[_NEFeature, None, None]:
     source.download()
 
     with source.local_path.open() as f:
@@ -208,10 +208,10 @@ def _get_ne_features_from_source(
         # Example id we'll generate for a feature of 10m cultural for the 5th file and
         # ne_10c5_45
         feature["id"] = f"{source_file_id}_{index + 1}"
-        yield NEFeature.model_validate(feature)
+        yield _NEFeature.model_validate(feature)
 
 
-def _ne_feature_to_geoplace(source: NESourceFile, feature: NEFeature) -> GeoPlace:
+def _ne_feature_to_geoplace(source: NESourceFile, feature: _NEFeature) -> GeoPlace:
     props = feature.properties
     name = props.feature_name
 
@@ -249,7 +249,7 @@ def _get_all_ne_geoplaces() -> Generator[GeoPlace, None, None]:
         for feature in _get_ne_features_from_source(source_idx, source):
             if (
                 feature.properties.feature_name is not None
-                and feature.properties.place_type != NEPlaceType.lake_centerline
+                and feature.properties.place_type != _NEPlaceType.lake_centerline
             ):
                 yield _ne_feature_to_geoplace(source, feature)
 
