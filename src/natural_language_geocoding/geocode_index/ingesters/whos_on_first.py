@@ -4,7 +4,7 @@ import logging
 import tarfile
 import threading
 from collections.abc import Generator, Iterable
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, as_completed, wait
 from enum import Enum
 from functools import singledispatch
 from pathlib import Path
@@ -415,7 +415,24 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
     features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
     with ThreadPoolExecutor(max_workers=5) as e:
-        futures = [e.submit(_bulk_index, features) for features in chunk_items(features_iter, 50)]
+        # The maximum number of concurrent future to queue before waiting.
+        max_inflight = 20
+        futures: list[Future[None]] = []
+
+        for features in chunk_items(features_iter, 15):
+            futures.append(e.submit(_bulk_index, features))
+
+            # We only append until the maximum number of futures is reached to avoid OOM errors
+            if len(futures) >= max_inflight:
+                # Wait for at least one to complete
+                done_futures, not_done_futures = wait(futures, return_when=FIRST_COMPLETED)
+                # Process results from completed futures
+                for future in done_futures:
+                    future.result()
+                # Save the set of not done futures as the set we're still waiting on
+                futures = list(not_done_futures)
+
+        # Wait for any remaining futures
         for future in as_completed(futures):
             future.result()
         for conn in all_conns:
