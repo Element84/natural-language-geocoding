@@ -40,7 +40,7 @@ from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
 # ruff: noqa: D103,T201,BLE001,FIX002,ERA001,E501
 
 
-TEMP_DIR = Path("temp")
+_LOCAL_TEMP_DIR = Path("temp")
 
 logger = logging.getLogger(__name__)
 
@@ -333,7 +333,7 @@ def _wof_feature_to_geoplace(feature: WhosOnFirstFeature, source_path: str) -> G
 def _download_placetype(place_type: WhosOnFirstPlaceType) -> Path:
     """TODO docs."""
     filename = f"whosonfirst-data-{place_type.value}-latest.tar.bz2"
-    place_type_file = TEMP_DIR / filename
+    place_type_file = _LOCAL_TEMP_DIR / filename
 
     if place_type_file.exists():
         # Return file if it already is downloaded
@@ -413,6 +413,9 @@ def process_placetype_file_multithread(placetype_file: Path) -> None:
         index.bulk_index(places)
 
     features_iter = _placetype_file_to_features_for_ingest(placetype_file)
+
+    # Performance notes
+    # 5 workers, 15 chunk size, 20 max in flight: Processed 768278 items. Rate: 48098 per min. Elapsed time: 16 mins
 
     with ThreadPoolExecutor(max_workers=5) as e:
         # The maximum number of concurrent future to queue before waiting.

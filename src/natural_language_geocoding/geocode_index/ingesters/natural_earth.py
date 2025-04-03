@@ -9,24 +9,15 @@ from pathlib import Path
 from typing import ClassVar, Literal, Self
 
 import requests
-import rich
 from e84_geoai_common.geojson import Feature
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from rich.tree import Tree
 
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
     GeoPlaceSource,
     GeoPlaceSourceType,
     GeoPlaceType,
-    Hierarchy,
 )
-from natural_language_geocoding.geocode_index.index import (
-    GeocodeIndex,
-    GeoPlaceIndexField,
-    SearchRequest,
-)
-from natural_language_geocoding.geocode_index.opensearch_utils import QueryDSL
 
 _GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/martynafford/natural-earth-geojson"
 
@@ -188,6 +179,9 @@ class NEPlaceProperties(BaseModel):
     def feature_name(self) -> str | None:
         return self.name or self.name_abb or self.name_alt
 
+    def get_alternate_names(self) -> list[str]:
+        return [name for name in [self.name_abb, self.name_alt] if name is not None]
+
 
 class NEFeature(Feature[NEPlaceProperties]):
     id: str = Field(
@@ -234,103 +228,11 @@ def _ne_feature_to_geoplace(source: NESourceFile, feature: NEFeature) -> GeoPlac
             source_type=GeoPlaceSourceType.ne,
             source_path=source.url,
         ),
-        # TODO finish this
-        # hierarchies=props.hierarchies,
-        # alternate_names=props.get_alternate_names(),
-        # area_sq_km=props.area_square_m / 1000.0 if props.area_square_m else None,
-        # population=props.population,
+        alternate_names=props.get_alternate_names(),
     )
 
 
-class _ContinentCountryRegionTracker:
-    """TODO docs."""
-
-    continent_to_country_to_region: dict[str | None, dict[str | None, set[str]]]
-
-    def __init__(self) -> None:
-        self.continent_to_country_to_region = {}
-
-    def add(self, continent_id: str | None, country_id: str | None, region_id: str | None) -> None:
-        """TODO docs."""
-        if continent_id not in self.continent_to_country_to_region:
-            self.continent_to_country_to_region[continent_id] = {}
-
-        if country_id or region_id:
-            country_map = self.continent_to_country_to_region[continent_id]
-
-            if country_id not in country_map:
-                country_map[country_id] = set()
-            region_ids = country_map[country_id]
-
-            if region_id:
-                region_ids.add(region_id)
-
-    def add_hierarchies(self, hierarchies: list[Hierarchy]) -> None:
-        """TODO docs."""
-        for h in hierarchies:
-            if h.continent_id or h.country_id or h.region_id:
-                self.add(h.continent_id, h.country_id, h.region_id)
-
-    def display(self) -> None:
-        """TODO docs."""
-        tree = Tree("_ContinentCountryRegionTracker", hide_root=True)
-        for continent, country_map in self.continent_to_country_to_region.items():
-            cont_node = tree.add(f"Continent {continent}")
-            for country, regions in country_map.items():
-                country_node = cont_node.add(f"Country {country}")
-                if len(regions) == 0:
-                    country_node.add("No regions")
-                else:
-                    for region in regions:
-                        country_node.add(region)
-        rich.print(tree)
-
-    def to_hierarchies(self) -> set[Hierarchy]:
-        """TODO docs."""
-        hierarchies: set[Hierarchy] = set()
-        for continent, country_map in self.continent_to_country_to_region.items():
-            if len(country_map) == 0:
-                hierarchies.add(Hierarchy(continent_id=continent))
-            else:
-                for country, regions in country_map.items():
-                    if len(regions) == 0:
-                        hierarchies.add(Hierarchy(continent_id=continent, country_id=country))
-                    else:
-                        for region in regions:
-                            hierarchies.add(
-                                Hierarchy(
-                                    continent_id=continent, country_id=country, region_id=region
-                                )
-                            )
-        return hierarchies
-
-
-def get_hierarchies(index: GeocodeIndex, place: GeoPlace) -> set[Hierarchy]:
-    """TODO docs."""
-    max_parents = 2000
-    request = SearchRequest(
-        search_type="query_then_fetch",
-        size=max_parents,
-        query=QueryDSL.and_conds(
-            QueryDSL.terms(
-                GeoPlaceIndexField.type,
-                [
-                    GeoPlaceType.continent.value,
-                    GeoPlaceType.country.value,
-                    GeoPlaceType.region.value,
-                ],
-            ),
-            QueryDSL.geo_shape(GeoPlaceIndexField.geom, place.geom),
-        ),
-    )
-    resp = index.search(request)
-    if resp.hits > max_parents:
-        raise Exception(f"Found more than {max_parents} for place {place.place_name} {place.type}")
-
-    tracker = _ContinentCountryRegionTracker()
-    for parent in resp.places:
-        tracker.add_hierarchies(parent.self_as_hierarchies())
-    return tracker.to_hierarchies()
+# TODO implement an ingest and use the hierarchies
 
 
 ## Code for manual testing

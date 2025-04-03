@@ -1,7 +1,7 @@
 from natural_language_geocoding.geocode_index.geoplace import (
     Hierarchy,
 )
-from natural_language_geocoding.geocode_index.ingesters.natural_earth import (
+from natural_language_geocoding.geocode_index.ingesters.hierarchy_finder import (
     _ContinentCountryRegionTracker,  # type: ignore[reportPrivateUsage]
 )
 
