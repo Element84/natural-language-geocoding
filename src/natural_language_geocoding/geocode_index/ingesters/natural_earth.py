@@ -18,15 +18,20 @@ from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlaceSourceType,
     GeoPlaceType,
 )
+from natural_language_geocoding.geocode_index.index import GeocodeIndex
+from natural_language_geocoding.geocode_index.ingesters.hierarchy_finder import get_hierarchies
+from natural_language_geocoding.geocode_index.ingesters.ingest_utils import process_ingest_items
 
 _GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/martynafford/natural-earth-geojson"
 
 logger = logging.getLogger(__name__)
 
-TEMP_DIR = Path("temp")
+_LOCAL_TEMP_DIR = Path("temp")
 
 
-class NESourceFile(BaseModel):
+class _NESourceFile(BaseModel):
+    """TODO docs."""
+
     model_config = ConfigDict(strict=True, extra="allow", frozen=True)
 
     resolution: Literal["10m", "110m", "50m"] = "10m"
@@ -46,7 +51,7 @@ class NESourceFile(BaseModel):
 
     @property
     def local_path(self) -> Path:
-        return TEMP_DIR / self.filename
+        return _LOCAL_TEMP_DIR / self.filename
 
     def download(self) -> None:
         local_file = self.local_path
@@ -62,16 +67,16 @@ class NESourceFile(BaseModel):
 
 # These are the source files from natural earth that we'll use.
 
-_NE_AIRPORTS = NESourceFile(area_type="cultural", name="airports")
-_NE_PORTS = NESourceFile(area_type="cultural", name="ports")
-_NE_PARKS_AND_PROTECTED_LANDS_AREA = NESourceFile(
+_NE_AIRPORTS = _NESourceFile(area_type="cultural", name="airports")
+_NE_PORTS = _NESourceFile(area_type="cultural", name="ports")
+_NE_PARKS_AND_PROTECTED_LANDS_AREA = _NESourceFile(
     area_type="cultural", name="parks_and_protected_lands_area"
 )
-_NE_LAKES = NESourceFile(area_type="physical", name="lakes")
-_NE_LAKES_EUROPE = NESourceFile(area_type="physical", name="lakes_europe")
-_NE_LAKES_NORTH_AMERICA = NESourceFile(area_type="physical", name="lakes_north_america")
-_NE_RIVERS_EUROPE = NESourceFile(area_type="physical", name="rivers_europe")
-_NE_RIVERS_NORTH_AMERICA = NESourceFile(area_type="physical", name="rivers_north_america")
+_NE_LAKES = _NESourceFile(area_type="physical", name="lakes")
+_NE_LAKES_EUROPE = _NESourceFile(area_type="physical", name="lakes_europe")
+_NE_LAKES_NORTH_AMERICA = _NESourceFile(area_type="physical", name="lakes_north_america")
+_NE_RIVERS_EUROPE = _NESourceFile(area_type="physical", name="rivers_europe")
+_NE_RIVERS_NORTH_AMERICA = _NESourceFile(area_type="physical", name="rivers_north_america")
 
 
 _NE_SOURCE_FILES = [
@@ -114,6 +119,8 @@ class EnumWithValueLookup(Enum):
 
 
 class _NEPlaceType(EnumWithValueLookup):
+    """TODO docs."""
+
     airport = "Airport"
     alkaline_lake = "Alkaline Lake"
     lake = "Lake"
@@ -149,6 +156,8 @@ class _NEPlaceType(EnumWithValueLookup):
 
 
 class _NEPlaceProperties(BaseModel):
+    """TODO docs."""
+
     model_config = ConfigDict(strict=True, extra="allow", frozen=True)
 
     # TODO add the additional name fields I found
@@ -184,6 +193,8 @@ class _NEPlaceProperties(BaseModel):
 
 
 class _NEFeature(Feature[_NEPlaceProperties]):
+    """TODO docs."""
+
     id: str = Field(
         description=(
             "Unique identifier for a natural earth feature. "
@@ -193,8 +204,9 @@ class _NEFeature(Feature[_NEPlaceProperties]):
 
 
 def _get_ne_features_from_source(
-    source_idx: int, source: NESourceFile
+    source_idx: int, source: _NESourceFile
 ) -> Generator[_NEFeature, None, None]:
+    """TODO docs."""
     source.download()
 
     with source.local_path.open() as f:
@@ -211,7 +223,8 @@ def _get_ne_features_from_source(
         yield _NEFeature.model_validate(feature)
 
 
-def _ne_feature_to_geoplace(source: NESourceFile, feature: _NEFeature) -> GeoPlace:
+def _ne_feature_to_geoplace(source: _NESourceFile, feature: _NEFeature) -> GeoPlace:
+    """TODO docs."""
     props = feature.properties
     name = props.feature_name
 
@@ -232,26 +245,39 @@ def _ne_feature_to_geoplace(source: NESourceFile, feature: _NEFeature) -> GeoPla
     )
 
 
-# TODO implement an ingest and use the hierarchies
-
-
-## Code for manual testing
-# ruff: noqa: ERA001,T201,E402
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-
-
-def _get_all_ne_geoplaces() -> Generator[GeoPlace, None, None]:
+def _get_all_ne_features() -> Generator[tuple[_NESourceFile, _NEFeature], None, None]:
+    """TODO docs."""
     for source_idx, source in enumerate(_NE_SOURCE_FILES):
         for feature in _get_ne_features_from_source(source_idx, source):
             if (
                 feature.properties.feature_name is not None
                 and feature.properties.place_type != _NEPlaceType.lake_centerline
             ):
-                yield _ne_feature_to_geoplace(source, feature)
+                yield (source, feature)
 
 
-all_places = list(_get_all_ne_geoplaces())
+def _bulk_index_features(
+    index: GeocodeIndex, source_features: list[tuple[_NESourceFile, _NEFeature]]
+) -> None:
+    """TODO docs."""
+    places: list[GeoPlace] = []
+    for source, feature in source_features:
+        place = _ne_feature_to_geoplace(source, feature)
+        hierarchies = get_hierarchies(index, place)
+        place = GeoPlace.model_validate({**place.model_dump(), "hierarchies": hierarchies})
+        places.append(place)
+    index.bulk_index(places)
+
+
+def process_features() -> None:
+    """TODO docs."""
+    process_ingest_items(_get_all_ne_features(), _bulk_index_features)
+
+
+## Code for manual testing
+# ruff: noqa: ERA001,T201,E402
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+# )

@@ -2,9 +2,7 @@
 
 import logging
 import tarfile
-import threading
 from collections.abc import Generator, Iterable
-from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, as_completed, wait
 from enum import Enum
 from functools import singledispatch
 from pathlib import Path
@@ -12,7 +10,7 @@ from typing import Any, TypeVar
 
 import requests
 from e84_geoai_common.geojson import Feature
-from e84_geoai_common.util import chunk_items, unique_by
+from e84_geoai_common.util import unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from shapely import (
     LinearRing,
@@ -34,6 +32,7 @@ from natural_language_geocoding.geocode_index.index import GeocodeIndex
 from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
     counting_generator,
     filter_items,
+    process_ingest_items,
 )
 
 # TODO reenable these ruff items
@@ -401,50 +400,14 @@ def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[_Wh
 
 def _process_placetype_file_multithread(placetype_file: Path) -> None:
     """TODO docs."""
-    thread_local = threading.local()
-    all_conns: set[GeocodeIndex] = set()
 
-    def _get_index() -> GeocodeIndex:
-        if not hasattr(thread_local, "index"):
-            thread_local.index = GeocodeIndex()
-            all_conns.add(thread_local.index)
-
-        return thread_local.index
-
-    def _bulk_index(features: list[_WhosOnFirstFeature]) -> None:
-        index = _get_index()
+    def _bulk_index(index: GeocodeIndex, features: list[_WhosOnFirstFeature]) -> None:
         places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
         index.bulk_index(places)
 
     features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
-    # Performance notes
-    # 5 workers, 15 chunk size, 20 max in flight: Processed 768278 items. Rate: 48098 per min. Elapsed time: 16 mins
-    # 10 workers, 25 chunk size, 20 max in flight: Processed 768278 items. Rate: 48098 per min. Elapsed time: 16 mins
-
-    with ThreadPoolExecutor(max_workers=10) as e:
-        # The maximum number of concurrent future to queue before waiting.
-        max_inflight = 20
-        futures: list[Future[None]] = []
-
-        for features in chunk_items(features_iter, 25):
-            futures.append(e.submit(_bulk_index, features))
-
-            # We only append until the maximum number of futures is reached to avoid OOM errors
-            if len(futures) >= max_inflight:
-                # Wait for at least one to complete
-                done_futures, not_done_futures = wait(futures, return_when=FIRST_COMPLETED)
-                # Process results from completed futures
-                for future in done_futures:
-                    future.result()
-                # Save the set of not done futures as the set we're still waiting on
-                futures = list(not_done_futures)
-
-        # Wait for any remaining futures
-        for future in as_completed(futures):
-            future.result()
-        for conn in all_conns:
-            conn.client.close()
+    process_ingest_items(features_iter, _bulk_index)
 
 
 def process_placetypes() -> None:
@@ -466,27 +429,35 @@ if __name__ == "__main__":
 # ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
 
-# placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
+placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 
-# features_iter = _placetype_file_to_features_for_ingest(placetype_file)
+found_features: list[_WhosOnFirstFeature] = []
 
-# found_features: list[WhosOnFirstFeature] = []
+with tarfile.open(placetype_file, "r:bz2") as tar:
+    f = tar.extractfile("data/101/736/167/101736167.geojson")
+    if f is not None:
+        feature = _WhosOnFirstFeature.model_validate_json(f.read())
+        found_features.append(feature)
 
-# with open("temp/found_bad_geoms.jsonld", "w") as f:
-#     for feature in features_iter:
-#         try:
-#             place = _wof_feature_to_geoplace(feature, "foo")
-#             bad = place.id == "wof_101960967" or place.id == "wof_101961007"
-#         except Exception as e:
-#             print(e)
-#             bad = True
 
-#         if bad:
-#             found_features.append(feature)
-#             f.write(feature.model_dump_json())
+features_iter = _placetype_file_to_features_for_ingest(placetype_file)
 
-# with open("temp/found_bad_geoms.jsonld") as f:
-#     found_features = [WhosOnFirstFeature.model_validate_json(line.strip()) for line in f]
+
+with open("temp/found_bad_geoms.jsonld", "w") as f:
+    for feature in features_iter:
+        try:
+            place = _wof_feature_to_geoplace(feature, "foo")
+            bad = place.id == "wof_101736167"
+        except Exception as e:
+            print(e)
+            bad = True
+
+        if bad:
+            found_features.append(feature)
+            f.write(feature.model_dump_json())
+
+with open("temp/found_bad_geoms.jsonld") as f:
+    found_features = [_WhosOnFirstFeature.model_validate_json(line.strip()) for line in f]
 
 
 # feature = found_features[1]
