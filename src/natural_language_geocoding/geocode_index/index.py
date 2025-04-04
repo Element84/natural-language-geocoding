@@ -365,6 +365,11 @@ class GeocodeIndexBase(ABC):
         """
         ...
 
+    @abstractmethod
+    def get_by_ids(self, ids: list[str]) -> list[GeoPlace]:
+        """Fetches geoplaces by id."""
+        ...
+
 
 class GeocodeIndex(GeocodeIndexBase):
     """Implementation of GeocodeIndexBase against opensearch cluster.
@@ -421,6 +426,13 @@ class GeocodeIndex(GeocodeIndexBase):
         )
         resp = self.client.search(index=GEOPLACE_INDEX_NAME, params=params, body=body)
         return SearchResponse.from_search_resp(resp)
+
+    @timed_function(logger)
+    def get_by_ids(self, ids: list[str]) -> list[GeoPlace]:
+        resp = self.client.mget(
+            {"docs": [{"_id": place_id} for place_id in ids]}, GEOPLACE_INDEX_NAME
+        )
+        return [_doc_to_geo_place(doc["_source"]) for doc in resp["docs"]]
 
 
 def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:

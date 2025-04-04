@@ -106,7 +106,7 @@ ignore = [
   'TD002',
   'TD003',
   'TD004',
-  # Cause TODOs not be an error preventing commit
+  # Allow TODOs in code.
   'FIX002']
 
 [tool.ruff.lint.per-file-ignores]

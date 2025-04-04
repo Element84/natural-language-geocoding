@@ -6,9 +6,9 @@ predefined.
 
 import rich
 from rich.tree import Tree
+from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.geocode_index.geoplace import (
-    GeoPlace,
     GeoPlaceType,
     Hierarchy,
 )
@@ -90,7 +90,12 @@ class _ContinentCountryRegionTracker:
         return hierarchies
 
 
-def get_hierarchies(index: GeocodeIndex, place: GeoPlace) -> set[Hierarchy]:
+def get_hierarchies(
+    index: GeocodeIndex,
+    place_name: str,
+    place_type: GeoPlaceType,
+    geom: BaseGeometry,
+) -> set[Hierarchy]:
     """Finds the parents of a place using spatial location and returns them as a set of Hierarchies.
 
     An existing set of places must already be indexed in order for this to be useful. Only finds
@@ -111,12 +116,12 @@ def get_hierarchies(index: GeocodeIndex, place: GeoPlace) -> set[Hierarchy]:
                     GeoPlaceType.region.value,
                 ],
             ),
-            QueryDSL.geo_shape(GeoPlaceIndexField.geom_spatial, place.geom),
+            QueryDSL.geo_shape(GeoPlaceIndexField.geom_spatial, geom),
         ),
     )
     resp = index.search(request)
     if resp.hits > max_parents:
-        raise Exception(f"Found more than {max_parents} for place {place.place_name} {place.type}")
+        raise Exception(f"Found more than {max_parents} for place {place_name} {place_type}")
 
     tracker = _ContinentCountryRegionTracker()
     for parent in resp.places:

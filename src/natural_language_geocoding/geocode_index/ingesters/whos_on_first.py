@@ -16,22 +16,13 @@ import logging
 import tarfile
 from collections.abc import Generator, Iterable
 from enum import Enum
-from functools import singledispatch
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 import requests
 from e84_geoai_common.geojson import Feature
 from e84_geoai_common.util import unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
-from shapely import (
-    LinearRing,
-    MultiPolygon,
-    Polygon,
-    remove_repeated_points,  # type: ignore[reportUnknownVariableTypes]
-)
-from shapely.geometry.base import BaseGeometry
-from shapely.validation import explain_validity
 
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
@@ -44,15 +35,13 @@ from natural_language_geocoding.geocode_index.index import GeocodeIndex
 from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
     counting_generator,
     filter_items,
+    fix_geometry,
     process_ingest_items,
 )
 
 _LOCAL_TEMP_DIR = Path("temp")
 
 logger = logging.getLogger(__name__)
-
-# Used for removing repeated points so that shapely and opensearch will consider them valid.
-_DUPLICATE_POINT_TOLERANCE = 0.00001
 
 
 _KNOWN_BAD_WOF_GEOMS__: set[int] = {
@@ -280,67 +269,6 @@ class _WhosOnFirstFeature(Feature[_WhosOnFirstPlaceProperties]):
         return self.properties.edtf_deprecated is not None
 
 
-T_Geom = TypeVar("T_Geom", bound=BaseGeometry)
-
-
-@singledispatch
-def _remove_duplicate_points(geom: T_Geom) -> T_Geom:
-    """Removes the duplicate points switching based on type."""
-    return remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
-
-
-@_remove_duplicate_points.register
-def _(geom: Polygon) -> Polygon:
-    # The shapely function doesn't seem to remove duplicates from interiors
-    fixed_exterior: LinearRing = _remove_duplicate_points(geom.exterior)
-    fixed_interiors: list[LinearRing] = [_remove_duplicate_points(i) for i in geom.interiors]
-
-    return Polygon(shell=fixed_exterior, holes=fixed_interiors)
-
-
-@_remove_duplicate_points.register
-def _(geom: MultiPolygon) -> MultiPolygon:
-    return MultiPolygon([_remove_duplicate_points(geom) for geom in geom.geoms])
-
-
-def _fix_geometry(feature: _WhosOnFirstFeature) -> BaseGeometry:
-    """Attempts to fix the geometry if it's invalid.
-
-    This uses a variety of approaches like remove duplicate points or adding a 0 length buffer.
-    Raises an exception if it can't fix a geometry.
-    """
-    orig_geom = feature.geometry
-    # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
-    result_geom = remove_repeated_points(orig_geom)
-
-    if not result_geom.is_valid:
-        # Sometimes geometry points are too close together and considered duplicates
-        result_geom = _remove_duplicate_points(result_geom)
-
-        if not result_geom.is_valid:
-            # One last approach is to create a buffer of 0 distance from an object. This can fix
-            # some invalid geometry
-            geom_with_buffer = result_geom.buffer(0)
-            # We must remove any new duplicates this might add
-            geom_with_buffer_and_no_dups = _remove_duplicate_points(result_geom)
-
-            if geom_with_buffer_and_no_dups.is_valid:
-                # We only use this last one if it's valid. Sometimes buffering will fix the problem
-                # but then removing duplicates will cause a different problem. We still remove the
-                # remaining duplicates if it's not invalid because this can fix opensearch issues
-                # that shapely doesn't catch.
-                result_geom = geom_with_buffer_and_no_dups
-            else:
-                result_geom = geom_with_buffer
-
-    if not result_geom.is_valid:
-        # If it's still not valid or wasn't fixed raise an error
-        reason = explain_validity(result_geom)
-        raise ValueError(f"Geometry for feature {feature.id} is not valid due to {reason}")
-
-    return result_geom
-
-
 def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> GeoPlace:
     """Converts a WOF feature to a GeoPlace."""
     props = feature.properties
@@ -352,7 +280,7 @@ def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> 
         id=f"wof_{feature.id}",
         place_name=name,
         type=props.placetype.to_geoplace_type(),
-        geom=_fix_geometry(feature),
+        geom=fix_geometry(f"wof_{feature.id}", feature.geometry),
         properties=props.model_dump(mode="json"),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType.wof,

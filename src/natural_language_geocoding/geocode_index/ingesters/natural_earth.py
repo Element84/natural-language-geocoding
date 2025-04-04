@@ -18,9 +18,15 @@ from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlaceSourceType,
     GeoPlaceType,
 )
-from natural_language_geocoding.geocode_index.index import GeocodeIndex
+from natural_language_geocoding.geocode_index.index import (
+    GeocodeIndex,
+)
 from natural_language_geocoding.geocode_index.ingesters.hierarchy_finder import get_hierarchies
-from natural_language_geocoding.geocode_index.ingesters.ingest_utils import process_ingest_items
+from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
+    counting_generator,
+    fix_geometry,
+    process_ingest_items,
+)
 
 _GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/martynafford/natural-earth-geojson"
 
@@ -75,6 +81,7 @@ _NE_PARKS_AND_PROTECTED_LANDS_AREA = _NESourceFile(
 _NE_LAKES = _NESourceFile(area_type="physical", name="lakes")
 _NE_LAKES_EUROPE = _NESourceFile(area_type="physical", name="lakes_europe")
 _NE_LAKES_NORTH_AMERICA = _NESourceFile(area_type="physical", name="lakes_north_america")
+_NE_RIVERS_LAKES_CENTERLINES = _NESourceFile(area_type="physical", name="rivers_lake_centerlines")
 _NE_RIVERS_EUROPE = _NESourceFile(area_type="physical", name="rivers_europe")
 _NE_RIVERS_NORTH_AMERICA = _NESourceFile(area_type="physical", name="rivers_north_america")
 
@@ -86,6 +93,7 @@ _NE_SOURCE_FILES = [
     _NE_LAKES,
     _NE_LAKES_EUROPE,
     _NE_LAKES_NORTH_AMERICA,
+    _NE_RIVERS_LAKES_CENTERLINES,
     _NE_RIVERS_EUROPE,
     _NE_RIVERS_NORTH_AMERICA,
 ]
@@ -220,28 +228,41 @@ def _get_ne_features_from_source(
         # Example id we'll generate for a feature of 10m cultural for the 5th file and
         # ne_10c5_45
         feature["id"] = f"{source_file_id}_{index + 1}"
-        yield _NEFeature.model_validate(feature)
+        if feature.get("geometry") is not None:
+            try:
+                yield _NEFeature.model_validate(feature)
+            except Exception as e:
+                raise Exception(
+                    f"Unable to parse feature [{feature.get('properties', {}).get('name', 'No name')}]"
+                    f" from source {source}"
+                ) from e
 
 
-def _ne_feature_to_geoplace(source: _NESourceFile, feature: _NEFeature) -> GeoPlace:
+def _ne_feature_to_geoplace(
+    index: GeocodeIndex, source: _NESourceFile, feature: _NEFeature
+) -> GeoPlace:
     """TODO docs."""
     props = feature.properties
     name = props.feature_name
 
     if name is None:
         raise Exception(f"Unexpected feature without name {feature}")
+    place_type = props.place_type.to_geoplace_type()
+    fixed_geom = fix_geometry(feature.id, feature.geometry)
+    hierarchies = get_hierarchies(index, name, place_type, fixed_geom)
 
     return GeoPlace(
         id=feature.id,
         place_name=name,
-        type=props.place_type.to_geoplace_type(),
-        geom=feature.geometry,
+        type=place_type,
+        geom=fixed_geom,
         properties=props.model_dump(mode="json"),
         source=GeoPlaceSource(
             source_type=GeoPlaceSourceType.ne,
             source_path=source.url,
         ),
         alternate_names=props.get_alternate_names(),
+        hierarchies=list(hierarchies),
     )
 
 
@@ -260,24 +281,79 @@ def _bulk_index_features(
     index: GeocodeIndex, source_features: list[tuple[_NESourceFile, _NEFeature]]
 ) -> None:
     """TODO docs."""
-    places: list[GeoPlace] = []
-    for source, feature in source_features:
-        place = _ne_feature_to_geoplace(source, feature)
-        hierarchies = get_hierarchies(index, place)
-        place = GeoPlace.model_validate({**place.model_dump(), "hierarchies": hierarchies})
-        places.append(place)
+    places: list[GeoPlace] = [
+        _ne_feature_to_geoplace(index, source, feature) for source, feature in source_features
+    ]
     index.bulk_index(places)
 
 
 def process_features() -> None:
     """TODO docs."""
-    process_ingest_items(_get_all_ne_features(), _bulk_index_features)
+    logger.info("Starting to ingest natural earth features")
+    process_ingest_items(
+        counting_generator(_get_all_ne_features(), logger=logger), _bulk_index_features
+    )
 
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+    logging.getLogger("opensearch").setLevel(logging.WARNING)
+    logging.getLogger("natural_language_geocoding.geocode_index.index.GeocodeIndex").setLevel(
+        logging.WARNING
+    )
+
+    process_features()
 
 ## Code for manual testing
 # ruff: noqa: ERA001,T201,E402
+
+
+# def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarchy]) -> None:
+#     """Prints hierarchies as a table. Useful for debugging."""
+#     places = index.get_by_ids(
+#         [place_id for h in hierarchies for place_id in h.model_dump(exclude_none=True).values()]
+#     )
+#     id_to_name = {p.id: p.place_name for p in places}
+
+#     table_data: list[dict[str, Any]] = [
+#         {field: id_to_name[place_id] for field, place_id in h.model_dump(exclude_none=True).items()}
+#         for h in hierarchies
+#     ]
+
+#     # Print the table
+#     print(tabulate(table_data, headers="keys", tablefmt="grid"))
+
 
 # logging.basicConfig(
 #     level=logging.INFO,
 #     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 # )
+
+# source_feature_pairs = list(_get_all_ne_features())
+
+# len(source_feature_pairs)
+
+# index = GeocodeIndex()
+
+# subset_sfp = [
+#     (source, feature)
+#     for source, feature in source_feature_pairs
+#     if feature.properties.name == "Mississippi"
+# ]
+
+# len(subset_sfp)
+
+# display_geometry([subset_sfp[0][1].geometry])
+# display_geometry([subset_sfp[1][1].geometry])
+# display_geometry([subset_sfp[2][1].geometry])
+
+# source, feature = subset_sfp[0]
+
+# place = _ne_feature_to_geoplace(index, source, feature)
+
+# print_hierarchies_with_names(index, place.hierarchies)
+
+# display_geometry([place.geom])
