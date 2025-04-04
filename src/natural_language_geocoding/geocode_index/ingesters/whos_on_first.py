@@ -1,4 +1,16 @@
-"""TODO document this module."""
+"""Provides functions for indexing data from Who's On First.
+
+[Who's On First](https://whosonfirst.org/) is an online distribution of places on the earth with
+information about each place like its spatial geometry, name, type, and hierarchy. See
+https://whosonfirst.org/docs/licenses/ for licensing information.
+
+The general process for indexing Who's On First (WOF) data is as follows:
+
+1. Download source tar files from WOF to a local directory. Each source tar is a `.tar.bz2` file.
+2. Read all of the Geojson features from each source tar. Each feature is in a separate file in the
+tar.
+
+"""
 
 import logging
 import tarfile
@@ -35,10 +47,6 @@ from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
     process_ingest_items,
 )
 
-# TODO reenable these ruff items
-# ruff: noqa: D103,T201,BLE001,FIX002,ERA001,E501
-
-
 _LOCAL_TEMP_DIR = Path("temp")
 
 logger = logging.getLogger(__name__)
@@ -52,11 +60,11 @@ _KNOWN_BAD_WOF_GEOMS__: set[int] = {
     101961007
 }
 
-# Documentation copied from https://whosonfirst.org/docs/placetypes/
-
 
 class _WhosOnFirstPlaceType(Enum):
-    """TODO docs."""
+    """Defines all the different kinds of WOF placetypes."""
+
+    # Documentation in comments copied from https://whosonfirst.org/docs/placetypes/
 
     address = "address"
     arcade = "arcade"
@@ -68,26 +76,34 @@ class _WhosOnFirstPlaceType(Enum):
     concourse = "concourse"
     continent = "continent"
 
-    # Basically places that issue passports, notwithstanding the details (like empires which actually issue the passports...)
+    # Basically places that issue passports, notwithstanding the details (like empires which
+    # actually issue the passports...)
     country = "country"
     county = "county"
 
     custom = "custom"
 
-    # It's not a sub-region of a country but rather dependent on a parent country for defence, passport control, subsidies, etc
+    # It's not a sub-region of a country but rather dependent on a parent country for defence,
+    # passport control, subsidies, etc
     dependency = "dependency"
 
-    # Places that one or more parties claim as their own. As of this writing all disputed places are parented only by the country (and higher) IDs of the claimants. This isn't to say there aren't more granular hierarchies to be applied to these place only that we are starting with the simple stuff first.
+    # Places that one or more parties claim as their own. As of this writing all disputed places are
+    # parented only by the country (and higher) IDs of the claimants. This isn't to say there aren't
+    # more granular hierarchies to be applied to these place only that we are starting with the
+    # simple stuff first.
     disputed = "disputed"
 
-    # Or "sovereignty" but really... empire. For example the Meta United States that contains both the US and Puerto Rico.
+    # Or "sovereignty" but really... empire. For example the Meta United States that contains both
+    # the US and Puerto Rico.
     empire = "empire"
 
     enclosure = "enclosure"
     installation = "installation"
     intersection = "intersection"
 
-    # In many countries, the lowest level of government. They contain one or more localities (or "populated places") which themselves have no authority. Often but not exclusively found in Europe.
+    # In many countries, the lowest level of government. They contain one or more localities (or
+    #  "populated places") which themselves have no authority. Often but not exclusively found in
+    # Europe.
     localadmin = "localadmin"
 
     # Towns and cities, independent of size or population. Things with neighbourhoods, basically.
@@ -106,7 +122,8 @@ class _WhosOnFirstPlaceType(Enum):
     marinearea = "marinearea"
     marketarea = "marketarea"
 
-    # Things like "The Bay Area" - this one is hard so we shouldn't spend too much time worrying about the details yet but instead treat as something we want to do eventually.
+    # Things like "The Bay Area" - this one is hard so we shouldn't spend too much time worrying
+    # about the details yet but instead treat as something we want to do eventually.
     metroarea = "metroarea"
 
     microhood = "microhood"
@@ -122,7 +139,8 @@ class _WhosOnFirstPlaceType(Enum):
     region = "region"
     timezone = "timezone"
 
-    # Things with walls, often but mostly things that people stand around together. Things with walls might be public (a bar) or private (your apartment) by default.
+    # Things with walls, often but mostly things that people stand around together. Things with
+    # walls might be public (a bar) or private (your apartment) by default.
     venue = "venue"
     wing = "wing"
 
@@ -132,25 +150,25 @@ class _WhosOnFirstPlaceType(Enum):
 
 _DOWNLOADABLE_PLACETYPES = [
     # TODO temporarily skipping already completed placetypes
-    # WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
-    # WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
-    # WhosOnFirstPlaceType.country,  # (202.4 MB) 232 records
-    # WhosOnFirstPlaceType.county,  # (563.1 MB) 47,645 records
-    # WhosOnFirstPlaceType.dependency,  # (1.2 MB) 43 records
-    # WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
-    # WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
-    # WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
-    _WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
-    _WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
-    _WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
-    _WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
-    _WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
-    _WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
-    _WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
-    _WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
-    _WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
-    _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
-    _WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
+    _WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
+    _WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
+    _WhosOnFirstPlaceType.country,  # (202.4 MB) 232 records
+    _WhosOnFirstPlaceType.county,  # (563.1 MB) 47,645 records
+    _WhosOnFirstPlaceType.dependency,  # (1.2 MB) 43 records
+    _WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
+    _WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
+    _WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
+    # _WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
+    # _WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
+    # _WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
+    # _WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
+    # _WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
+    # _WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
+    # _WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
+    # _WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
+    # _WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
+    # _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
+    # _WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
     # We won't download these
     # WhosOnFirstPlaceType.planet (3 KB)
     # WhosOnFirstPlaceType.campus  (72.2 MB)
@@ -187,7 +205,10 @@ def _wof_hierarchy_parser(value: Any) -> Any:  # noqa: ANN401
 
 
 class _WhosOnFirstPlaceProperties(BaseModel):
-    """TODO docs."""
+    """The Geojson feature properties from a Who's On First feature.
+
+    This only defines the fields that we need.
+    """
 
     model_config = ConfigDict(
         strict=True,
@@ -250,7 +271,7 @@ class _WhosOnFirstPlaceProperties(BaseModel):
 
 
 class _WhosOnFirstFeature(Feature[_WhosOnFirstPlaceProperties]):
-    """TODO docs."""
+    """A Who's On First geojson feature."""
 
     id: int
 
@@ -264,11 +285,13 @@ T_Geom = TypeVar("T_Geom", bound=BaseGeometry)
 
 @singledispatch
 def _remove_duplicate_points(geom: T_Geom) -> T_Geom:
+    """Removes the duplicate points switching based on type."""
     return remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
 
 
 @_remove_duplicate_points.register
 def _(geom: Polygon) -> Polygon:
+    # The shapely function doesn't seem to remove duplicates from interiors
     fixed_exterior: LinearRing = _remove_duplicate_points(geom.exterior)
     fixed_interiors: list[LinearRing] = [_remove_duplicate_points(i) for i in geom.interiors]
 
@@ -281,32 +304,45 @@ def _(geom: MultiPolygon) -> MultiPolygon:
 
 
 def _fix_geometry(feature: _WhosOnFirstFeature) -> BaseGeometry:
-    """TODO docs."""
-    geom = feature.geometry
+    """Attempts to fix the geometry if it's invalid.
+
+    This uses a variety of approaches like remove duplicate points or adding a 0 length buffer.
+    Raises an exception if it can't fix a geometry.
+    """
+    orig_geom = feature.geometry
     # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
-    geom = remove_repeated_points(geom)
+    result_geom = remove_repeated_points(orig_geom)
 
-    if not geom.is_valid:
+    if not result_geom.is_valid:
         # Sometimes geometry points are too close together and considered duplicates
-        geom = _remove_duplicate_points(geom)
+        result_geom = _remove_duplicate_points(result_geom)
 
-        if not geom.is_valid:
+        if not result_geom.is_valid:
             # One last approach is to create a buffer of 0 distance from an object. This can fix
             # some invalid geometry
-            geom = geom.buffer(0)
+            geom_with_buffer = result_geom.buffer(0)
             # We must remove any new duplicates this might add
-            geom = _remove_duplicate_points(geom)
+            geom_with_buffer_and_no_dups = _remove_duplicate_points(result_geom)
 
-    if not geom.is_valid:
+            if geom_with_buffer_and_no_dups.is_valid:
+                # We only use this last one if it's valid. Sometimes buffering will fix the problem
+                # but then removing duplicates will cause a different problem. We still remove the
+                # remaining duplicates if it's not invalid because this can fix opensearch issues
+                # that shapely doesn't catch.
+                result_geom = geom_with_buffer_and_no_dups
+            else:
+                result_geom = geom_with_buffer
+
+    if not result_geom.is_valid:
         # If it's still not valid or wasn't fixed raise an error
-        reason = explain_validity(geom)
+        reason = explain_validity(result_geom)
         raise ValueError(f"Geometry for feature {feature.id} is not valid due to {reason}")
 
-    return geom
+    return result_geom
 
 
 def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> GeoPlace:
-    """TODO docs."""
+    """Converts a WOF feature to a GeoPlace."""
     props = feature.properties
     name = props.name
     if name is None:
@@ -330,7 +366,7 @@ def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> 
 
 
 def _download_placetype(place_type: _WhosOnFirstPlaceType) -> Path:
-    """TODO docs."""
+    """Downloads the WOF file if it's not already downloaded."""
     filename = f"whosonfirst-data-{place_type.value}-latest.tar.bz2"
     place_type_file = _LOCAL_TEMP_DIR / filename
 
@@ -351,18 +387,19 @@ def _download_placetype(place_type: _WhosOnFirstPlaceType) -> Path:
 def _find_all_geojson_features_files(
     tar: tarfile.TarFile,
 ) -> Generator[tarfile.TarInfo, None, None]:
-    """TODO docs."""
+    """Returns all members of the tar file that are WOF Geojson features."""
     member = tar.next()
     while member is not None:
+        # Skip the alternate geometries
         if "-alt-" not in member.name and member.name.endswith(".geojson"):
             yield member
         member = tar.next()
 
 
-def _find_all_wof_features(source_tar: Path) -> Generator[_WhosOnFirstFeature, None, None]:
-    """TODO docs."""
-    logger.info("Opening tar %s", source_tar)
-    with tarfile.open(source_tar, "r:bz2") as tar:
+def _find_all_wof_features(placetype_tar_file: Path) -> Generator[_WhosOnFirstFeature, None, None]:
+    """Given a WOF tar file, returns every WOF Feature in the tar file."""
+    logger.info("Opening tar %s", placetype_tar_file)
+    with tarfile.open(placetype_tar_file, "r:bz2") as tar:
         for member in _find_all_geojson_features_files(tar):
             f = tar.extractfile(member)
             if f is not None:
@@ -372,9 +409,14 @@ def _find_all_wof_features(source_tar: Path) -> Generator[_WhosOnFirstFeature, N
                     raise Exception(f"Failed loading {member.name}") from e
 
 
-def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[_WhosOnFirstFeature]:
-    """TODO docs."""
-    features_iter = _find_all_wof_features(placetype_file)
+def _placetype_tar_file_to_features_for_ingest(
+    placetype_tar_file: Path,
+) -> Iterable[_WhosOnFirstFeature]:
+    """Returns all of the WOF Features from a tar file that we want to ingest.
+
+    Skips deprecated places, places without names, known bad geometries, etc.
+    """
+    features_iter = _find_all_wof_features(placetype_tar_file)
     features_iter = counting_generator(features_iter, logger=logger)
     # Exclude deprecated places
     features_iter = filter_items(features_iter, filter_fn=lambda f: not f.is_deprecated)
@@ -398,146 +440,44 @@ def _placetype_file_to_features_for_ingest(placetype_file: Path) -> Iterable[_Wh
     )
 
 
-def _process_placetype_file_multithread(placetype_file: Path) -> None:
-    """TODO docs."""
+def _index_placetype_tar_file(placetype_tar_file: Path) -> None:
+    """Indexes all of the features in the tar file."""
 
     def _bulk_index(index: GeocodeIndex, features: list[_WhosOnFirstFeature]) -> None:
-        places = [_wof_feature_to_geoplace(f, placetype_file.name) for f in features]
+        places = [_wof_feature_to_geoplace(f, placetype_tar_file.name) for f in features]
         index.bulk_index(places)
 
-    features_iter = _placetype_file_to_features_for_ingest(placetype_file)
+    features_iter = _placetype_tar_file_to_features_for_ingest(placetype_tar_file)
 
     process_ingest_items(features_iter, _bulk_index)
 
 
-def process_placetypes() -> None:
-    """TODO docs."""
-    index = GeocodeIndex()
-    index.create_index(recreate=True)
+def index_wof_places() -> None:
+    """Indexes all of the WOF features into the geocode index."""
+    # TODO temporarily skipping
+    # index = GeocodeIndex()
+    # index.create_index(recreate=True)
 
     for placetype in _DOWNLOADABLE_PLACETYPES:
-        placetype_file = _download_placetype(placetype)
-        _process_placetype_file_multithread(placetype_file)
+        placetype_tar_file = _download_placetype(placetype)
+        _index_placetype_tar_file(placetype_tar_file)
 
 
 if __name__ == "__main__":
     logging.getLogger("opensearch").setLevel(logging.WARNING)
 
-    process_placetypes()
+    index_wof_places()
 
 # Code for manual testing
 # ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
 
-placetype_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
+# placetype_tar_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 
-found_features: list[_WhosOnFirstFeature] = []
+# found_features: list[_WhosOnFirstFeature] = []
 
-with tarfile.open(placetype_file, "r:bz2") as tar:
-    f = tar.extractfile("data/101/736/167/101736167.geojson")
-    if f is not None:
-        feature = _WhosOnFirstFeature.model_validate_json(f.read())
-        found_features.append(feature)
-
-
-features_iter = _placetype_file_to_features_for_ingest(placetype_file)
-
-
-with open("temp/found_bad_geoms.jsonld", "w") as f:
-    for feature in features_iter:
-        try:
-            place = _wof_feature_to_geoplace(feature, "foo")
-            bad = place.id == "wof_101736167"
-        except Exception as e:
-            print(e)
-            bad = True
-
-        if bad:
-            found_features.append(feature)
-            f.write(feature.model_dump_json())
-
-with open("temp/found_bad_geoms.jsonld") as f:
-    found_features = [_WhosOnFirstFeature.model_validate_json(line.strip()) for line in f]
-
-
-# feature = found_features[1]
-# feature.properties.name
-# feature.properties.placetype
-
-# g = feature.geometry
-# g.is_valid
-# display_geometry([g])
-
-# fg: Polygon = cast("Polygon", _fix_geometry(feature))
-
-
-# next_id: int = 0
-# index = GeocodeIndex()
-
-
-# def test_geometry(geom: BaseGeometry) -> bool:
-#     global next_id
-#     if not geom.is_valid:
-#         raise Exception("Geometry is not valid")
-#     next_id += 1
-#     feature = WhosOnFirstFeature(
-#         id=next_id,
-#         geometry=geom,
-#         properties=WhosOnFirstPlaceProperties(
-#             name="Test Geom", placetype=WhosOnFirstPlaceType.borough
-#         ),
-#     )
-#     place = _wof_feature_to_geoplace(feature, "test")
-
-#     try:
-#         index.bulk_index([place])
-#         success = True
-#     except Exception:
-#         success = False
-#     return success
-
-
-# # Original geom should fail
-# test_geometry(fg)
-
-# p_without_interiors = Polygon(fg.exterior)
-# test_geometry(p_without_interiors)
-# display_geometry([p_without_interiors])
-
-
-# def find_bad_interior(interiors: list[LinearRing], start_index: int, end_index: int) -> int:
-#     print(f"Running with indexes: {start_index}, {end_index}")
-#     # Base case: If we've narrowed down to a single interior ring
-#     if start_index == end_index:
-#         test_polygon = Polygon(fg.exterior, holes=[interiors[start_index]])
-#         if not test_geometry(test_polygon):
-#             raise Exception("Logic error")
-#         return start_index
-
-#     # Find the midpoint for binary search
-#     mid = (start_index + end_index) // 2
-
-#     # Test the first half of the interior rings
-#     first_half_interiors = interiors[start_index : mid + 1]
-#     test_polygon = Polygon(fg.exterior, holes=first_half_interiors)
-
-#     # If the first half fails the test, the problematic ring is in that half
-#     if not test_geometry(test_polygon):
-#         return find_bad_interior(interiors, start_index, mid)
-
-#     # Otherwise, the problematic ring is in the second half
-#     return find_bad_interior(interiors, mid + 1, end_index)
-
-
-# bad_index = find_bad_interior(list(fg.interiors), 0, len(fg.interiors) - 1)
-
-# bad_index
-
-# bad_interior = fg.interiors[39]
-
-# bad_interior.__geo_interface__
-# bad_interior.is_valid
-
-# bad_poly = Polygon(fg.exterior, [bad_interior])
-
-# display_geometry([bad_poly])
+# with tarfile.open(placetype_tar_file, "r:bz2") as tar:
+#     f = tar.extractfile("data/101/736/167/101736167.geojson")
+#     if f is not None:
+#         feature = _WhosOnFirstFeature.model_validate_json(f.read())
+#         found_features.append(feature)
