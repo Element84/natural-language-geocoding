@@ -11,6 +11,7 @@ from e84_geoai_common.geometry import (
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
 from natural_language_geocoding.place_lookup import PlaceLookup
@@ -23,7 +24,7 @@ class SpatialNodeType(BaseModel, ABC):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     @abstractmethod
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None: ...
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry: ...
 
 
 class NamedPlace(SpatialNodeType):
@@ -51,7 +52,7 @@ class NamedPlace(SpatialNodeType):
         ),
     )
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         geometry = place_lookup.search(
             name=self.name,
             place_type=self.type,
@@ -59,9 +60,6 @@ class NamedPlace(SpatialNodeType):
             in_country=self.in_country,
             in_region=self.in_region,
         )
-        if geometry is None:
-            # FUTURE change this into a specific kind of exception that we can show the user.
-            raise Exception(f"Unable to find area with name [{self.name}]")
         return simplify_geometry(geometry)
 
 
@@ -71,10 +69,14 @@ class CoastOf(SpatialNodeType):
     node_type: Literal["CoastOf"] = "CoastOf"
     child_node: "AnySpatialNodeType"
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
-        if child_bounds := self.child_node.to_geometry(place_lookup):
-            return coastline_of(child_bounds)
-        return None
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
+        child_bounds = self.child_node.to_geometry(place_lookup)
+        coast = coastline_of(child_bounds)
+        if coast is None:
+            # TODO these errors would benefit from being more specific.
+            # Maybe the LLM should generate it?
+            raise GeocodeError("Could not find a coastline of the area.")
+        return coast
 
 
 # The number of kilometers of buffer added to each shape to ensure that the areas that are very
@@ -103,13 +105,14 @@ class BorderBetween(SpatialNodeType):
     child_node_1: "AnySpatialNodeType"
     child_node_2: "AnySpatialNodeType"
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         child1_bounds = self.child_node_1.to_geometry(place_lookup)
         child2_bounds = self.child_node_2.to_geometry(place_lookup)
-        if child1_bounds is None or child2_bounds is None:
-            return None
 
-        return border_between(child1_bounds, child2_bounds)
+        intersection = border_between(child1_bounds, child2_bounds)
+        if intersection is None:
+            raise GeocodeError("No border found between the two areas")
+        return intersection
 
 
 class BorderOf(SpatialNodeType):
@@ -118,14 +121,13 @@ class BorderOf(SpatialNodeType):
     node_type: Literal["BorderOf"] = "BorderOf"
     child_node: "AnySpatialNodeType"
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
-        if child_bounds := self.child_node.to_geometry(place_lookup):
-            boundary = child_bounds.boundary
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
+        child_bounds = self.child_node.to_geometry(place_lookup)
+        boundary = child_bounds.boundary
 
-            if boundary.is_empty:
-                return None
-            return boundary
-        return None
+        if boundary.is_empty:
+            raise GeocodeError("Could not find border of area")
+        return boundary
 
 
 class Buffer(SpatialNodeType):
@@ -148,10 +150,9 @@ class Buffer(SpatialNodeType):
             case "nautical miles":
                 return self.distance * 1.852
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
-        if child_bounds := self.child_node.to_geometry(place_lookup):
-            return add_buffer(child_bounds, self.distance_km)
-        return None
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
+        child_bounds = self.child_node.to_geometry(place_lookup)
+        return add_buffer(child_bounds, self.distance_km)
 
 
 class DirectionalConstraint(BaseModel):
@@ -164,10 +165,8 @@ class DirectionalConstraint(BaseModel):
     child_node: "AnySpatialNodeType"
     direction: Literal["west", "north", "south", "east"]
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         child_bounds = self.child_node.to_geometry(place_lookup)
-        if child_bounds is None:
-            return None
         match self.direction:
             case "west":
                 return BoundingBox(
@@ -209,11 +208,20 @@ class Intersection(SpatialNodeType):
     def from_nodes(cls, *nodes: "AnySpatialNodeType") -> Self:
         return cls(child_nodes=list(nodes))
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         result: BaseGeometry | None = None
         for node in self.child_nodes:
             node_geom = node.to_geometry(place_lookup)
-            result = result.intersection(node_geom) if result else node_geom
+
+            if result:
+                if result.intersects(node_geom):
+                    result = result.intersection(node_geom)
+                else:
+                    raise GeocodeError("The two areas do not intersect")
+            else:
+                result = node_geom
+        if result is None:
+            raise Exception("Unexpected empty list of child nodes")
         return result
 
 
@@ -227,11 +235,13 @@ class Union(SpatialNodeType):
     def from_nodes(cls, *nodes: "AnySpatialNodeType") -> Self:
         return cls(child_nodes=list(nodes))
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         result: BaseGeometry | None = None
         for node in self.child_nodes:
             node_geom = node.to_geometry(place_lookup)
             result = result.union(node_geom) if result else node_geom
+        if result is None:
+            raise Exception("Unexpected empty list of child nodes")
         return result
 
 
@@ -242,11 +252,9 @@ class Difference(SpatialNodeType):
     child_node_1: "AnySpatialNodeType"
     child_node_2: "AnySpatialNodeType"
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         b1 = self.child_node_1.to_geometry(place_lookup)
         b2 = self.child_node_2.to_geometry(place_lookup)
-        if b1 is None or b2 is None:
-            return None
         return b1.difference(b2)
 
 
@@ -261,12 +269,9 @@ class Between(SpatialNodeType):
     child_node_1: "AnySpatialNodeType"
     child_node_2: "AnySpatialNodeType"
 
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         b1 = self.child_node_1.to_geometry(place_lookup)
         b2 = self.child_node_2.to_geometry(place_lookup)
-        if b1 is None or b2 is None:
-            return None
-
         return between(b1, b2)
 
 
@@ -285,5 +290,5 @@ AnySpatialNodeType = (
 
 
 class SpatialNode(RootModel[AnySpatialNodeType]):
-    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry | None:
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         return self.root.to_geometry(place_lookup)

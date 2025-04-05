@@ -8,6 +8,7 @@ from e84_geoai_common.geometry import geometry_from_wkt
 from e84_geoai_common.util import get_env_var, timed_function
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 
 
@@ -62,4 +63,4 @@ class NominatimAPI(PlaceLookup):
                 "Nominatim place found for [%s]: %s", name, json.dumps(selected_place)[0:100]
             )
             return geometry_from_wkt(selected_place["geotext"])
-        raise LookupError(f"Unable to find place with name {name}")
+        raise GeocodeError(f"Unable to find place with name {name}")

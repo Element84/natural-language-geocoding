@@ -5,6 +5,7 @@ import logging
 from e84_geoai_common.util import timed_function
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import PLACE_TYPE_SORT_ORDER, GeoPlaceType
 from natural_language_geocoding.geocode_index.hierachical_place_cache import PlaceCache
 from natural_language_geocoding.geocode_index.index import (
@@ -152,7 +153,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         places = search_resp.places
         if len(places) > 0:
             return places[0].geom
-        raise Exception(
+        # TODO I'm not sure this is the error that should be shown to the user.
+        raise GeocodeError(
             f"Unable find place with name [{name}] "
             f"type [{place_type}] "
             f"in_continent [{in_continent}] "
@@ -162,7 +164,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
 
 ## Code for testing
-# ruff: noqa: ERA001
+# ruff: noqa: ERA001,E501
 
 
 # lookup = GeocodeIndexPlaceLookup()
@@ -180,3 +182,9 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 # display_geometry([places[2].geom])
 # display_geometry([places[3].geom])
 # display_geometry([places[4].geom])
+
+# TODO current problem is that this doesn't find the Maui that we'd care about. IT finds some place in south america
+# g = lookup.search(name="Maui")
+# display_geometry([g])
+
+# When searching for "Maui" by itself the addition of USA and helps ensure this works
