@@ -308,7 +308,7 @@ if __name__ == "__main__":
     process_features()
 
 ## Code for manual testing
-# ruff: noqa: ERA001,T201,E402
+# ruff: noqa: ERA001,T201,E402,E501
 
 
 # def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarchy]) -> None:

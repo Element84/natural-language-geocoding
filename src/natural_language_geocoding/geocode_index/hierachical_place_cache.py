@@ -166,11 +166,15 @@ def _populate() -> HierchicalPlaceCache:
                 GeoPlaceType.region.value,
             ],
         ),
-        source_fields=["name", "type", "hierarchies"],
+        source_fields=[
+            GeoPlaceIndexField.place_name,
+            GeoPlaceIndexField.type,
+            GeoPlaceIndexField.hierarchies,
+        ],
     ):
         feature_id = hit["_id"]
         place_type = GeoPlaceType(hit["_source"]["type"])
-        name = hit["_source"]["name"]
+        name = hit["_source"]["place_name"]
         hierarchies = [Hierarchy.model_validate(h) for h in hit["_source"]["hierarchies"]]
         dicts.add(feature_id, name, place_type, hierarchies)
 

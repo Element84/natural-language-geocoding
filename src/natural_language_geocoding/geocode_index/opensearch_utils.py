@@ -149,10 +149,10 @@ def scroll_fetch_all(
     *,
     index: str,
     query: QueryCondition,
-    source_fields: list[str],
+    source_fields: list[IndexField],
 ) -> Generator[Hit, None, None]:
     """Finds and returns all items using the scroll API."""
-    body = {"query": query, "_source": source_fields, "size": 1000}
+    body = {"query": query, "_source": [f.value for f in source_fields], "size": 1000}
 
     # Initialize the scroll
     scroll_resp: dict[str, Any] = client.search(index=index, body=body, params={"scroll": "2m"})

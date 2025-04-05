@@ -451,7 +451,7 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
     def to_compare_str(place: GeoPlace, exp: dict[str, Any]) -> str:
         return json.dumps(
             {
-                "name": place.place_name,
+                "place_name": place.place_name,
                 "type": place.type.value,
                 "alternate_names": place.alternate_names,
                 "explanation": exp,
