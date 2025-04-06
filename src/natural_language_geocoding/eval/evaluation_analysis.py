@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 from e84_geoai_common.llm.core import LLMInferenceConfig, LLMMessage, TextContent
 from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS, BedrockClaudeLLM
 
@@ -8,6 +11,29 @@ haiku_llm = BedrockClaudeLLM()
 sonnet_llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.5 Sonnet v2"])
 
 full_eval = evaluate_examples(haiku_llm)
+
+_TEMP_DIR = Path("temp")
+
+
+# Find the highest existing version number
+def _get_next_version() -> int:
+    pattern = re.compile(r"temp/full_eval_v(\d+)\.md$")
+    max_version = -1
+
+    for filename in _TEMP_DIR.iterdir():
+        match = pattern.match(str(filename))
+        if match:
+            version = int(match.group(1))
+            max_version = max(max_version, version)
+
+    # Return the next version number
+    return max_version + 1
+
+
+test_version = _get_next_version()
+
+with (_TEMP_DIR / "full_eval_v{test_version}.md").open("w") as f:
+    f.write(full_eval.to_markdown())
 
 system_prompt = """
 You are ane expert in optimizing LLM prompts to make them successful. You produce prompts that work
@@ -44,3 +70,6 @@ resp = sonnet_llm.prompt(
 
 
 print(resp.to_text_only())  # noqa: T201
+
+with (_TEMP_DIR / "llm_suggestion_v{test_version}.md").open("w") as f:
+    f.write(resp.to_text_only())
