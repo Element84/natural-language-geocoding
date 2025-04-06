@@ -13,7 +13,7 @@ from natural_language_geocoding.prompt import SYSTEM_PROMPT
 logger = logging.getLogger(__name__)
 
 
-def _parse_spatial_node_from_text(llm: LLM, text: str) -> SpatialNode:
+def parse_spatial_node_from_text(llm: LLM, text: str) -> SpatialNode:
     """Parses out the spatial node from text."""
     return extract_data_from_text(
         llm=llm, model_type=SpatialNode, system_prompt=SYSTEM_PROMPT, user_prompt=text
@@ -25,7 +25,7 @@ def extract_geometry_from_text(
 ) -> BaseGeometry:
     """Extracts a spatial area referenced in text as geometry."""
     place_lookup = place_lookup or NominatimAPI()
-    spatial_node = _parse_spatial_node_from_text(llm, text)
+    spatial_node = parse_spatial_node_from_text(llm, text)
     logger.info("Found spatial node from text %s: %s", text, spatial_node.model_dump_json(indent=2))
     if g := spatial_node.to_geometry(place_lookup):
         return g

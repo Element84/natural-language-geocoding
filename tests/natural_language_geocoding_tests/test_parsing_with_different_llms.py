@@ -15,7 +15,7 @@ from natural_language_geocoding.models import (
     NamedPlace,
 )
 
-parse_spatial_node = natural_language_geocoding._parse_spatial_node_from_text  # type: ignore[reportPrivateUsage]
+parse_spatial_node = natural_language_geocoding.parse_spatial_node_from_text  # type: ignore[reportPrivateUsage]
 
 
 EXAMPLES: list[tuple[str, AnySpatialNodeType]] = [

@@ -7,10 +7,18 @@ from pydantic import BaseModel, ConfigDict, SkipValidation
 from zss import simple_distance  # type: ignore[reportUnknownVariableType]
 
 from natural_language_geocoding.models import (
+    AnySpatialNodeType,
+    Between,
+    BorderBetween,
+    BorderOf,
+    Buffer,
+    CoastOf,
+    Difference,
     DirectionalConstraint,
     Intersection,
     NamedPlace,
     SpatialNodeType,
+    Union,
 )
 
 _SimpleValue = str | int | float | bool | None
@@ -57,9 +65,16 @@ def _(node: SpatialNodeType) -> _GetChildrenResponse:
 
 
 # Register the subclasses of SpatialNodeType explicitly
-@_get_children.register(DirectionalConstraint)
 @_get_children.register(NamedPlace)
+@_get_children.register(Buffer)
+@_get_children.register(BorderBetween)
+@_get_children.register(BorderOf)
+@_get_children.register(CoastOf)
 @_get_children.register(Intersection)
+@_get_children.register(Union)
+@_get_children.register(Difference)
+@_get_children.register(Between)
+@_get_children.register(DirectionalConstraint)
 def _(node: SpatialNodeType) -> _GetChildrenResponse:
     # Call the implementation for SpatialNodeType
     return _get_children.registry[SpatialNodeType](node)
@@ -88,13 +103,17 @@ def _get_label(node: _Attribute | SpatialNodeType) -> str:
 
 
 def _label_distance(l1: str, l2: str) -> float:
+    # FUTURE it may make more sense to use a real edit distance here.
+    # zss uses https://pypi.org/project/editdistance/
     if l1 == l2:
         return 0
     return 1
 
 
-def get_distance(node1: SpatialNodeType, node2: SpatialNodeType) -> float:
+# TODO unit test this method
+def get_spatial_node_tree_distance(node1: AnySpatialNodeType, node2: AnySpatialNodeType) -> float:
     """TODO docs."""
+    # TODO add safety check in here. If the nodes are not equal then the distance must not be 0.
     resp = simple_distance(node1, node2, _get_children, _get_label, _label_distance)  # type: ignore[reportUnknownArgumentType]
     return float(resp)  # type: ignore[reportUnknownArgumentType]
 
