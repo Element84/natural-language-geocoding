@@ -50,17 +50,39 @@ class ExampleNLG(BaseModel):
 
 
 examples: list[ExampleNLG] = [
-    ExampleNLG(user_text="Paris", expected_node=NamedPlace(name="Paris")),
-    ExampleNLG(user_text="France", expected_node=NamedPlace(name="France")),
+    ExampleNLG(
+        user_text="Paris",
+        expected_node=NamedPlace(
+            name="Paris",
+            type=GeoPlaceType.locality,
+            in_continent="Europe",
+            in_country="France",
+        ),
+    ),
+    ExampleNLG(
+        user_text="France",
+        expected_node=NamedPlace(
+            name="France",
+            type=GeoPlaceType.country,
+            in_continent="Europe",
+        ),
+    ),
     ExampleNLG(
         user_text="Paris, France",
         expected_node=NamedPlace(
-            name="Paris", type=GeoPlaceType.locality, in_continent="Europe", in_country="France"
+            name="Paris",
+            type=GeoPlaceType.locality,
+            in_continent="Europe",
+            in_country="France",
         ),
     ),
     ExampleNLG(
         user_text="United States of America",
-        expected_node=NamedPlace(name="United States of America"),
+        expected_node=NamedPlace(
+            name="United States of America",
+            type=GeoPlaceType.country,
+            in_continent="North America",
+        ),
     ),
     ExampleNLG(
         user_text="Annapolis, Maryland",

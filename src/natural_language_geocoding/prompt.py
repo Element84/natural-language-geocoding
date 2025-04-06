@@ -1,10 +1,19 @@
 import json
 from pathlib import Path
+from textwrap import dedent
 
 from e84_geoai_common.llm.extraction import ExtractDataExample
 from e84_geoai_common.util import singleline
 
-from natural_language_geocoding.models import SpatialNode
+from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
+from natural_language_geocoding.models import (
+    DirectionalConstraint,
+    Intersection,
+    NamedPlace,
+    SpatialNode,
+)
+
+# TODO try pruning guidelines and seeing the effect once there is a lerge test set.
 
 GUIDELINES = [
     singleline(
@@ -32,14 +41,19 @@ GUIDELINES = [
         multiple spatial relationships and geographical contexts.
         """
     ),
-    singleline(
+    dedent(
         """
-        Specifically, when translating city names into named places, always include the most
-        specific geographical context available, such as 'Boston Massachusetts' instead of just
-        'Boston'. This ensures that the NamedPlace reflects both the city and state, or city and
-        country, maintaining clear and unambiguous geographical identification.
+        GEOGRAPHICAL HIERARCHY
+            - Always use separate fields (in_continent, in_country, in_region) instead of combining
+              them in the name field
+            - The name field should contain only the specific place name (e.g., "Paris" not
+              "Paris France")
+            - Use in_country for country context (e.g., "France" for Paris)
+            - Use in_region for state/province context (e.g., "Maryland" for Annapolis)
+            - Use in_continent for continental context where appropriate
         """
-    ),
+    ).strip(),
+    "Always specify the place type when it can be determined",
     singleline(
         """
         Simplify When Possible: Always generate the simplest version of the tree possible to
@@ -81,29 +95,35 @@ EXAMPLES = [
     ExtractDataExample(
         name="Simple Spatial Example",
         user_query="in North Dakota",
-        structure=SpatialNode.model_validate({"node_type": "NamedPlace", "name": "North Dakota"}),
+        structure=NamedPlace(
+            name="North Dakota",
+            type=GeoPlaceType.region,
+            in_continent="North America",
+            in_country="United States of America",
+        ),
     ),
     ExtractDataExample(
         name="Complex Query Example",
         user_query="in New Mexico, west of Albuquerque",
-        structure=SpatialNode.model_validate(
-            {
-                "node_type": "Intersection",
-                "child_nodes": [
-                    {
-                        "node_type": "NamedPlace",
-                        "name": "New Mexico",
-                    },
-                    {
-                        "node_type": "DirectionalConstraint",
-                        "child_node": {
-                            "node_type": "NamedPlace",
-                            "name": "Albuquerque",
-                        },
-                        "direction": "west",
-                    },
-                ],
-            }
+        structure=Intersection(
+            child_nodes=[
+                NamedPlace(
+                    name="New Mexico",
+                    type=GeoPlaceType.region,
+                    in_continent="North America",
+                    in_country="United States of America",
+                ),
+                DirectionalConstraint(
+                    direction="west",
+                    child_node=NamedPlace(
+                        name="Albuquerque",
+                        type=GeoPlaceType.locality,
+                        in_continent="North America",
+                        in_country="United States of America",
+                        in_region="New Mexico",
+                    ),
+                ),
+            ]
         ),
     ),
 ]

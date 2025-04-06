@@ -32,7 +32,7 @@ def _get_next_version() -> int:
 
 test_version = _get_next_version()
 
-with (_TEMP_DIR / "full_eval_v{test_version}.md").open("w") as f:
+with (_TEMP_DIR / f"full_eval_v{test_version}.md").open("w") as f:
     f.write(full_eval.to_markdown())
 
 system_prompt = """
