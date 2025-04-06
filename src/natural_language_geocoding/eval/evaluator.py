@@ -143,14 +143,7 @@ def evaluate(llm: LLM, example: ExampleNLG) -> SingleEvaluation:
     if distance > 0:
         expected_dict = example.expected_node.model_dump()
         actual_dict = actual.model_dump()
-        diff = DeepDiff(
-            expected_dict,
-            actual_dict,
-            verbose_level=2,
-            view="tree",
-            # get_deep_distance=True,
-        )
-
+        diff = DeepDiff(expected_dict, actual_dict, verbose_level=2, view="tree")
         diff_tree: dict[str, Any] = cast("dict[str, Any]", diff.tree)
 
         diff_explanations = [
