@@ -38,6 +38,8 @@ demo = [
   "streamlit>=1.38.0",
   "streamlit-folium>=0.22.1",
   "watchdog>=6.0.0"]
+eval = [
+  "zss"]
 dev = [
   "pytest>=8.3.3",
   "pytest-watch",
