@@ -84,6 +84,8 @@ _NE_LAKES_NORTH_AMERICA = _NESourceFile(area_type="physical", name="lakes_north_
 _NE_RIVERS_LAKES_CENTERLINES = _NESourceFile(area_type="physical", name="rivers_lake_centerlines")
 _NE_RIVERS_EUROPE = _NESourceFile(area_type="physical", name="rivers_europe")
 _NE_RIVERS_NORTH_AMERICA = _NESourceFile(area_type="physical", name="rivers_north_america")
+_NE_GEOGRAPHY_REGIONS = _NESourceFile(area_type="physical", name="geography_regions_polys")
+_NE_GEOGRAPHY_MARINE = _NESourceFile(area_type="physical", name="geography_marine_polys")
 
 
 _NE_SOURCE_FILES = [
@@ -96,6 +98,8 @@ _NE_SOURCE_FILES = [
     _NE_RIVERS_LAKES_CENTERLINES,
     _NE_RIVERS_EUROPE,
     _NE_RIVERS_NORTH_AMERICA,
+    _NE_GEOGRAPHY_REGIONS,
+    _NE_GEOGRAPHY_MARINE,
 ]
 
 
