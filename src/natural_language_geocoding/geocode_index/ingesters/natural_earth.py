@@ -89,15 +89,16 @@ _NE_GEOGRAPHY_MARINE = _NESourceFile(area_type="physical", name="geography_marin
 
 
 _NE_SOURCE_FILES = [
-    _NE_AIRPORTS,
-    _NE_PORTS,
-    _NE_PARKS_AND_PROTECTED_LANDS_AREA,
-    _NE_LAKES,
-    _NE_LAKES_EUROPE,
-    _NE_LAKES_NORTH_AMERICA,
-    _NE_RIVERS_LAKES_CENTERLINES,
-    _NE_RIVERS_EUROPE,
-    _NE_RIVERS_NORTH_AMERICA,
+    # TODO temporarily commenting
+    # _NE_AIRPORTS,
+    # _NE_PORTS,
+    # _NE_PARKS_AND_PROTECTED_LANDS_AREA,
+    # _NE_LAKES,
+    # _NE_LAKES_EUROPE,
+    # _NE_LAKES_NORTH_AMERICA,
+    # _NE_RIVERS_LAKES_CENTERLINES,
+    # _NE_RIVERS_EUROPE,
+    # _NE_RIVERS_NORTH_AMERICA,
     _NE_GEOGRAPHY_REGIONS,
     _NE_GEOGRAPHY_MARINE,
 ]
@@ -140,7 +141,47 @@ class _NEPlaceType(EnumWithValueLookup):
     national_park_service = "National Park Service"
     port = "Port"
     reservoir = "Reservoir"
-    river = "River"
+    river = "river"
+
+    basin = "Basin"
+    coast = "Coast"
+    # We'll skip this since we have it from WOF
+    continent = "Continent"
+    delta = "Delta"
+    depression = "Depression"
+    desert = "Desert"
+    # From Null Island and skippable
+    dragons_be_here = "Dragons-be-here"
+    foothills = "Foothills"
+    geoarea = "Geoarea"
+    gorge = "Gorge"
+    island = "Island"
+    island_group = "Island group"
+    isthmus = "Isthmus"
+    lowland = "Lowland"
+    pen_cape = "Pen/cape"
+    peninsula = "Peninsula"
+    plain = "Plain"
+    plateau = "Plateau"
+    range_mtn = "Range/mtn"
+    tundra = "Tundra"
+    valley = "Valley"
+    wetlands = "Wetlands"
+
+    bay = "bay"
+    channel = "channel"
+    fjord = "fjord"
+    # Ignore these as they are all without a name and internal waters for each country
+    generic = "generic"
+    gulf = "gulf"
+    inlet = "inlet"
+    lagoon = "lagoon"
+    # We'll skip this since we have it from WOF
+    ocean = "ocean"
+    reef = "reef"
+    sea = "sea"
+    sound = "sound"
+    strait = "strait"
 
     @classmethod
     def from_feature_cla(cls, feature_cla: str) -> "_NEPlaceType | None":
@@ -148,6 +189,9 @@ class _NEPlaceType(EnumWithValueLookup):
             feature_cla = feature_cla.replace("Intermittent", "").strip()
         elif feature_cla.endswith("(Intermittent)"):
             feature_cla = feature_cla.replace("(Intermittent)", "").strip()
+        if feature_cla == "River":
+            # River and river both appear but we map them to a single type
+            feature_cla = "river"
         return cls.from_value(feature_cla)
 
     def to_geoplace_type(self) -> GeoPlaceType:
@@ -160,6 +204,36 @@ class _NEPlaceType(EnumWithValueLookup):
             _NEPlaceType.national_park_service: GeoPlaceType.national_park,
             _NEPlaceType.port: GeoPlaceType.port,
             _NEPlaceType.river: GeoPlaceType.river,
+            _NEPlaceType.basin: GeoPlaceType.basin,
+            _NEPlaceType.coast: GeoPlaceType.coast,
+            _NEPlaceType.delta: GeoPlaceType.delta,
+            _NEPlaceType.depression: GeoPlaceType.depression,
+            _NEPlaceType.desert: GeoPlaceType.desert,
+            _NEPlaceType.foothills: GeoPlaceType.foothills,
+            _NEPlaceType.geoarea: GeoPlaceType.geoarea,
+            _NEPlaceType.gorge: GeoPlaceType.gorge,
+            _NEPlaceType.island: GeoPlaceType.island,
+            _NEPlaceType.island_group: GeoPlaceType.island_group,
+            _NEPlaceType.isthmus: GeoPlaceType.isthmus,
+            _NEPlaceType.lowland: GeoPlaceType.lowland,
+            _NEPlaceType.pen_cape: GeoPlaceType.peninsula,
+            _NEPlaceType.peninsula: GeoPlaceType.peninsula,
+            _NEPlaceType.plain: GeoPlaceType.plain,
+            _NEPlaceType.plateau: GeoPlaceType.plateau,
+            _NEPlaceType.range_mtn: GeoPlaceType.range_mtn,
+            _NEPlaceType.tundra: GeoPlaceType.tundra,
+            _NEPlaceType.valley: GeoPlaceType.valley,
+            _NEPlaceType.wetlands: GeoPlaceType.wetlands,
+            _NEPlaceType.bay: GeoPlaceType.bay,
+            _NEPlaceType.channel: GeoPlaceType.channel,
+            _NEPlaceType.fjord: GeoPlaceType.fjord,
+            _NEPlaceType.gulf: GeoPlaceType.gulf,
+            _NEPlaceType.inlet: GeoPlaceType.inlet,
+            _NEPlaceType.lagoon: GeoPlaceType.lagoon,
+            _NEPlaceType.reef: GeoPlaceType.reef,
+            _NEPlaceType.sea: GeoPlaceType.sea,
+            _NEPlaceType.sound: GeoPlaceType.sound,
+            _NEPlaceType.strait: GeoPlaceType.strait,
         }
 
         if self in _place_type_map:
