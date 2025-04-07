@@ -1,12 +1,14 @@
 """TODO docs."""
 
 import logging
+import re
 from pathlib import Path
 from typing import Any, cast
 
 import deepdiff.serialization
 from deepdiff import DeepDiff
 from e84_geoai_common.llm.core import LLM
+from e84_geoai_common.llm.models import BedrockClaudeLLM
 from pydantic import BaseModel, ConfigDict
 
 from natural_language_geocoding import parse_spatial_node_from_text
@@ -14,6 +16,9 @@ from natural_language_geocoding.eval.tree_distance import get_spatial_node_tree_
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
+    BorderBetween,
+    CoastOf,
+    DirectionalConstraint,
     NamedPlace,
     SpatialNode,
 )
@@ -49,9 +54,10 @@ class ExampleNLG(BaseModel):
     expected_node: AnySpatialNodeType
 
 
-examples: list[ExampleNLG] = [
+NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
     ExampleNLG(
         user_text="Paris",
+        description="Simple city lookup",
         expected_node=NamedPlace(
             name="Paris",
             type=GeoPlaceType.locality,
@@ -61,6 +67,7 @@ examples: list[ExampleNLG] = [
     ),
     ExampleNLG(
         user_text="France",
+        description="Simple country lookup",
         expected_node=NamedPlace(
             name="France",
             type=GeoPlaceType.country,
@@ -69,6 +76,7 @@ examples: list[ExampleNLG] = [
     ),
     ExampleNLG(
         user_text="Paris, France",
+        description="City scoped to a country",
         expected_node=NamedPlace(
             name="Paris",
             type=GeoPlaceType.locality,
@@ -78,6 +86,7 @@ examples: list[ExampleNLG] = [
     ),
     ExampleNLG(
         user_text="United States of America",
+        description="USA lookup",
         expected_node=NamedPlace(
             name="United States of America",
             type=GeoPlaceType.country,
@@ -86,6 +95,7 @@ examples: list[ExampleNLG] = [
     ),
     ExampleNLG(
         user_text="Annapolis, Maryland",
+        description="City scoped to a US State",
         expected_node=NamedPlace(
             name="Annapolis",
             type=GeoPlaceType.locality,
@@ -94,7 +104,73 @@ examples: list[ExampleNLG] = [
             in_region="Maryland",
         ),
     ),
+    ExampleNLG(
+        user_text="Mississippi",
+        description="Ambiguous state or river",
+        expected_node=NamedPlace(
+            name="Mississippi",
+            in_continent="North America",
+            in_country="United States of America",
+        ),
+    ),
+    ExampleNLG(
+        user_text="Mississippi River",
+        description="River",
+        expected_node=NamedPlace(
+            name="Mississippi",
+            type=GeoPlaceType.river,
+            in_continent="North America",
+            in_country="United States of America",
+        ),
+    ),
+    # TODO add islands
 ]
+
+FEATURE_EXAMPLES: list[ExampleNLG] = [
+    ExampleNLG(
+        user_text="the coast of Maryland",
+        description="Coastline of a US State",
+        expected_node=CoastOf(
+            child_node=NamedPlace(
+                name="Maryland",
+                type=GeoPlaceType.region,
+                in_continent="North America",
+                in_country="United States of America",
+            )
+        ),
+    ),
+    ExampleNLG(
+        user_text="West of London",
+        description="Simple directional constraint",
+        expected_node=DirectionalConstraint(
+            child_node=NamedPlace(
+                name="London",
+                type=GeoPlaceType.locality,
+                in_continent="Europe",
+                in_country="United Kingdom",
+            ),
+            direction="west",
+        ),
+    ),
+    ExampleNLG(
+        user_text="Border between France and Spain",
+        description="Simple border extraction",
+        expected_node=BorderBetween(
+            child_node_1=NamedPlace(
+                name="France",
+                type=GeoPlaceType.country,
+                in_continent="Europe",
+            ),
+            child_node_2=NamedPlace(
+                name="Spain",
+                type=GeoPlaceType.country,
+                in_continent="Europe",
+            ),
+        ),
+    ),
+]
+
+ALL_EXAMPLES = [*NAMED_PLACE_EXAMPLES, *FEATURE_EXAMPLES]
 
 
 class SingleEvaluation(BaseModel):
@@ -180,17 +256,41 @@ def evaluate(llm: LLM, example: ExampleNLG) -> SingleEvaluation:
 
 def evaluate_examples(llm: LLM) -> FullEvaluation:
     """TODO docs."""
-    return FullEvaluation(evaluations=[evaluate(llm, example) for example in examples])
+    return FullEvaluation(evaluations=[evaluate(llm, example) for example in ALL_EXAMPLES])
 
 
 #################
 # code for manual testing
-# ruff: noqa: ERA001
+# ruff: noqa: ERA001,T201
 
-# llm = BedrockClaudeLLM()
+llm = BedrockClaudeLLM()
 
-# eval = evaluate_examples(llm)
-# print(eval.to_markdown())
+full_eval = evaluate_examples(llm)
+print(full_eval.to_markdown())
+
+
+_TEMP_DIR = Path("temp")
+
+
+# Find the highest existing version number
+def _get_next_version() -> int:
+    pattern = re.compile(r"temp/full_eval_v(\d+)\.md$")
+    max_version = -1
+
+    for filename in _TEMP_DIR.iterdir():
+        match = pattern.match(str(filename))
+        if match:
+            version = int(match.group(1))
+            max_version = max(max_version, version)
+
+    # Return the next version number
+    return max_version + 1
+
+
+test_version = _get_next_version()
+
+with (_TEMP_DIR / f"full_eval_v{test_version}.md").open("w") as f:
+    f.write(full_eval.to_markdown())
 
 
 # node = Intersection.from_nodes(
