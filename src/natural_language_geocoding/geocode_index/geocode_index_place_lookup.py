@@ -76,8 +76,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         if place_type:
             should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
 
-        continent_ids: list[str] | None = None
-        country_ids: list[str] | None = None
+        continent_ids: set[str] | None = None
+        country_ids: set[str] | None = None
 
         if continent_name:
             continent_ids = self._place_cache.find_ids(
@@ -90,7 +90,9 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
                     f"Unexpectedly found multiple continents with name [{continent_name}]"
                 )
             should_conds.append(
-                QueryDSL.term(GeoPlaceIndexField.hierarchies_continent_id, continent_ids[0])
+                QueryDSL.term(
+                    GeoPlaceIndexField.hierarchies_continent_id, next(iter(continent_ids))
+                )
             )
 
         if country_name:
@@ -100,7 +102,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             if len(country_ids) == 0:
                 raise ValueError(f"Unable to find country with name [{country_name}]")
             should_conds.append(
-                QueryDSL.terms(GeoPlaceIndexField.hierarchies_country_id, country_ids)
+                QueryDSL.terms(GeoPlaceIndexField.hierarchies_country_id, list(country_ids))
             )
 
         if region_name:
@@ -114,7 +116,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             if len(region_ids) == 0:
                 raise ValueError(f"Unable to find region with name [{region_name}]")
             should_conds.append(
-                QueryDSL.terms(GeoPlaceIndexField.hierarchies_region_id, region_ids)
+                QueryDSL.terms(GeoPlaceIndexField.hierarchies_region_id, list(region_ids))
             )
 
         name_match = QueryDSL.dis_max(

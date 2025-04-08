@@ -1,6 +1,7 @@
 """TODO document this module."""
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
 
 from e84_geoai_common.util import timed_function
@@ -14,20 +15,20 @@ from natural_language_geocoding.geocode_index.opensearch_utils import (
 )
 
 
-def _append_to_dict[K](d: dict[K, list[str]], key: K, item: str) -> None:
+def _append_to_dict[K](d: dict[K, set[str]], key: K, item: str) -> None:
     if key not in d:
-        d[key] = []
-    d[key].append(item)
+        d[key] = set()
+    d[key].add(item)
 
 
 class HierchicalPlaceCache:
     """TODO docs."""
 
     _id_to_name_place_hierarchies: dict[str, tuple[str, GeoPlaceType, list[Hierarchy]]]
-    _name_place_to_ids: dict[tuple[str, GeoPlaceType], list[str]]
-    _name_place_continent_to_ids: dict[tuple[str, GeoPlaceType, str], list[str]]
-    _name_place_country_to_ids: dict[tuple[str, GeoPlaceType, str], list[str]]
-    _name_place_continent_country_to_ids: dict[tuple[str, GeoPlaceType, str, str], list[str]]
+    _name_place_to_ids: dict[tuple[str, GeoPlaceType], set[str]]
+    _name_place_continent_to_ids: dict[tuple[str, GeoPlaceType, str], set[str]]
+    _name_place_country_to_ids: dict[tuple[str, GeoPlaceType, str], set[str]]
+    _name_place_continent_country_to_ids: dict[tuple[str, GeoPlaceType, str, str], set[str]]
 
     def __init__(self) -> None:
         self._id_to_name_place_hierarchies = {}
@@ -80,42 +81,38 @@ class HierchicalPlaceCache:
         *,
         name: str,
         place_type: GeoPlaceType,
-        continent_ids: list[str] | None = None,
-        country_ids: list[str] | None = None,
-    ) -> list[str]:
+        continent_ids: Iterable[str] | None = None,
+        country_ids: Iterable[str] | None = None,
+    ) -> set[str]:
         """TODO docs."""
-        # Validate args
-        if continent_ids is not None and len(continent_ids) == 0:
-            raise ValueError("if continent_ids are provided at least one must be specified")
-        if country_ids is not None and len(country_ids) == 0:
-            raise ValueError("if country_ids are provided at least one must be specified")
-
         if continent_ids:
             if country_ids:
-                matches = [
+                matches = {
                     fid
                     for continent_id in continent_ids
                     for country_id in country_ids
                     for fid in self._name_place_continent_country_to_ids.get(
-                        (name, place_type, continent_id, country_id), []
+                        (name, place_type, continent_id, country_id), set()
                     )
-                ]
+                }
             else:
-                matches = [
+                matches = {
                     fid
                     for continent_id in continent_ids
                     for fid in self._name_place_continent_to_ids.get(
-                        (name, place_type, continent_id), []
+                        (name, place_type, continent_id), set()
                     )
-                ]
+                }
         elif country_ids:
-            matches = [
+            matches = {
                 fid
                 for country_id in country_ids
-                for fid in self._name_place_country_to_ids.get((name, place_type, country_id), [])
-            ]
+                for fid in self._name_place_country_to_ids.get(
+                    (name, place_type, country_id), set()
+                )
+            }
         else:
-            matches = self._name_place_to_ids.get((name, place_type), [])
+            matches = self._name_place_to_ids.get((name, place_type), set())
         return matches
 
     def to_json(self, *, indent: int | str | None = None) -> str:
@@ -191,7 +188,8 @@ class PlaceCache:
     _cache_file: Path
 
     def __init__(self, *, cache_dir: str | Path = "./temp", force_reload: bool = False) -> None:
-        self._cache_file = Path(cache_dir) / "hierarchical_place_cache.json"
+        # Increment the name of the file when something changes about the format of the storage
+        self._cache_file = Path(cache_dir) / "hierarchical_place_cache_v2.json"
         if force_reload or not self._cache_file.exists():
             self._dicts = _populate()
             self._cache_file.parent.mkdir(exist_ok=True)
@@ -206,9 +204,9 @@ class PlaceCache:
         *,
         name: str,
         place_type: GeoPlaceType,
-        continent_ids: list[str] | None = None,
-        country_ids: list[str] | None = None,
-    ) -> list[str]:
+        continent_ids: Iterable[str] | None = None,
+        country_ids: Iterable[str] | None = None,
+    ) -> set[str]:
         """TODO docs."""
         return self._dicts.find_ids(
             name=name,
@@ -223,4 +221,39 @@ class PlaceCache:
 
 # cache = _populate()
 
-# cache.find_ids(name="France", place_type=GeoPlaceType.country)
+# place_cache = PlaceCache()
+
+# items = list(place_cache._dicts._name_place_continent_country_to_ids.keys())
+
+
+# r_items = [t for t in items if t[0] == "Russia"]
+
+
+# # cache.find_ids(name="France", place_type=GeoPlaceType.country)
+
+# client = create_opensearch_client()
+
+# hits = list(
+#     scroll_fetch_all(
+#         client,
+#         index=GEOPLACE_INDEX_NAME,
+#         query=QueryDSL.and_conds(
+#             QueryDSL.term(GeoPlaceIndexField.place_name_keyword, "Russia"),
+#             QueryDSL.terms(
+#                 GeoPlaceIndexField.type,
+#                 [
+#                     GeoPlaceType.continent.value,
+#                     GeoPlaceType.country.value,
+#                     GeoPlaceType.region.value,
+#                 ],
+#             ),
+#         ),
+#         source_fields=[
+#             GeoPlaceIndexField.place_name,
+#             GeoPlaceIndexField.type,
+#             GeoPlaceIndexField.hierarchies,
+#         ],
+#     )
+# )
+
+# hits
