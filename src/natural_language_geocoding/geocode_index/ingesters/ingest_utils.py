@@ -31,11 +31,12 @@ def counting_generator[T](
 
     def _log() -> None:
         now = time()
-        elapsed = now - start_time
-        total_rate_per_sec = count / elapsed
+        total_elapsed = now - start_time
+        total_rate_per_sec = count / total_elapsed
         rate_per_min = total_rate_per_sec * 60
 
-        rolling_rate_per_sec = (count - last_logged_count) / elapsed
+        since_last_log_elapsed = now - last_logged
+        rolling_rate_per_sec = (count - last_logged_count) / since_last_log_elapsed
         rolling_rate_per_min = rolling_rate_per_sec * 60
 
         logger.info(
@@ -46,7 +47,7 @@ def counting_generator[T](
             count,
             ceil(rolling_rate_per_min),
             ceil(rate_per_min),
-            ceil(elapsed / 60),
+            ceil(total_elapsed / 60),
         )
 
     for item in items:
