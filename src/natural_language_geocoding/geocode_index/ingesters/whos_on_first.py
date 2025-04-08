@@ -394,10 +394,11 @@ if __name__ == "__main__":
 
     index_wof_places()
 
+
 # Code for manual testing
 # ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
 
-# placetype_tar_file = Path("temp/whosonfirst-data-country-latest.tar.bz2")
+# placetype_tar_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 
 # found_features: list[_WhosOnFirstFeature] = []
 
@@ -405,4 +406,15 @@ if __name__ == "__main__":
 #     f = tar.extractfile("data/101/736/167/101736167.geojson")
 #     if f is not None:
 #         feature = _WhosOnFirstFeature.model_validate_json(f.read())
-#         found_features.append(feature)
+
+# with open("temp/found_bad_geoms.json.ld", "w") as f:
+#     for feature in _placetype_tar_file_to_features_for_ingest(placetype_tar_file):
+#         try:
+#             fix_geometry(str(feature.id), feature.geometry)
+#         except Exception as e:
+#             print(e)
+#             found_features.append(feature)
+#             f.write(feature.model_dump_json())
+#             f.write("\n")
+#             f.flush()
+# print("Done")

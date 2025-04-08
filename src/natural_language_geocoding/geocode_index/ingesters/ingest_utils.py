@@ -9,6 +9,7 @@ from typing import TypeVar
 
 from e84_geoai_common.util import chunk_items
 from shapely import (
+    GEOSException,
     LinearRing,
     MultiPolygon,
     Polygon,
@@ -78,24 +79,51 @@ _DUPLICATE_POINT_TOLERANCE = 0.00001
 T_Geom = TypeVar("T_Geom", bound=BaseGeometry)
 
 
+def _is_tiny_linear_ring_error(e: GEOSException) -> bool:
+    msg = str(e.args[0])
+    # An error that can occur if the ring has only/mostly duplicate points.
+    return msg.startswith("IllegalArgumentException: Invalid number of points in LinearRing")
+
+
+# TODO test this
 @singledispatch
-def _remove_duplicate_points(geom: T_Geom) -> T_Geom:
+def _remove_duplicate_points(geom: T_Geom, tolerance: float) -> T_Geom:
     """Removes the duplicate points switching based on type."""
-    return remove_repeated_points(geom, _DUPLICATE_POINT_TOLERANCE)
+    return remove_repeated_points(geom, tolerance)
 
 
 @_remove_duplicate_points.register
-def _(geom: Polygon) -> Polygon:
-    # The shapely function doesn't seem to remove duplicates from interiors
-    fixed_exterior: LinearRing = _remove_duplicate_points(geom.exterior)
-    fixed_interiors: list[LinearRing] = [_remove_duplicate_points(i) for i in geom.interiors]
+def _(geom: Polygon, tolerance: float) -> Polygon:
+    # This will throw a tiny linear ring error if it's really small. We'll handle that a higher
+    # level.
+    fixed_exterior: LinearRing = _remove_duplicate_points(geom.exterior, tolerance)
+
+    fixed_interiors: list[LinearRing] = []
+
+    for interior in geom.interiors:
+        try:
+            fixed_interiors.append(_remove_duplicate_points(interior, tolerance))
+        except GEOSException as e:
+            # An error that can occur if the ring has only/mostly duplicate points.
+            # We'll just drop the interior in that case as it would effectively be a tiny hole.
+            if not _is_tiny_linear_ring_error(e):
+                raise
 
     return Polygon(shell=fixed_exterior, holes=fixed_interiors)
 
 
 @_remove_duplicate_points.register
-def _(geom: MultiPolygon) -> MultiPolygon:
-    return MultiPolygon([_remove_duplicate_points(geom) for geom in geom.geoms])
+def _(geom: MultiPolygon, tolerance: float) -> MultiPolygon:
+    polygons: list[Polygon] = []
+
+    for poly in geom.geoms:
+        try:
+            polygons.append(_remove_duplicate_points(poly, tolerance))
+        except GEOSException as e:
+            # Indicates that the exterior of one of the polygons was a tiny area. Drop the polygon.
+            if not _is_tiny_linear_ring_error(e):
+                raise
+    return MultiPolygon(polygons)
 
 
 def fix_geometry(feature_id: str, orig_geom: BaseGeometry) -> BaseGeometry:
@@ -105,18 +133,20 @@ def fix_geometry(feature_id: str, orig_geom: BaseGeometry) -> BaseGeometry:
     Raises an exception if it can't fix a geometry.
     """
     # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
-    result_geom = remove_repeated_points(orig_geom)
+    result_geom = _remove_duplicate_points(orig_geom, 0)
 
     if not result_geom.is_valid:
         # Sometimes geometry points are too close together and considered duplicates
-        result_geom = _remove_duplicate_points(result_geom)
+        result_geom = _remove_duplicate_points(result_geom, _DUPLICATE_POINT_TOLERANCE)
 
         if not result_geom.is_valid:
             # One last approach is to create a buffer of 0 distance from an object. This can fix
             # some invalid geometry
             geom_with_buffer = result_geom.buffer(0)
             # We must remove any new duplicates this might add
-            geom_with_buffer_and_no_dups = _remove_duplicate_points(result_geom)
+            geom_with_buffer_and_no_dups = _remove_duplicate_points(
+                result_geom, _DUPLICATE_POINT_TOLERANCE
+            )
 
             if geom_with_buffer_and_no_dups.is_valid:
                 # We only use this last one if it's valid. Sometimes buffering will fix the problem
