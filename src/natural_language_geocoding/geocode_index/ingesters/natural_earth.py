@@ -87,20 +87,22 @@ _NE_RIVERS_NORTH_AMERICA = _NESourceFile(area_type="physical", name="rivers_nort
 _NE_GEOGRAPHY_REGIONS = _NESourceFile(area_type="physical", name="geography_regions_polys")
 _NE_GEOGRAPHY_MARINE = _NESourceFile(area_type="physical", name="geography_marine_polys")
 
-
-_NE_SOURCE_FILES = [
+# A list of the source files to index along with their index for id generation.
+# The ids are included in the tuples so that they can be temporarily commented out without changing
+# the ids that are generated.
+_NE_SOURCE_FILES: list[tuple[_NESourceFile, int]] = [
     # TODO temporarily commenting
-    # _NE_AIRPORTS,
-    # _NE_PORTS,
-    # _NE_PARKS_AND_PROTECTED_LANDS_AREA,
-    # _NE_LAKES,
-    # _NE_LAKES_EUROPE,
-    # _NE_LAKES_NORTH_AMERICA,
-    # _NE_RIVERS_LAKES_CENTERLINES,
-    # _NE_RIVERS_EUROPE,
-    # _NE_RIVERS_NORTH_AMERICA,
-    _NE_GEOGRAPHY_REGIONS,
-    _NE_GEOGRAPHY_MARINE,
+    # (_NE_AIRPORTS, 0),
+    # (_NE_PORTS, 1),
+    # (_NE_PARKS_AND_PROTECTED_LANDS_AREA, 2),
+    # (_NE_LAKES, 3),
+    # (_NE_LAKES_EUROPE, 4),
+    # (_NE_LAKES_NORTH_AMERICA, 5),
+    # (_NE_RIVERS_LAKES_CENTERLINES, 6),
+    # (_NE_RIVERS_EUROPE, 7),
+    # (_NE_RIVERS_NORTH_AMERICA, 8),
+    (_NE_GEOGRAPHY_REGIONS, 9),
+    (_NE_GEOGRAPHY_MARINE, 10),
 ]
 
 
@@ -145,7 +147,6 @@ class _NEPlaceType(EnumWithValueLookup):
 
     basin = "Basin"
     coast = "Coast"
-    # We'll skip this since we have it from WOF
     continent = "Continent"
     delta = "Delta"
     depression = "Depression"
@@ -171,12 +172,11 @@ class _NEPlaceType(EnumWithValueLookup):
     bay = "bay"
     channel = "channel"
     fjord = "fjord"
-    # Ignore these as they are all without a name and internal waters for each country
+    # Used to mean a generic water area (They're all internal water with no name.)
     generic = "generic"
     gulf = "gulf"
     inlet = "inlet"
     lagoon = "lagoon"
-    # We'll skip this since we have it from WOF
     ocean = "ocean"
     reef = "reef"
     sea = "sea"
@@ -239,6 +239,20 @@ class _NEPlaceType(EnumWithValueLookup):
         if self in _place_type_map:
             return _place_type_map[self]
         raise NotImplementedError(f"Missing mapping from NEPlaceType to GeoPlaceType for {self}")
+
+
+_SKIPPABLE_PLACE_TYPES = {
+    # Dragons aren't real
+    _NEPlaceType.dragons_be_here,
+    # We only want lake polygons.
+    _NEPlaceType.lake_centerline,
+    # We have these from WOF already
+    _NEPlaceType.continent,
+    # We have these from WOF already
+    _NEPlaceType.ocean,
+    # Ignore these as they are all without a name and internal waters for each country
+    _NEPlaceType.generic,
+}
 
 
 class _NEPlaceProperties(BaseModel):
@@ -346,11 +360,11 @@ def _ne_feature_to_geoplace(
 
 def _get_all_ne_features() -> Generator[tuple[_NESourceFile, _NEFeature], None, None]:
     """TODO docs."""
-    for source_idx, source in enumerate(_NE_SOURCE_FILES):
+    for source, source_idx in _NE_SOURCE_FILES:
         for feature in _get_ne_features_from_source(source_idx, source):
             if (
                 feature.properties.feature_name is not None
-                and feature.properties.place_type != _NEPlaceType.lake_centerline
+                and feature.properties.place_type not in _SKIPPABLE_PLACE_TYPES
             ):
                 yield (source, feature)
 
