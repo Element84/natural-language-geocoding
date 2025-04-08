@@ -138,7 +138,6 @@ class _WhosOnFirstPlaceType(Enum):
 
 
 _DOWNLOADABLE_PLACETYPES = [
-    # TODO temporarily skipping already completed placetypes
     _WhosOnFirstPlaceType.borough,  # (5.8 MB) 474 records
     _WhosOnFirstPlaceType.continent,  # (5.0 MB) 8 records
     _WhosOnFirstPlaceType.country,  # (202.4 MB) 232 records
@@ -147,17 +146,17 @@ _DOWNLOADABLE_PLACETYPES = [
     _WhosOnFirstPlaceType.disputed,  # (1.5 MB) 104 records
     _WhosOnFirstPlaceType.empire,  # (1.6 MB) 12 records
     _WhosOnFirstPlaceType.localadmin,  # (948.3 MB) 203,541 records
-    # _WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
-    # _WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
-    # _WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
-    # _WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
-    # _WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
-    # _WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
-    # _WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
-    # _WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
-    # _WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
-    # _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
-    # _WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
+    _WhosOnFirstPlaceType.locality,  # (1.96 GB) 5,053,746 records
+    _WhosOnFirstPlaceType.macrocounty,  # (23.7 MB) 581 records
+    _WhosOnFirstPlaceType.macrohood,  # (8.7 MB) 1,272 records
+    _WhosOnFirstPlaceType.macroregion,  # (32.9 MB) 118 records
+    _WhosOnFirstPlaceType.marinearea,  # (4.6 MB) 402 records
+    _WhosOnFirstPlaceType.marketarea,  # (12.5 MB) 210 records
+    _WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
+    _WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
+    _WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
+    _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
+    _WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
     # We won't download these
     # WhosOnFirstPlaceType.planet (3 KB)
     # WhosOnFirstPlaceType.campus  (72.2 MB)
@@ -382,9 +381,8 @@ def _index_placetype_tar_file(placetype_tar_file: Path) -> None:
 
 def index_wof_places() -> None:
     """Indexes all of the WOF features into the geocode index."""
-    # TODO temporarily skipping
-    # index = GeocodeIndex()
-    # index.create_index(recreate=True)
+    index = GeocodeIndex()
+    index.create_index(recreate=True)
 
     for placetype in _DOWNLOADABLE_PLACETYPES:
         placetype_tar_file = _download_placetype(placetype)

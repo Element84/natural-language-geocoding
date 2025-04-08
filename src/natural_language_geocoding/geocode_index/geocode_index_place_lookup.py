@@ -173,9 +173,18 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
 # lookup = GeocodeIndexPlaceLookup()
 
-# resp = lookup.search_for_places_raw(
-#     name="Panama Canal", place_type=GeoPlaceType.channel, continent_name="North America"
-# )
+
+# {
+#   "node_type": "NamedPlace",
+#   "name": "Amazon Rainforest",
+#   "type": "geoarea",
+#   "in_continent": "South America",
+#   "in_country": null,
+#   "in_region": null
+# }
+
+# resp = lookup.search_for_places_raw(name="Amazon Rainforest", limit=40)
+
 
 # places = resp.places
 # print_places_as_table(resp.places)

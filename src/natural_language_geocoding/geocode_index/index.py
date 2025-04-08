@@ -30,7 +30,8 @@ _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
         "number_of_shards": int(get_env_var("GEOCODE_INDEX_NUM_SHARDS", "5")),
         "refresh_interval": "30s",
         "number_of_replicas": 0,
-    }
+    },
+    "analysis": {"normalizer": {"lowercase": {"type": "custom", "filter": ["lowercase"]}}},
 }
 
 
@@ -40,6 +41,7 @@ class GeoPlaceIndexField(IndexField):
     id = "id"
     place_name = "place_name"
     place_name_keyword = ("place_name", "keyword")
+    place_name_lower_keyword = ("place_name", "lowercase")
     type = "type"
     geom_str = "geom_str"
     geom_spatial = "geom_spatial"
@@ -48,6 +50,7 @@ class GeoPlaceIndexField(IndexField):
     source_path = "source_path"
     alternate_names = "alternate_names"
     alternate_names_keyword = ("alternate_names", "keyword")
+    alternate_names_lower_keyword = ("alternate_names", "lowercase")
     population = "population"
     area_sq_km = "area_sq_km"
     properties = "properties"
@@ -80,7 +83,13 @@ _GEOPLACE_INDEX_MAPPINGS = {
         GeoPlaceIndexField.id.name: {"type": "keyword"},
         GeoPlaceIndexField.place_name.name: {
             "type": "text",
-            "fields": {GeoPlaceIndexField.place_name_keyword.name: {"type": "keyword"}},
+            "fields": {
+                GeoPlaceIndexField.place_name_keyword.name: {"type": "keyword"},
+                GeoPlaceIndexField.place_name_lower_keyword.name: {
+                    "type": "keyword",
+                    "normalizer": "lowercase",
+                },
+            },
         },
         GeoPlaceIndexField.type.name: {"type": "keyword"},
         # The geometry of the place as an indexed geo shape
@@ -92,7 +101,13 @@ _GEOPLACE_INDEX_MAPPINGS = {
         GeoPlaceIndexField.source_path.name: {"type": "keyword"},
         GeoPlaceIndexField.alternate_names.name: {
             "type": "text",
-            "fields": {GeoPlaceIndexField.alternate_names_keyword.name: {"type": "keyword"}},
+            "fields": {
+                GeoPlaceIndexField.alternate_names_keyword.name: {"type": "keyword"},
+                GeoPlaceIndexField.alternate_names_lower_keyword.name: {
+                    "type": "keyword",
+                    "normalizer": "lowercase",
+                },
+            },
         },
         GeoPlaceIndexField.population.name: {"type": "long"},
         GeoPlaceIndexField.area_sq_km.name: {"type": "double"},
@@ -545,18 +560,46 @@ def print_places_with_names(index: GeocodeIndex, places: list[GeoPlace]) -> None
 # Code for manual testing
 # ruff: noqa: ERA001
 
-# from natural_language_geocoding.geocode_index.opensearch_utils import QueryDSL
 
 # index = GeocodeIndex()
 
-# resp = index.search(
-#     SearchRequest(
-#         query=QueryDSL.and_conds(
-#             # QueryDSL.match(GeoPlaceIndexField.place_name, "Brazil", fuzzy=True),
-#             QueryDSL.term(GeoPlaceIndexField.type, GeoPlaceType.country.value),
-#         ),
-#         size=5,
-#     )
-# )
+
+# query = {
+#     "bool": {
+#         "should": [
+#             {"term": {"type": {"value": "desert"}}},
+#             {"term": {"hierarchies.continent_id": {"value": "wof_102191573"}}},
+#         ],
+#         "must": [
+#             {
+#                 "dis_max": {
+#                     "queries": [
+#                         {"term": {"place_name.keyword": {"value": "Sahara", "boost": 10.0}}},
+#                         {"term": {"alternate_names.keyword": {"value": "Sahara", "boost": 5.0}}},
+#                         {
+#                             "match": {
+#                                 "place_name": {"query": "Sahara", "fuzziness": "AUTO", "boost": 2.0}
+#                             }
+#                         },
+#                         {
+#                             "match": {
+#                                 "alternate_names": {
+#                                     "query": "Sahara",
+#                                     "fuzziness": "AUTO",
+#                                     "boost": 1.0,
+#                                 }
+#                             }
+#                         },
+#                     ]
+#                 }
+#             }
+#         ],
+#     }
+# }
+
+# resp = index.search(SearchRequest(query=query, size=30, explain=True))
+
 
 # print_places_with_names(index, resp.places)
+
+# diff_explanations(resp, 25, 26)
