@@ -1,7 +1,7 @@
 """TODO document this module."""
 
 import json
-from collections.abc import Iterable
+from collections.abc import Collection
 from pathlib import Path
 
 from e84_geoai_common.util import timed_function
@@ -81,10 +81,15 @@ class HierchicalPlaceCache:
         *,
         name: str,
         place_type: GeoPlaceType,
-        continent_ids: Iterable[str] | None = None,
-        country_ids: Iterable[str] | None = None,
+        continent_ids: Collection[str] | None = None,
+        country_ids: Collection[str] | None = None,
     ) -> set[str]:
         """TODO docs."""
+        # Validate args
+        if continent_ids is not None and len(continent_ids) == 0:
+            raise ValueError("if continent_ids are provided at least one must be specified")
+        if country_ids is not None and len(country_ids) == 0:
+            raise ValueError("if country_ids are provided at least one must be specified")
         if continent_ids:
             if country_ids:
                 matches = {
@@ -204,16 +209,27 @@ class PlaceCache:
         *,
         name: str,
         place_type: GeoPlaceType,
-        continent_ids: Iterable[str] | None = None,
-        country_ids: Iterable[str] | None = None,
+        continent_ids: Collection[str] | None = None,
+        country_ids: Collection[str] | None = None,
     ) -> set[str]:
         """TODO docs."""
-        return self._dicts.find_ids(
+        results = self._dicts.find_ids(
             name=name,
             place_type=place_type,
             continent_ids=continent_ids,
             country_ids=country_ids,
         )
+
+        if len(results) == 0 and continent_ids:
+            # Due to transcontinental areas we'll allow flexibility if not in the correct continent
+            # The hierarchies in the source data for places like Russia are not always complete.
+            results = self._dicts.find_ids(
+                name=name,
+                place_type=place_type,
+                country_ids=country_ids,
+            )
+
+        return results
 
 
 ## Code for manual testing
