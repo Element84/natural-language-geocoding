@@ -99,7 +99,7 @@ EXAMPLES = [
             name="North Dakota",
             type=GeoPlaceType.region,
             in_continent="North America",
-            in_country="United States of America",
+            in_country="United States",
         ),
     ),
     ExtractDataExample(
@@ -111,7 +111,7 @@ EXAMPLES = [
                     name="New Mexico",
                     type=GeoPlaceType.region,
                     in_continent="North America",
-                    in_country="United States of America",
+                    in_country="United States",
                 ),
                 DirectionalConstraint(
                     direction="west",
@@ -119,7 +119,7 @@ EXAMPLES = [
                         name="Albuquerque",
                         type=GeoPlaceType.locality,
                         in_continent="North America",
-                        in_country="United States of America",
+                        in_country="United States",
                         in_region="New Mexico",
                     ),
                 ),

@@ -49,7 +49,7 @@ def test_nova_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
 )
 @pytest.mark.parametrize(("example_pair"), EXAMPLES)
 def test_claude_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
-    llm = BedrockClaudeLLM(CLAUDE_BEDROCK_MODEL_IDS["Claude 3.5 Sonnet"])
+    llm = BedrockClaudeLLM(CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
     query, expected_node = example_pair
     node = parse_spatial_node(llm, query)
     assert node.root.model_dump() == expected_node.model_dump()

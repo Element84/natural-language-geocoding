@@ -39,6 +39,7 @@ demo = [
   "streamlit-folium>=0.22.1",
   "watchdog>=6.0.0"]
 eval = [
+  "deepdiff",
   "zss"]
 dev = [
   "pytest>=8.3.3",

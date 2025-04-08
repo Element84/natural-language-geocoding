@@ -8,7 +8,7 @@ from typing import Any, cast
 import deepdiff.serialization
 from deepdiff import DeepDiff
 from e84_geoai_common.llm.core import LLM
-from e84_geoai_common.llm.models import BedrockClaudeLLM
+from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS, BedrockClaudeLLM
 from pydantic import BaseModel, ConfigDict
 
 from natural_language_geocoding import parse_spatial_node_from_text
@@ -85,10 +85,10 @@ NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
         ),
     ),
     ExampleNLG(
-        user_text="United States of America",
+        user_text="United States",
         description="USA lookup",
         expected_node=NamedPlace(
-            name="United States of America",
+            name="United States",
             type=GeoPlaceType.country,
             in_continent="North America",
         ),
@@ -100,7 +100,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
             name="Annapolis",
             type=GeoPlaceType.locality,
             in_continent="North America",
-            in_country="United States of America",
+            in_country="United States",
             in_region="Maryland",
         ),
     ),
@@ -110,7 +110,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
         expected_node=NamedPlace(
             name="Mississippi",
             in_continent="North America",
-            in_country="United States of America",
+            in_country="United States",
         ),
     ),
     ExampleNLG(
@@ -120,7 +120,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
             name="Mississippi",
             type=GeoPlaceType.river,
             in_continent="North America",
-            in_country="United States of America",
+            in_country="United States",
         ),
     ),
     # TODO add islands
@@ -135,7 +135,7 @@ FEATURE_EXAMPLES: list[ExampleNLG] = [
                 name="Maryland",
                 type=GeoPlaceType.region,
                 in_continent="North America",
-                in_country="United States of America",
+                in_country="United States",
             )
         ),
     ),
@@ -263,7 +263,19 @@ def evaluate_examples(llm: LLM) -> FullEvaluation:
 # code for manual testing
 # ruff: noqa: ERA001,T201
 
-llm = BedrockClaudeLLM()
+llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
+
+
+example = ExampleNLG(
+    user_text="Panama Canal",
+    expected_node=NamedPlace(name="Panama Canal", type=GeoPlaceType.river),
+)
+
+
+eval_result = evaluate(llm, example)
+
+print(eval_result.to_markdown())
+
 
 full_eval = evaluate_examples(llm)
 print(full_eval.to_markdown())
@@ -291,33 +303,3 @@ test_version = _get_next_version()
 
 with (_TEMP_DIR / f"full_eval_v{test_version}.md").open("w") as f:
     f.write(full_eval.to_markdown())
-
-
-# node = Intersection.from_nodes(
-#     NamedPlace(name="alpha"),
-#     DirectionalConstraint(child_node=NamedPlace(name="bravo"), direction="north"),
-# )
-# node2 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     DirectionalConstraint(child_node=NamedPlace(name="bravo"), direction="north"),
-# )
-# node3 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     DirectionalConstraint(child_node=NamedPlace(name="charlie"), direction="north"),
-# )
-# node4 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     NamedPlace(name="bravo"),
-# )
-# node5 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     NamedPlace(name="charlie"),
-# )
-
-# diff = DeepDiff(
-#     node.model_dump(),
-#     node4.model_dump(),
-#     verbose_level=2,
-#     view="tree",
-#     # get_deep_distance=True,
-# )

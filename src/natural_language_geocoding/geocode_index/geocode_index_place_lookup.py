@@ -6,7 +6,10 @@ from e84_geoai_common.util import timed_function
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
-from natural_language_geocoding.geocode_index.geoplace import PLACE_TYPE_SORT_ORDER, GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import (
+    PLACE_TYPE_SORT_ORDER,
+    GeoPlaceType,
+)
 from natural_language_geocoding.geocode_index.hierachical_place_cache import PlaceCache
 from natural_language_geocoding.geocode_index.index import (
     GeocodeIndex,
@@ -68,17 +71,10 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
     ) -> SearchResponse:
         """TODO docs."""
         # Dis_max is used so that the score will come from only the highest matching condition.
-        name_match = QueryDSL.dis_max(
-            QueryDSL.term(GeoPlaceIndexField.place_name_keyword, name, boost=10.0),
-            QueryDSL.term(GeoPlaceIndexField.alternate_names_keyword, name, boost=5.0),
-            QueryDSL.match(GeoPlaceIndexField.place_name, name, fuzzy=True, boost=2.0),
-            QueryDSL.match(GeoPlaceIndexField.alternate_names, name, fuzzy=True, boost=1.0),
-        )
-        conditions: list[QueryCondition] = [name_match]
-        if place_type:
-            conditions.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
 
-        within_conds: list[QueryCondition] = []
+        should_conds: list[QueryCondition] = []
+        if place_type:
+            should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
 
         continent_ids: list[str] | None = None
         country_ids: list[str] | None = None
@@ -93,7 +89,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
                 raise Exception(
                     f"Unexpectedly found multiple continents with name [{continent_name}]"
                 )
-            within_conds.append(
+            should_conds.append(
                 QueryDSL.term(GeoPlaceIndexField.hierarchies_continent_id, continent_ids[0])
             )
 
@@ -103,7 +99,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             )
             if len(country_ids) == 0:
                 raise ValueError(f"Unable to find country with name [{country_name}]")
-            within_conds.append(
+            should_conds.append(
                 QueryDSL.terms(GeoPlaceIndexField.hierarchies_country_id, country_ids)
             )
 
@@ -117,13 +113,20 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
             if len(region_ids) == 0:
                 raise ValueError(f"Unable to find region with name [{region_name}]")
-            within_conds.append(
+            should_conds.append(
                 QueryDSL.terms(GeoPlaceIndexField.hierarchies_region_id, region_ids)
             )
 
+        name_match = QueryDSL.dis_max(
+            QueryDSL.term(GeoPlaceIndexField.place_name_keyword, name, boost=10.0),
+            QueryDSL.term(GeoPlaceIndexField.alternate_names_keyword, name, boost=5.0),
+            QueryDSL.match(GeoPlaceIndexField.place_name, name, fuzzy=True, boost=2.0),
+            QueryDSL.match(GeoPlaceIndexField.alternate_names, name, fuzzy=True, boost=1.0),
+        )
+
         request = SearchRequest(
             size=limit,
-            query=QueryDSL.and_conds(*conditions, *within_conds),
+            query=QueryDSL.bool_cond(must_conds=[name_match], should_conds=should_conds),
             sort=[
                 SortField(field="_score", order="desc"),
                 _TYPE_SORT_COND,
@@ -166,10 +169,12 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 ## Code for testing
 # ruff: noqa: ERA001,E501
 
-
 # lookup = GeocodeIndexPlaceLookup()
 
-# resp = lookup.search_for_places_raw(name="Florida", limit=30, explain=True)
+# resp = lookup.search_for_places_raw(
+#     name="Panama Canal", place_type=GeoPlaceType.channel, continent_name="North America"
+# )
+
 # places = resp.places
 # print_places_as_table(resp.places)
 
@@ -182,9 +187,3 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 # display_geometry([places[2].geom])
 # display_geometry([places[3].geom])
 # display_geometry([places[4].geom])
-
-# TODO current problem is that this doesn't find the Maui that we'd care about. IT finds some place in south america
-# g = lookup.search(name="Maui")
-# display_geometry([g])
-
-# When searching for "Maui" by itself the addition of USA and helps ensure this works

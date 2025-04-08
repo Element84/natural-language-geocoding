@@ -7,10 +7,9 @@ from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS, BedrockClaudeL
 import natural_language_geocoding.prompt
 from natural_language_geocoding.eval.evaluator import evaluate_examples
 
-haiku_llm = BedrockClaudeLLM()
-sonnet_llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.5 Sonnet v2"])
+llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 
-full_eval = evaluate_examples(haiku_llm)
+full_eval = evaluate_examples(llm)
 
 _TEMP_DIR = Path("temp")
 
@@ -52,7 +51,7 @@ Follow these steps to improve the prompt
 config = LLMInferenceConfig(
     system_prompt=system_prompt,
 )
-resp = sonnet_llm.prompt(
+resp = llm.prompt(
     messages=[
         LLMMessage(
             content=[

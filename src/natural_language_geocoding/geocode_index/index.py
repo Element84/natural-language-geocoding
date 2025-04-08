@@ -4,6 +4,7 @@ import json
 import logging
 import subprocess
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import Any, Literal, TypedDict, cast
 
 from e84_geoai_common.geometry import geometry_from_geojson
@@ -366,7 +367,7 @@ class GeocodeIndexBase(ABC):
         ...
 
     @abstractmethod
-    def get_by_ids(self, ids: list[str]) -> list[GeoPlace]:
+    def get_by_ids(self, ids: Iterable[str]) -> list[GeoPlace]:
         """Fetches geoplaces by id."""
         ...
 
@@ -428,11 +429,26 @@ class GeocodeIndex(GeocodeIndexBase):
         return SearchResponse.from_search_resp(resp)
 
     @timed_function(logger)
-    def get_by_ids(self, ids: list[str]) -> list[GeoPlace]:
+    def get_by_ids(self, ids: Iterable[str]) -> list[GeoPlace]:
         resp = self.client.mget(
             {"docs": [{"_id": place_id} for place_id in ids]}, GEOPLACE_INDEX_NAME
         )
         return [_doc_to_geo_place(doc["_source"]) for doc in resp["docs"]]
+
+    @timed_function(logger)
+    def get_names_by_ids(self, ids: Iterable[str]) -> dict[str, str]:
+        resp = self.client.mget(
+            {
+                "docs": [
+                    {"_id": place_id, "_source": {"include": GeoPlaceIndexField.place_name.value}}
+                    for place_id in ids
+                ]
+            },
+            GEOPLACE_INDEX_NAME,
+        )
+        return {
+            doc["_id"]: doc["_source"][GeoPlaceIndexField.place_name.value] for doc in resp["docs"]
+        }
 
 
 def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
@@ -466,3 +482,71 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
 
     subprocess.run(["code", "temp/compare1.json"], check=True)  # noqa: S603, S607
     subprocess.run(["code", "temp/compare2.json"], check=True)  # noqa: S603, S607
+
+
+def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarchy]) -> None:
+    """Prints hierarchies as a table. Useful for debugging."""
+    places = index.get_by_ids(
+        [place_id for h in hierarchies for place_id in h.model_dump(exclude_none=True).values()]
+    )
+    id_to_name = {p.id: p.place_name for p in places}
+
+    table_data: list[dict[str, Any]] = [
+        {field: id_to_name[place_id] for field, place_id in h.model_dump(exclude_none=True).items()}
+        for h in hierarchies
+    ]
+
+    from tabulate import tabulate
+
+    # Print the table
+    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
+
+
+def print_places_with_names(index: GeocodeIndex, places: list[GeoPlace]) -> None:
+    """Prints places as a table with hierarchy names. Useful for debugging."""
+    all_ids = {
+        place_id
+        for place in places
+        for h in place.hierarchies
+        for place_id in h.model_dump(exclude_none=True).values()
+    }
+
+    id_to_name = index.get_names_by_ids(all_ids)
+
+    table_data: list[dict[str, Any]] = []
+    for idx, place in enumerate(places):
+        place_dict = {
+            "index": idx,
+            "id": place.id,
+            "name": place.place_name,
+            "type": place.type.value,
+            "alternate_names": place.alternate_names,
+            "hierarchies": [
+                {k: id_to_name.get(v, v) for k, v in h if v is not None} for h in place.hierarchies
+            ],
+        }
+        table_data.append(place_dict)
+
+    from tabulate import tabulate
+
+    # Print the table
+    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
+
+
+##################
+# Code for manual testing
+# ruff: noqa: ERA001
+
+# index = GeocodeIndex()
+
+# resp = index.search(
+#     SearchRequest(
+#         query=QueryDSL.and_conds(
+#             QueryDSL.match(GeoPlaceIndexField.place_name, "Panama", fuzzy=True),
+#             QueryDSL.term(GeoPlaceIndexField.source_type, "ne"),
+#         ),
+#         size=50,
+#     )
+# )
+
+# print_places_with_names(index, resp.places)

@@ -50,6 +50,8 @@ debugpy==1.8.13
     # via ipykernel
 decorator==5.2.1
     # via ipython
+deepdiff==8.4.2
+    # via natural-language-geocoding (pyproject.toml)
 distlib==0.3.9
     # via virtualenv
 docopt==0.6.2
@@ -137,6 +139,8 @@ numpy==2.2.4
     #   types-shapely
 opensearch-py==2.8.0
     # via natural-language-geocoding (pyproject.toml)
+orderly-set==5.3.1
+    # via deepdiff
 packaging==24.2
     # via
     #   altair

@@ -37,5 +37,5 @@ def extract_geometry_from_text(
 # ruff: noqa: ERA001, T201
 
 # from e84_geoai_common.llm.core import BedrockClaudeLLM
-# llm = BedrockClaudeLLM()
+# llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 # extract_geometry_from_text(llm, "Within 10 km of Baltimore")

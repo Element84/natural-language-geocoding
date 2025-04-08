@@ -1,6 +1,7 @@
 import streamlit as st
 from e84_geoai_common.debugging import display_geometry
 from e84_geoai_common.geometry import geometry_to_geojson, simplify_geometry
+from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS
 from e84_geoai_common.llm.models.claude import BedrockClaudeLLM
 from shapely.geometry.base import BaseGeometry
 from streamlit_folium import st_folium  # type: ignore[reportUnknownVariableType]
@@ -12,7 +13,9 @@ from natural_language_geocoding.geocode_index.geocode_index_place_lookup import 
 )
 
 if "llm" not in st.session_state:
-    st.session_state["llm"] = BedrockClaudeLLM()
+    st.session_state["llm"] = BedrockClaudeLLM(
+        model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"]
+    )
 
 llm = st.session_state["llm"]
 

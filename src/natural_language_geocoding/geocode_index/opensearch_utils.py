@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from enum import Enum
 from typing import Any, Literal, TypedDict
 
@@ -74,14 +74,36 @@ class QueryDSL:
     """TODO docs."""
 
     @staticmethod
+    def bool_cond(
+        *,
+        must_conds: Sequence[QueryCondition] | None = None,
+        must_not_conds: Sequence[QueryCondition] | None = None,
+        should_conds: Sequence[QueryCondition] | None = None,
+        filter_cond: QueryCondition | None = None,
+    ) -> QueryCondition:
+        """See https://opensearch.org/docs/latest/query-dsl/compound/bool/."""
+        bool_dict: dict[str, Any] = {}
+
+        if should_conds:
+            bool_dict["should"] = should_conds
+        if must_conds:
+            bool_dict["must"] = must_conds
+        if must_not_conds:
+            bool_dict["must_not"] = must_not_conds
+        if filter_cond:
+            bool_dict["filter"] = filter_cond
+
+        return {"bool": bool_dict}
+
+    @staticmethod
     def and_conds(*conds: QueryCondition) -> QueryCondition:
         """TODO docs."""
-        return {"bool": {"must": conds}}
+        return QueryDSL.bool_cond(must_conds=conds)
 
     @staticmethod
     def or_conds(*conds: QueryCondition) -> QueryCondition:
         """TODO docs."""
-        return {"bool": {"should": conds}}
+        return QueryDSL.bool_cond(should_conds=conds)
 
     @staticmethod
     def dis_max(*conds: QueryCondition) -> QueryCondition:
