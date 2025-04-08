@@ -60,7 +60,11 @@ class NamedPlace(SpatialNodeType):
             in_country=self.in_country,
             in_region=self.in_region,
         )
-        return simplify_geometry(geometry)
+        # Simplify the geometry to enable faster additional processing of the geometry.
+        # 18,500 points was found to be a number that worked even for areas with many
+        # small polygons. A smaller number fails because countries with many small islands
+        # can have thousands of separate polygons which are difficult to simplify.
+        return simplify_geometry(geometry, 18_500)
 
 
 class CoastOf(SpatialNodeType):

@@ -1,6 +1,6 @@
 import streamlit as st
 from e84_geoai_common.debugging import display_geometry
-from e84_geoai_common.geometry import geometry_to_geojson, simplify_geometry
+from e84_geoai_common.geometry import geometry_to_geojson
 from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS
 from e84_geoai_common.llm.models.claude import BedrockClaudeLLM
 from shapely.geometry.base import BaseGeometry
@@ -25,8 +25,7 @@ place_lookup = GeocodeIndexPlaceLookup()
 @st.cache_data
 def _text_to_geometry(text: str) -> BaseGeometry | None:
     try:
-        geometry = extract_geometry_from_text(llm, text, place_lookup)
-        return simplify_geometry(geometry)
+        return extract_geometry_from_text(llm, text, place_lookup)
     except GeocodeError as e:
         st.error(f"Geocoding error: {e.user_message}")
 

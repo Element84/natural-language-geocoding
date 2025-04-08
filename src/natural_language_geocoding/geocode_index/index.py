@@ -5,6 +5,7 @@ import logging
 import subprocess
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from time import time
 from typing import Any, Literal, TypedDict, cast
 
 from e84_geoai_common.geometry import geometry_from_geojson
@@ -417,7 +418,6 @@ class GeocodeIndex(GeocodeIndexBase):
             self.logger.error("Failed ingesting items: %s", json.dumps(failed_items, indent=2))
             raise Exception("There were errors in the bulk index. See log")
 
-    @timed_function(logger)
     def search(self, request: SearchRequest) -> SearchResponse:
         params = request.to_opensearch_params()
         body = request.to_opensearch_body()
@@ -425,8 +425,16 @@ class GeocodeIndex(GeocodeIndexBase):
         self.logger.info(
             "Searching for geoplaces with params %s and body %s", params, json.dumps(body)
         )
-        resp = self.client.search(index=GEOPLACE_INDEX_NAME, params=params, body=body)
-        return SearchResponse.from_search_resp(resp)
+        start = time()
+        os_resp = self.client.search(index=GEOPLACE_INDEX_NAME, params=params, body=body)
+        duration = time() - start
+        resp = SearchResponse.from_search_resp(os_resp)
+        self.logger.info(
+            "Searching for geoplaces took %s seconds with opensearch reporting %s seconds",
+            duration,
+            resp.took_ms / 1000,
+        )
+        return resp
 
     @timed_function(logger)
     def get_by_ids(self, ids: Iterable[str]) -> list[GeoPlace]:
@@ -537,15 +545,17 @@ def print_places_with_names(index: GeocodeIndex, places: list[GeoPlace]) -> None
 # Code for manual testing
 # ruff: noqa: ERA001
 
+# from natural_language_geocoding.geocode_index.opensearch_utils import QueryDSL
+
 # index = GeocodeIndex()
 
 # resp = index.search(
 #     SearchRequest(
 #         query=QueryDSL.and_conds(
-#             QueryDSL.match(GeoPlaceIndexField.place_name, "Panama", fuzzy=True),
-#             QueryDSL.term(GeoPlaceIndexField.source_type, "ne"),
+#             # QueryDSL.match(GeoPlaceIndexField.place_name, "Brazil", fuzzy=True),
+#             QueryDSL.term(GeoPlaceIndexField.type, GeoPlaceType.country.value),
 #         ),
-#         size=50,
+#         size=5,
 #     )
 # )
 
