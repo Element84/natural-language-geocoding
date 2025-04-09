@@ -130,8 +130,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
         # Dis_max is used so that the score will come from only the highest matching condition.
         name_match = QueryDSL.dis_max(
-            QueryDSL.term(GeoPlaceIndexField.place_name_keyword, name, boost=10.0),
-            QueryDSL.term(GeoPlaceIndexField.alternate_names_keyword, name, boost=5.0),
+            QueryDSL.term(GeoPlaceIndexField.place_name_lower_keyword, name, boost=10.0),
+            QueryDSL.term(GeoPlaceIndexField.alternate_names_lower_keyword, name, boost=5.0),
             QueryDSL.match(GeoPlaceIndexField.place_name, name, fuzzy=True, boost=2.0),
             QueryDSL.match(GeoPlaceIndexField.alternate_names, name, fuzzy=True, boost=1.0),
         )
