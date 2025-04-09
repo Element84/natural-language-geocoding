@@ -91,16 +91,15 @@ _NE_GEOGRAPHY_MARINE = _NESourceFile(area_type="physical", name="geography_marin
 # The ids are included in the tuples so that they can be temporarily commented out without changing
 # the ids that are generated.
 _NE_SOURCE_FILES: list[tuple[_NESourceFile, int]] = [
-    # TODO temporarily commenting
-    # (_NE_AIRPORTS, 0),
-    # (_NE_PORTS, 1),
-    # (_NE_PARKS_AND_PROTECTED_LANDS_AREA, 2),
-    # (_NE_LAKES, 3),
-    # (_NE_LAKES_EUROPE, 4),
-    # (_NE_LAKES_NORTH_AMERICA, 5),
-    # (_NE_RIVERS_LAKES_CENTERLINES, 6),
-    # (_NE_RIVERS_EUROPE, 7),
-    # (_NE_RIVERS_NORTH_AMERICA, 8),
+    (_NE_AIRPORTS, 0),
+    (_NE_PORTS, 1),
+    (_NE_PARKS_AND_PROTECTED_LANDS_AREA, 2),
+    (_NE_LAKES, 3),
+    (_NE_LAKES_EUROPE, 4),
+    (_NE_LAKES_NORTH_AMERICA, 5),
+    (_NE_RIVERS_LAKES_CENTERLINES, 6),
+    (_NE_RIVERS_EUROPE, 7),
+    (_NE_RIVERS_NORTH_AMERICA, 8),
     (_NE_GEOGRAPHY_REGIONS, 9),
     (_NE_GEOGRAPHY_MARINE, 10),
 ]
@@ -425,6 +424,8 @@ if __name__ == "__main__":
 # )
 
 # source_feature_pairs = list(_get_all_ne_features())
+
+# len(source_feature_pairs)
 
 # len(source_feature_pairs)
 
