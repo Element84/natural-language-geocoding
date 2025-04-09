@@ -118,8 +118,16 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
     ) -> SearchResponse:
         """TODO docs."""
         should_conds: list[QueryCondition] = []
+        must_conds: list[QueryCondition] = []
+        must_not_conds: list[QueryCondition] = []
         if place_type:
             should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
+            if place_type == GeoPlaceType.geoarea:
+                # If we're looking for a general geoarea we exclude locality so that we are more
+                # likely to find other areas first.
+                must_not_conds.append(
+                    QueryDSL.term(GeoPlaceIndexField.type, GeoPlaceType.locality.value)
+                )
 
         should_conds = [
             *should_conds,
@@ -135,10 +143,13 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             QueryDSL.match(GeoPlaceIndexField.place_name, name, fuzzy=True, boost=2.0),
             QueryDSL.match(GeoPlaceIndexField.alternate_names, name, fuzzy=True, boost=1.0),
         )
+        must_conds.append(name_match)
 
         request = SearchRequest(
             size=limit,
-            query=QueryDSL.bool_cond(must_conds=[name_match], should_conds=should_conds),
+            query=QueryDSL.bool_cond(
+                must_conds=must_conds, should_conds=should_conds, must_not_conds=must_not_conds
+            ),
             sort=[
                 SortField(field="_score", order="desc"),
                 _TYPE_SORT_COND,
@@ -183,17 +194,22 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
 # lookup = GeocodeIndexPlaceLookup()
 
-
-# {
+#  {
 #   "node_type": "NamedPlace",
-#   "name": "Amazon Rainforest",
+#   "name": "Sub-Saharan Africa",
 #   "type": "geoarea",
-#   "in_continent": "South America",
+#   "in_continent": "Africa",
 #   "in_country": null,
 #   "in_region": null
 # }
 
-# resp = lookup.search_for_places_raw(name="Amazon Rainforest", limit=40)
+# resp = lookup.search_for_places_raw(
+#     name="Sub-Saharan Africa",
+#     place_type=GeoPlaceType.geoarea,
+#     continent_name="Africa",
+#     explain=True,
+#     limit=40,
+# )
 
 
 # places = resp.places
