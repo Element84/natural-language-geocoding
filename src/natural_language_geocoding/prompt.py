@@ -13,7 +13,7 @@ from natural_language_geocoding.models import (
     SpatialNode,
 )
 
-# TODO try pruning guidelines and seeing the effect once there is a lerge test set.
+# TODO try pruning guidelines and seeing the effect once there is a more complete evaluation.
 
 GUIDELINES = [
     singleline(

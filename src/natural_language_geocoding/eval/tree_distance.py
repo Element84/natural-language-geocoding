@@ -1,4 +1,4 @@
-"""TODO docs."""
+"""Contains functions to calculate the tree edit distance between two spatial nodes."""
 
 from abc import ABC
 from functools import singledispatch
@@ -28,7 +28,6 @@ _Value = _SimpleValue | _SpatialNodeValue
 
 class _Attribute(BaseModel, ABC):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
-
     name: str
 
 
@@ -56,6 +55,7 @@ _GetChildrenResponse = list[_Attribute] | list[SpatialNodeType]
 
 @singledispatch
 def _get_children(node: _Value) -> _GetChildrenResponse:
+    """Returns the "children" of the node."""
     raise NotImplementedError(f"node of type {node.__class__} is not implemented for _get_children")
 
 
@@ -93,6 +93,10 @@ def _(node: _SpatialNodeAttribute) -> _GetChildrenResponse:
 
 
 def _get_label(node: _Attribute | SpatialNodeType) -> str:
+    """Converts a node to string that can be used for comparision to see if it's equal.
+
+    Children do not need to be part of the label.
+    """
     if isinstance(node, _SimpleAttribute):
         return node.model_dump_json()
 
@@ -103,6 +107,7 @@ def _get_label(node: _Attribute | SpatialNodeType) -> str:
 
 
 def _label_distance(l1: str, l2: str) -> float:
+    """Returns the edit distance between two node values."""
     # FUTURE it may make more sense to use a real edit distance here.
     # zss uses https://pypi.org/project/editdistance/
     if l1 == l2:
@@ -112,10 +117,22 @@ def _label_distance(l1: str, l2: str) -> float:
 
 # TODO unit test this method
 def get_spatial_node_tree_distance(node1: AnySpatialNodeType, node2: AnySpatialNodeType) -> float:
-    """TODO docs."""
-    # TODO add safety check in here. If the nodes are not equal then the distance must not be 0.
+    """Returns the edit distance between two spatial nodes.
+
+    0 indicates that the nodes are identical. The distance gets larger for the more changes that are
+    required to make the nodes match.
+    """
     resp = simple_distance(node1, node2, _get_children, _get_label, _label_distance)  # type: ignore[reportUnknownArgumentType]
-    return float(resp)  # type: ignore[reportUnknownArgumentType]
+    distance: float = float(resp)  # type: ignore[reportUnknownArgumentType]
+
+    # Safety checks that our distance algorithm is working.
+    if node1 == node2 and distance != 0.0:
+        raise Exception("Expected two nodes that are equivalent to have an edit distance of 0")
+
+    if distance == 0.0 and node1 != node2:
+        raise Exception("Expected two nodes to be equal with an edit distance of 0")
+
+    return distance
 
 
 #################

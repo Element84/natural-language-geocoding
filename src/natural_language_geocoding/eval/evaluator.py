@@ -1,15 +1,13 @@
-"""TODO docs."""
+"""Defines examples and methods for evaluating natural language geocoding."""
 
 import logging
-import re
 from pathlib import Path
 from typing import Any, cast
 
 import deepdiff.serialization
 from deepdiff import DeepDiff
 from e84_geoai_common.llm.core import LLM
-from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS, BedrockClaudeLLM
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from natural_language_geocoding import parse_spatial_node_from_text
 from natural_language_geocoding.eval.tree_distance import get_spatial_node_tree_distance
@@ -22,12 +20,6 @@ from natural_language_geocoding.models import (
     NamedPlace,
     SpatialNode,
 )
-
-# Improvements
-# - Make an example class with a description
-# - Create an example report class
-# - Include a diff of the trees in the result.
-# - Need a way to visualize the trees easily and for human analysis.
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +37,15 @@ _FULL_EVAL_TEMPLATE = _load_template("full_eval_result.md")
 
 
 class ExampleNLG(BaseModel):
-    """TODO docs."""
+    """A single example of natural language geocoding.."""
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
-    user_text: str
-    description: str | None = None
-    expected_node: AnySpatialNodeType
+    user_text: str = Field(description="The input user text")
+    description: str | None = Field(description="A description of the example.", default=None)
+    expected_node: AnySpatialNodeType = Field(
+        description="The expected spatial node that the LLM will parse"
+    )
 
 
 NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
@@ -127,6 +121,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleNLG] = [
 ]
 
 FEATURE_EXAMPLES: list[ExampleNLG] = [
+    # TODO minimum to add should include every spatial node type
     ExampleNLG(
         user_text="the coast of Maryland",
         description="Coastline of a US State",
@@ -174,14 +169,20 @@ ALL_EXAMPLES = [*NAMED_PLACE_EXAMPLES, *FEATURE_EXAMPLES]
 
 
 class SingleEvaluation(BaseModel):
-    """TODO docs."""
+    """The result of evaluating a single example."""
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
-    example: ExampleNLG
-    actual: SpatialNode
-    tree_distance: float
-    diff_explanations: list[str]
+    example: ExampleNLG = Field(description="The original example to evaluate against")
+    actual: SpatialNode = Field(description="The actual spatial node produced by the model")
+    tree_distance: float = Field(
+        description=(
+            "The tree edit distance between expected and actual nodes. 0 means they are identical."
+        )
+    )
+    diff_explanations: list[str] = Field(
+        description="Human-readable explanations of differences between nodes"
+    )
 
     @property
     def is_success(self) -> bool:
@@ -203,14 +204,15 @@ class SingleEvaluation(BaseModel):
         )
 
 
-class FullEvaluation(BaseModel):
-    """TODO docs."""
+class Evaluations(BaseModel):
+    """The result of evaluating a set of examples."""
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     evaluations: list[SingleEvaluation]
 
     @property
     def distance(self) -> float:
+        """The total tree edit distance for all evaluations."""
         return sum([e.tree_distance for e in self.evaluations])
 
     def to_markdown(self) -> str:
@@ -232,7 +234,7 @@ class FullEvaluation(BaseModel):
 
 
 def evaluate(llm: LLM, example: ExampleNLG) -> SingleEvaluation:
-    """TODO docs."""
+    """Evaluates a single example."""
     logger.info("Evaluating example [%s]", example.user_text)
     actual = parse_spatial_node_from_text(llm, example.user_text)
     distance = get_spatial_node_tree_distance(actual.root, example.expected_node)
@@ -254,52 +256,52 @@ def evaluate(llm: LLM, example: ExampleNLG) -> SingleEvaluation:
     )
 
 
-def evaluate_examples(llm: LLM) -> FullEvaluation:
-    """TODO docs."""
-    return FullEvaluation(evaluations=[evaluate(llm, example) for example in ALL_EXAMPLES])
+def evaluate_examples(llm: LLM) -> Evaluations:
+    """Evaluates all of the examples defined in this module."""
+    return Evaluations(evaluations=[evaluate(llm, example) for example in ALL_EXAMPLES])
 
 
 #################
 # code for manual testing
 # ruff: noqa: ERA001,T201
 
-llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
+# llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 
 
-example = ExampleNLG(
-    user_text="Panama Canal",
-    expected_node=NamedPlace(name="Panama Canal", type=GeoPlaceType.river),
-)
+# example = ExampleNLG(
+#     user_text="Panama Canal",
+#     expected_node=NamedPlace(name="Panama Canal", type=GeoPlaceType.river),
+# )
 
 
-eval_result = evaluate(llm, example)
+# eval_result = evaluate(llm, example)
 
-print(eval_result.to_markdown())
-
-
-full_eval = evaluate_examples(llm)
-print(full_eval.to_markdown())
+# print(eval_result.to_markdown())
 
 
-_TEMP_DIR = Path("temp")
+# full_eval = evaluate_examples(llm)
+# print(full_eval.to_markdown())
 
 
-# Find the highest existing version number
-def _get_next_version() -> int:
-    pattern = re.compile(r"temp/full_eval_v(\d+)\.md$")
-    max_version = -1
-
-    for filename in _TEMP_DIR.iterdir():
-        match = pattern.match(str(filename))
-        if match:
-            version = int(match.group(1))
-            max_version = max(max_version, version)
-
-    # Return the next version number
-    return max_version + 1
+# _TEMP_DIR = Path("temp")
 
 
-test_version = _get_next_version()
+# # Find the highest existing version number
+# def _get_next_version() -> int:
+#     pattern = re.compile(r"temp/full_eval_v(\d+)\.md$")
+#     max_version = -1
 
-with (_TEMP_DIR / f"full_eval_v{test_version}.md").open("w") as f:
-    f.write(full_eval.to_markdown())
+#     for filename in _TEMP_DIR.iterdir():
+#         match = pattern.match(str(filename))
+#         if match:
+#             version = int(match.group(1))
+#             max_version = max(max_version, version)
+
+#     # Return the next version number
+#     return max_version + 1
+
+
+# test_version = _get_next_version()
+
+# with (_TEMP_DIR / f"full_eval_v{test_version}.md").open("w") as f:
+#     f.write(full_eval.to_markdown())

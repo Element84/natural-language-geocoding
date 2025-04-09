@@ -16,8 +16,8 @@ from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
 from natural_language_geocoding.place_lookup import PlaceLookup
 
-# TODO Issue for the ability to specify a portion of an area like the northern part or southern part
-# This was originally here but the implementation ignored it.
+# TODO File Issue for the ability to specify a portion of an area like the northern part or
+# southern part. This was originally here but the implementation ignored it.
 
 
 class SpatialNodeType(BaseModel, ABC):

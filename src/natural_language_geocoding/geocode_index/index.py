@@ -578,7 +578,8 @@ def print_places_with_names(index: GeocodeIndex, places: list[GeoPlace]) -> None
 #                         {"term": {"alternate_names.keyword": {"value": "Sahara", "boost": 5.0}}},
 #                         {
 #                             "match": {
-#                                 "place_name": {"query": "Sahara", "fuzziness": "AUTO", "boost": 2.0}
+#                                 "place_name": {
+#                                   "query": "Sahara", "fuzziness": "AUTO", "boost": 2.0}
 #                             }
 #                         },
 #                         {
