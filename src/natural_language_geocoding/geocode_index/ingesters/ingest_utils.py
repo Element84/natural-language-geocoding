@@ -85,24 +85,23 @@ def _is_tiny_linear_ring_error(e: GEOSException) -> bool:
     return msg.startswith("IllegalArgumentException: Invalid number of points in LinearRing")
 
 
-# TODO test this
 @singledispatch
-def _remove_duplicate_points(geom: T_Geom, tolerance: float) -> T_Geom:
+def remove_duplicate_points(geom: T_Geom, tolerance: float) -> T_Geom:
     """Removes the duplicate points switching based on type."""
     return remove_repeated_points(geom, tolerance)
 
 
-@_remove_duplicate_points.register
+@remove_duplicate_points.register
 def _(geom: Polygon, tolerance: float) -> Polygon:
     # This will throw a tiny linear ring error if it's really small. We'll handle that a higher
     # level.
-    fixed_exterior: LinearRing = _remove_duplicate_points(geom.exterior, tolerance)
+    fixed_exterior: LinearRing = remove_duplicate_points(geom.exterior, tolerance)
 
     fixed_interiors: list[LinearRing] = []
 
     for interior in geom.interiors:
         try:
-            fixed_interiors.append(_remove_duplicate_points(interior, tolerance))
+            fixed_interiors.append(remove_duplicate_points(interior, tolerance))
         except GEOSException as e:
             # An error that can occur if the ring has only/mostly duplicate points.
             # We'll just drop the interior in that case as it would effectively be a tiny hole.
@@ -112,13 +111,13 @@ def _(geom: Polygon, tolerance: float) -> Polygon:
     return Polygon(shell=fixed_exterior, holes=fixed_interiors)
 
 
-@_remove_duplicate_points.register
+@remove_duplicate_points.register
 def _(geom: MultiPolygon, tolerance: float) -> MultiPolygon:
     polygons: list[Polygon] = []
 
     for poly in geom.geoms:
         try:
-            polygons.append(_remove_duplicate_points(poly, tolerance))
+            polygons.append(remove_duplicate_points(poly, tolerance))
         except GEOSException as e:
             # Indicates that the exterior of one of the polygons was a tiny area. Drop the polygon.
             if not _is_tiny_linear_ring_error(e):
@@ -126,43 +125,48 @@ def _(geom: MultiPolygon, tolerance: float) -> MultiPolygon:
     return MultiPolygon(polygons)
 
 
+# TODO test this
 def fix_geometry(feature_id: str, orig_geom: BaseGeometry) -> BaseGeometry:
     """Attempts to fix the geometry if it's invalid.
 
     This uses a variety of approaches like remove duplicate points or adding a 0 length buffer.
     Raises an exception if it can't fix a geometry.
     """
-    # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
-    result_geom = _remove_duplicate_points(orig_geom, 0)
-
-    if not result_geom.is_valid:
-        # Sometimes geometry points are too close together and considered duplicates
-        result_geom = _remove_duplicate_points(result_geom, _DUPLICATE_POINT_TOLERANCE)
+    try:
+        # Remove explicity duplicated points. This is valid for Shapely but not for opensearch
+        result_geom = remove_duplicate_points(orig_geom, 0)
 
         if not result_geom.is_valid:
-            # One last approach is to create a buffer of 0 distance from an object. This can fix
-            # some invalid geometry
-            geom_with_buffer = result_geom.buffer(0)
-            # We must remove any new duplicates this might add
-            geom_with_buffer_and_no_dups = _remove_duplicate_points(
-                result_geom, _DUPLICATE_POINT_TOLERANCE
-            )
+            # Sometimes geometry points are too close together and considered duplicates
+            result_geom = remove_duplicate_points(result_geom, _DUPLICATE_POINT_TOLERANCE)
 
-            if geom_with_buffer_and_no_dups.is_valid:
-                # We only use this last one if it's valid. Sometimes buffering will fix the problem
-                # but then removing duplicates will cause a different problem. We still remove the
-                # remaining duplicates if it's not invalid because this can fix opensearch issues
-                # that shapely doesn't catch.
-                result_geom = geom_with_buffer_and_no_dups
-            else:
-                result_geom = geom_with_buffer
+            if not result_geom.is_valid:
+                # One last approach is to create a buffer of 0 distance from an object. This can fix
+                # some invalid geometry
+                geom_with_buffer = result_geom.buffer(0)
+                # We must remove any new duplicates this might add
+                geom_with_buffer_and_no_dups = remove_duplicate_points(
+                    result_geom, _DUPLICATE_POINT_TOLERANCE
+                )
 
-    if not result_geom.is_valid:
-        # If it's still not valid or wasn't fixed raise an error
-        reason = explain_validity(result_geom)
-        raise ValueError(f"Geometry for feature {feature_id} is not valid due to {reason}")
+                if geom_with_buffer_and_no_dups.is_valid:
+                    # We only use this last one if it's valid. Sometimes buffering will fix the
+                    # problem but then removing duplicates will cause a different problem. We still
+                    # remove the remaining duplicates if it's not invalid because this can fix
+                    # opensearch issues that shapely doesn't catch.
+                    result_geom = geom_with_buffer_and_no_dups
+                else:
+                    result_geom = geom_with_buffer
+    except Exception as e:
+        # Shapely might throw an error and if it does we want to include the feature id.
+        raise Exception(f"Error while fixing feature {feature_id}") from e
+    else:
+        if not result_geom.is_valid:
+            # If it's still not valid or wasn't fixed raise an error
+            reason = explain_validity(result_geom)
+            raise ValueError(f"Geometry for feature {feature_id} is not valid due to {reason}")
 
-    return result_geom
+        return result_geom
 
 
 def process_ingest_items[T](
