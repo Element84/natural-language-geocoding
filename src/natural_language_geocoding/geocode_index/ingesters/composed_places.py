@@ -2,6 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
@@ -28,14 +29,14 @@ class _CompositionComponent(BaseModel, ABC):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     @abstractmethod
-    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> list[GeoPlace]: ...
+    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> Sequence[GeoPlace]: ...
 
 
 class _PlaceLookupComponent(_CompositionComponent):
     request: PlaceSearchRequest
     num_to_take: int = 1
 
-    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> list[GeoPlace]:
+    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> Sequence[GeoPlace]:
         return place_lookup.search_for_places_raw(
             self.request,
             limit=self.num_to_take,
@@ -130,7 +131,7 @@ compositions = [
     _Composition(
         id="comp_mediterranean",
         place_name="Mediterranean Sea",
-        place_type=GeoPlaceType.ocean,
+        place_type=GeoPlaceType.sea,
         components=[
             _PlaceLookupComponent(
                 request=PlaceSearchRequest(
@@ -151,6 +152,8 @@ compositions = [
             _PlaceLookupComponent.with_name_type("Gulf of Sidra", GeoPlaceType.marinearea),
         ],
     ),
+    # TODO add the iberian peninsula (but also look for it first)
+    # Spain and portugal but only within the European continent
 ]
 
 

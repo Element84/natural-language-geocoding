@@ -6,7 +6,6 @@ from typing import Annotated, Any, cast
 from e84_geoai_common.geometry import geometry_from_geojson_dict
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation, field_serializer, field_validator
 from shapely.geometry.base import BaseGeometry
-from tabulate import tabulate
 
 
 class GeoPlaceType(Enum):
@@ -80,10 +79,11 @@ PLACE_TYPE_SORT_ORDER = [
     GeoPlaceType.country,
     GeoPlaceType.empire,
     GeoPlaceType.region,
-    GeoPlaceType.locality,
-    GeoPlaceType.county,
     GeoPlaceType.marinearea,
     GeoPlaceType.ocean,
+    GeoPlaceType.geoarea,
+    GeoPlaceType.locality,
+    GeoPlaceType.county,
     GeoPlaceType.postalregion,
 ]
 
@@ -95,6 +95,15 @@ class GeoPlaceSourceType(Enum):
     ne = "ne"
     # Composed areas that are composed of other areas
     comp = "comp"
+
+
+# The sort order for search results by source type. If the source type is not in this list then it
+# should appear after any of these
+SOURCE_TYPE_SORT_ORDER = [
+    GeoPlaceSourceType.comp,
+    GeoPlaceSourceType.ne,
+    GeoPlaceSourceType.wof,
+]
 
 
 class GeoPlaceSource(BaseModel):
@@ -172,29 +181,3 @@ class GeoPlace(BaseModel):
             return [h.with_id(self.id, self.type) for h in self.hierarchies]
         model = {f"{self.type.value}_id": self.id}
         return [Hierarchy.model_validate(model)]
-
-
-def print_places_as_table(places: list[GeoPlace]) -> None:
-    """Prints places as a table. Useful for debugging."""
-    table_data: list[dict[str, Any]] = []
-    for index, place in enumerate(places):
-        place_dict = {
-            "index": index,
-            "id": place.id,
-            "name": place.place_name,
-            "type": place.type.value,
-            "alternate_names": place.alternate_names,
-            "hierarchies": [{k: v for k, v in h if v is not None} for h in place.hierarchies],
-        }
-        table_data.append(place_dict)
-
-    # Print the table
-    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
-
-
-def print_hierarchies_as_table(hierarchies: list[Hierarchy]) -> None:
-    """Prints hierarchies as a table. Useful for debugging."""
-    table_data: list[dict[str, Any]] = [h.model_dump(exclude_none=True) for h in hierarchies]
-
-    # Print the table
-    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201

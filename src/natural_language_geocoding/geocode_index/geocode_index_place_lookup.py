@@ -8,6 +8,7 @@ from shapely.geometry.base import BaseGeometry
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import (
     PLACE_TYPE_SORT_ORDER,
+    SOURCE_TYPE_SORT_ORDER,
     GeoPlaceType,
 )
 from natural_language_geocoding.geocode_index.hierachical_place_cache import PlaceCache
@@ -18,31 +19,22 @@ from natural_language_geocoding.geocode_index.index import (
     SearchResponse,
     SortField,
 )
-from natural_language_geocoding.geocode_index.opensearch_utils import QueryCondition, QueryDSL
+from natural_language_geocoding.geocode_index.opensearch_utils import (
+    QueryCondition,
+    QueryDSL,
+    ordered_values_to_sort_cond,
+)
 from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
-
-type_order_values = [f"    '{pt.value}': {index}" for index, pt in enumerate(PLACE_TYPE_SORT_ORDER)]
-type_order_values_str = "\n,".join(type_order_values)
 
 # Note that using a script for sorting is slow. Eventually we should switch this to an indexed id
 # to improve performance.
-_TYPE_SORT_COND_SCRIPT = f"""
-def typeOrder = [
-    {type_order_values_str}
-];
-return typeOrder.containsKey(doc['type'].value) ? typeOrder[doc['type'].value] : 999;
-""".strip()
 
-_TYPE_SORT_COND = {
-    "_script": {
-        "type": "number",
-        "script": {
-            "source": _TYPE_SORT_COND_SCRIPT,
-            "lang": "painless",
-        },
-        "order": "asc",
-    }
-}
+_TYPE_SORT_COND = ordered_values_to_sort_cond(
+    GeoPlaceIndexField.type, [pt.value for pt in PLACE_TYPE_SORT_ORDER]
+)
+_SOURCE_TYPE_SORT_COND = ordered_values_to_sort_cond(
+    GeoPlaceIndexField.type, [st.value for st in SOURCE_TYPE_SORT_ORDER]
+)
 
 
 def _continent_country_region_to_conditions(
@@ -149,6 +141,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             sort=[
                 SortField(field="_score", order="desc"),
                 _TYPE_SORT_COND,
+                _SOURCE_TYPE_SORT_COND,
                 SortField(field="population", order="desc"),
             ],
             explain=explain,
@@ -186,37 +179,28 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
 
 ## Code for testing
-# ruff: noqa: ERA001,E501
+# ruff: noqa: ERA001,E501,RUF100
+
+# TODO mediterranean is still not sorting correctly
+
+# from natural_language_geocoding.geocode_index.index import (  # noqa: E402
+#     diff_explanations,
+#     print_places_with_names,
+# )
 
 # lookup = GeocodeIndexPlaceLookup()
 
-#  {
-#   "node_type": "NamedPlace",
-#   "name": "Sub-Saharan Africa",
-#   "type": "geoarea",
-#   "in_continent": "Africa",
-#   "in_country": null,
-#   "in_region": null
-# }
-
 # resp = lookup.search_for_places_raw(
-#     name="Sub-Saharan Africa",
-#     place_type=GeoPlaceType.geoarea,
-#     continent_name="Africa",
+#     PlaceSearchRequest(
+#         name="Mediterranean Sea", place_type=GeoPlaceType.sea, in_continent="Europe"
+#     ),
 #     explain=True,
-#     limit=40,
+#     limit=10,
 # )
 
+# index = GeocodeIndex()
 
 # places = resp.places
-# print_places_as_table(resp.places)
+# print_places_with_names(index, resp.places)
 
-# diff_explanations(resp, 0, 20)
-
-# print(json.dumps(resp.body, indent=2))
-
-# display_geometry([places[0].geom])
-# display_geometry([places[1].geom])
-# display_geometry([places[2].geom])
-# display_geometry([places[3].geom])
-# display_geometry([places[4].geom])
+# diff_explanations(resp, 0, 2)

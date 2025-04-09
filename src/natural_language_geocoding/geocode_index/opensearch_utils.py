@@ -1,5 +1,6 @@
 from collections.abc import Generator, Sequence
 from enum import Enum
+from textwrap import dedent
 from typing import Any, Literal, TypedDict
 
 import boto3
@@ -194,3 +195,33 @@ def scroll_fetch_all(
 
     # Clear the scroll to free resources
     client.clear_scroll(scroll_id=scroll_id)
+
+
+def ordered_values_to_sort_cond(field: IndexField, values: Sequence[str]) -> dict[str, Any]:
+    """Generates a sort condition for a field based on a predefined order of known values.
+
+    Note that sorting this way can be slow and it's better to index a new field with the integer
+    values instead and sort by that. It does require reindexing when changing sort order though.
+    """
+    order_values = [f"    '{value}': {index}" for index, value in enumerate(values)]
+    order_values_str = "\n,".join(order_values)
+
+    sort_cond_script = dedent(
+        f"""
+            def typeOrder = [
+                {order_values_str}
+            ];
+            return typeOrder.containsKey(doc['type'].value) ? typeOrder[doc['type'].value] : 999;
+        """.strip()
+    )
+
+    return {
+        "_script": {
+            field.value: "number",
+            "script": {
+                "source": sort_cond_script,
+                "lang": "painless",
+            },
+            "order": "asc",
+        }
+    }

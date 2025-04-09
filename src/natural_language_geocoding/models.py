@@ -31,7 +31,12 @@ class NamedPlace(SpatialNodeType):
     """Represents a place on the earth locatable in a geocoding database."""
 
     node_type: Literal["NamedPlace"] = "NamedPlace"
-    name: str = Field(description="The name to use to find the location")
+    name: str = Field(
+        description=(
+            "The name to use to find the location. Correct the name the user specifies as needed "
+            "to help ensure the correct area is found."
+        )
+    )
     type: GeoPlaceType | None = Field(
         default=None, description="Limits the search to a specific type of location"
     )

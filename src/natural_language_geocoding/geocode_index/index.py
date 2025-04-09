@@ -215,24 +215,34 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
     return doc
 
 
-def _doc_to_geo_place(doc: GeoPlaceDoc) -> GeoPlace:
-    """Converts an opensearch document to the GeoPlace model."""
-    return GeoPlace(
-        id=doc["id"],
-        place_name=doc["place_name"],
-        type=GeoPlaceType(doc["type"]),
-        geom=geometry_from_geojson(doc["geom_str"]),
-        source=GeoPlaceSource(
-            source_type=GeoPlaceSourceType(doc["source_type"]), source_path=doc["source_path"]
-        ),
-        alternate_names=doc["alternate_names"],
-        properties=json.loads(doc["properties"]),
-        hierarchies=[
-            Hierarchy.model_validate(hierarchy) for hierarchy in doc.get("hierarchies", [])
-        ],
-        population=doc["population"],
-        area_sq_km=doc["area_sq_km"],
-    )
+class FoundGeoPlace(GeoPlace):
+    """TODO docs."""
+
+    score: float | None
+    sort: list[float] | None
+
+    @staticmethod
+    def from_hit(hit: dict[str, Any]) -> "FoundGeoPlace":
+        doc: GeoPlaceDoc = hit["_source"]
+        """Converts an opensearch document to the GeoPlace model."""
+        return FoundGeoPlace(
+            id=doc["id"],
+            place_name=doc["place_name"],
+            type=GeoPlaceType(doc["type"]),
+            geom=geometry_from_geojson(doc["geom_str"]),
+            source=GeoPlaceSource(
+                source_type=GeoPlaceSourceType(doc["source_type"]), source_path=doc["source_path"]
+            ),
+            alternate_names=doc["alternate_names"],
+            properties=json.loads(doc["properties"]),
+            hierarchies=[
+                Hierarchy.model_validate(hierarchy) for hierarchy in doc.get("hierarchies", [])
+            ],
+            population=doc["population"],
+            area_sq_km=doc["area_sq_km"],
+            score=hit.get("_score"),
+            sort=hit.get("sort"),
+        )
 
 
 class SearchResponse(BaseModel):
@@ -241,7 +251,7 @@ class SearchResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     took_ms: int
     hits: int
-    places: list[GeoPlace]
+    places: list[FoundGeoPlace]
     body: dict[str, Any]
     explanations: list[dict[str, Any]] | None
 
@@ -256,7 +266,7 @@ class SearchResponse(BaseModel):
             body=body,
             took_ms=body["took"],
             hits=body["hits"]["total"]["value"],
-            places=[_doc_to_geo_place(hit["_source"]) for hit in hits],
+            places=[FoundGeoPlace.from_hit(hit) for hit in hits],
             explanations=explanations,
         )
 
@@ -456,7 +466,7 @@ class GeocodeIndex(GeocodeIndexBase):
         resp = self.client.mget(
             {"docs": [{"_id": place_id} for place_id in ids]}, GEOPLACE_INDEX_NAME
         )
-        return [_doc_to_geo_place(doc["_source"]) for doc in resp["docs"]]
+        return [FoundGeoPlace.from_hit(doc) for doc in resp["docs"]]
 
     @timed_function(logger)
     def get_names_by_ids(self, ids: Iterable[str]) -> dict[str, str]:
@@ -525,7 +535,17 @@ def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarch
     print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
 
 
-def print_places_with_names(index: GeocodeIndex, places: list[GeoPlace]) -> None:
+def print_hierarchies_as_table(hierarchies: list[Hierarchy]) -> None:
+    """Prints hierarchies as a table. Useful for debugging."""
+    table_data: list[dict[str, Any]] = [h.model_dump(exclude_none=True) for h in hierarchies]
+
+    # Print the table
+    from tabulate import tabulate
+
+    print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
+
+
+def print_places_with_names(index: GeocodeIndex, places: list[FoundGeoPlace]) -> None:
     """Prints places as a table with hierarchy names. Useful for debugging."""
     all_ids = {
         place_id
@@ -540,6 +560,8 @@ def print_places_with_names(index: GeocodeIndex, places: list[GeoPlace]) -> None
     for idx, place in enumerate(places):
         place_dict = {
             "index": idx,
+            "score": place.score,
+            "sort": place.sort,
             "id": place.id,
             "name": place.place_name,
             "type": place.type.value,
