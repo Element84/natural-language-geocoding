@@ -401,23 +401,6 @@ if __name__ == "__main__":
 ## Code for manual testing
 # ruff: noqa: ERA001,T201,E402,E501
 
-
-# def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarchy]) -> None:
-#     """Prints hierarchies as a table. Useful for debugging."""
-#     places = index.get_by_ids(
-#         [place_id for h in hierarchies for place_id in h.model_dump(exclude_none=True).values()]
-#     )
-#     id_to_name = {p.id: p.place_name for p in places}
-
-#     table_data: list[dict[str, Any]] = [
-#         {field: id_to_name[place_id] for field, place_id in h.model_dump(exclude_none=True).items()}
-#         for h in hierarchies
-#     ]
-
-#     # Print the table
-#     print(tabulate(table_data, headers="keys", tablefmt="grid"))
-
-
 # logging.basicConfig(
 #     level=logging.INFO,
 #     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
