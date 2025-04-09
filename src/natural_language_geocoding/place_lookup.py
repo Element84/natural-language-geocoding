@@ -6,10 +6,11 @@ from typing import Any
 import requests
 from e84_geoai_common.geometry import geometry_from_wkt
 from e84_geoai_common.util import get_env_var, timed_function
+from pydantic import BaseModel, ConfigDict
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import GeoPlaceSourceType, GeoPlaceType
 
 
 def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
@@ -20,33 +21,28 @@ def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
     return places[0]
 
 
+class PlaceSearchRequest(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+    name: str
+    place_type: GeoPlaceType | None = None
+    in_continent: str | None = None
+    in_country: str | None = None
+    in_region: str | None = None
+    source_type: GeoPlaceSourceType | None = None
+
+
 class PlaceLookup(ABC):
     @abstractmethod
-    def search(
-        self,
-        *,
-        name: str,
-        place_type: GeoPlaceType | None = None,
-        in_continent: str | None = None,
-        in_country: str | None = None,
-        in_region: str | None = None,
-    ) -> BaseGeometry: ...
+    def search(self, request: PlaceSearchRequest) -> BaseGeometry: ...
 
 
 class NominatimAPI(PlaceLookup):
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
 
     @timed_function(logger)
-    def search(
-        self,
-        *,
-        name: str,
-        place_type: GeoPlaceType | None = None,  # noqa: ARG002
-        in_continent: str | None = None,  # noqa: ARG002
-        in_country: str | None = None,  # noqa: ARG002
-        in_region: str | None = None,  # noqa: ARG002
-    ) -> BaseGeometry:
+    def search(self, request: PlaceSearchRequest) -> BaseGeometry:
         """Finds the geometry of a place using Nominatim."""
+        name = request.name
         self.logger.info("Searching for [%s] geometry", name)
 
         nominatim_user_agent = get_env_var("NOMINATIM_USER_AGENT")

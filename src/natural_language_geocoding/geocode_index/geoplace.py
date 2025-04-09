@@ -93,6 +93,8 @@ class GeoPlaceSourceType(Enum):
     wof = "wof"
     # Natural Earth
     ne = "ne"
+    # Composed areas that are composed of other areas
+    comp = "comp"
 
 
 class GeoPlaceSource(BaseModel):

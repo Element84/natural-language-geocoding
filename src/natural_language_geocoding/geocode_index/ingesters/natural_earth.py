@@ -408,6 +408,36 @@ if __name__ == "__main__":
 
 # source_feature_pairs = list(_get_all_ne_features())
 
+
+# def not_a_point(feature: _NEFeature) -> bool:
+#     return not isinstance(feature.geometry, Point)
+
+
+# by_name_type = group_by(
+#     [f for _s, f in source_feature_pairs if not_a_point(f)],
+#     key_fn=lambda f: (f.properties.name, f.properties.place_type),
+# )
+
+
+# by_name_type_multi = {
+#     (name, place_type): features
+#     for (name, place_type), features in by_name_type.items()
+#     if len(features) > 1 and name is not None
+# }
+
+
+# for name, place_type in sorted(by_name_type_multi.keys()):
+#     print(f"{name} - {place_type.value}")
+
+# len(by_name_type_multi.keys())
+
+
+# [f.properties for f in by_name_type_multi[("Reindeer Lake", _NEPlaceType.lake)]]
+
+
+# display_geometry([f.geometry for f in by_name_type_multi[("Reindeer Lake", _NEPlaceType.lake)]])
+
+
 # len(source_feature_pairs)
 
 # len(source_feature_pairs)

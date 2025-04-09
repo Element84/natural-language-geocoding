@@ -19,7 +19,7 @@ from natural_language_geocoding.geocode_index.index import (
     SortField,
 )
 from natural_language_geocoding.geocode_index.opensearch_utils import QueryCondition, QueryDSL
-from natural_language_geocoding.place_lookup import PlaceLookup
+from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
 
 type_order_values = [f"    '{pt.value}': {index}" for index, pt in enumerate(PLACE_TYPE_SORT_ORDER)]
 type_order_values_str = "\n,".join(type_order_values)
@@ -104,25 +104,19 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         self._index = GeocodeIndex()
         self._place_cache = PlaceCache()
 
-    @timed_function(logger)
-    def search_for_places_raw(  # noqa: PLR0913
+    def create_search_request(
         self,
+        request: PlaceSearchRequest,
         *,
-        name: str,
-        place_type: GeoPlaceType | None = None,
-        continent_name: str | None = None,
-        country_name: str | None = None,
-        region_name: str | None = None,
         limit: int = 5,
         explain: bool = False,
-    ) -> SearchResponse:
-        """TODO docs."""
+    ) -> SearchRequest:
         should_conds: list[QueryCondition] = []
         must_conds: list[QueryCondition] = []
         must_not_conds: list[QueryCondition] = []
-        if place_type:
-            should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
-            if place_type == GeoPlaceType.geoarea:
+        if request.place_type:
+            should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, request.place_type.value))
+            if request.place_type == GeoPlaceType.geoarea:
                 # If we're looking for a general geoarea we exclude locality so that we are more
                 # likely to find other areas first.
                 must_not_conds.append(
@@ -132,20 +126,22 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         should_conds = [
             *should_conds,
             *_continent_country_region_to_conditions(
-                self._place_cache, continent_name, country_name, region_name
+                self._place_cache, request.in_continent, request.in_country, request.in_region
             ),
         ]
 
         # Dis_max is used so that the score will come from only the highest matching condition.
         name_match = QueryDSL.dis_max(
-            QueryDSL.term(GeoPlaceIndexField.place_name_lower_keyword, name, boost=10.0),
-            QueryDSL.term(GeoPlaceIndexField.alternate_names_lower_keyword, name, boost=5.0),
-            QueryDSL.match(GeoPlaceIndexField.place_name, name, fuzzy=True, boost=2.0),
-            QueryDSL.match(GeoPlaceIndexField.alternate_names, name, fuzzy=True, boost=1.0),
+            QueryDSL.term(GeoPlaceIndexField.place_name_lower_keyword, request.name, boost=10.0),
+            QueryDSL.term(
+                GeoPlaceIndexField.alternate_names_lower_keyword, request.name, boost=5.0
+            ),
+            QueryDSL.match(GeoPlaceIndexField.place_name, request.name, fuzzy=True, boost=2.0),
+            QueryDSL.match(GeoPlaceIndexField.alternate_names, request.name, fuzzy=True, boost=1.0),
         )
         must_conds.append(name_match)
 
-        request = SearchRequest(
+        return SearchRequest(
             size=limit,
             query=QueryDSL.bool_cond(
                 must_conds=must_conds, should_conds=should_conds, must_not_conds=must_not_conds
@@ -157,35 +153,35 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             ],
             explain=explain,
         )
-        return self._index.search(request)
+
+    @timed_function(logger)
+    def search_for_places_raw(
+        self,
+        request: PlaceSearchRequest,
+        *,
+        limit: int = 5,
+        explain: bool = False,
+    ) -> SearchResponse:
+        """TODO docs."""
+        search_request = self.create_search_request(request, limit=limit, explain=explain)
+        return self._index.search(search_request)
 
     def search(
         self,
-        *,
-        name: str,
-        place_type: GeoPlaceType | None = None,
-        in_continent: str | None = None,
-        in_country: str | None = None,
-        in_region: str | None = None,
+        request: PlaceSearchRequest,
     ) -> BaseGeometry:
         """TODO docs."""
-        search_resp = self.search_for_places_raw(
-            name=name,
-            place_type=place_type,
-            continent_name=in_continent,
-            country_name=in_country,
-            region_name=in_region,
-        )
+        search_resp = self.search_for_places_raw(request)
         places = search_resp.places
         if len(places) > 0:
             return places[0].geom
         # TODO I'm not sure this is the error that should be shown to the user.
         raise GeocodeError(
-            f"Unable find place with name [{name}] "
-            f"type [{place_type}] "
-            f"in_continent [{in_continent}] "
-            f"in_country [{in_country}] "
-            f"in_region [{in_region}] "
+            f"Unable find place with name [{request.name}] "
+            f"type [{request.place_type}] "
+            f"in_continent [{request.in_continent}] "
+            f"in_country [{request.in_country}] "
+            f"in_region [{request.in_region}] "
         )
 
 

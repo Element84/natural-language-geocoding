@@ -14,7 +14,7 @@ from shapely.geometry.base import BaseGeometry
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
-from natural_language_geocoding.place_lookup import PlaceLookup
+from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
 
 # TODO File Issue for the ability to specify a portion of an area like the northern part or
 # southern part. This was originally here but the implementation ignored it.
@@ -57,11 +57,13 @@ class NamedPlace(SpatialNodeType):
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         geometry = place_lookup.search(
-            name=self.name,
-            place_type=self.type,
-            in_continent=self.in_continent,
-            in_country=self.in_country,
-            in_region=self.in_region,
+            PlaceSearchRequest(
+                name=self.name,
+                place_type=self.type,
+                in_continent=self.in_continent,
+                in_country=self.in_country,
+                in_region=self.in_region,
+            )
         )
         # Simplify the geometry to enable faster additional processing of the geometry.
         # 18,500 points was found to be a number that worked even for areas with many
