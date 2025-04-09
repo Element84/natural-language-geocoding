@@ -38,7 +38,10 @@ class NamedPlace(SpatialNodeType):
 
     in_continent: str | None = Field(
         default=None,
-        description="Indicates to search within a specific continent.",
+        description=(
+            "Indicates to search within a specific continent."
+            " Note that Oceania is a valid continent."
+        ),
     )
     in_country: str | None = Field(
         default=None,
