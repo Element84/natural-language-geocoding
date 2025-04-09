@@ -45,6 +45,53 @@ _TYPE_SORT_COND = {
 }
 
 
+def _continent_country_region_to_conditions(
+    place_cache: PlaceCache,
+    continent_name: str | None = None,
+    country_name: str | None = None,
+    region_name: str | None = None,
+) -> list[QueryCondition]:
+    """Create query conditions to limit found places to any specified continent, country, or region."""
+    should_conds: list[QueryCondition] = []
+    continent_ids: set[str] | None = None
+    country_ids: set[str] | None = None
+
+    if continent_name:
+        continent_ids = place_cache.find_ids(name=continent_name, place_type=GeoPlaceType.continent)
+        if len(continent_ids) == 0:
+            raise ValueError(f"Unable to find continent with name [{continent_name}]")
+        if len(continent_ids) > 1:
+            raise Exception(f"Unexpectedly found multiple continents with name [{continent_name}]")
+        should_conds.append(
+            QueryDSL.term(GeoPlaceIndexField.hierarchies_continent_id, next(iter(continent_ids)))
+        )
+
+    if country_name:
+        country_ids = place_cache.find_ids(
+            name=country_name, place_type=GeoPlaceType.country, continent_ids=continent_ids
+        )
+        if len(country_ids) == 0:
+            raise ValueError(f"Unable to find country with name [{country_name}]")
+        should_conds.append(
+            QueryDSL.terms(GeoPlaceIndexField.hierarchies_country_id, list(country_ids))
+        )
+
+    if region_name:
+        region_ids = place_cache.find_ids(
+            name=region_name,
+            place_type=GeoPlaceType.region,
+            continent_ids=continent_ids,
+            country_ids=country_ids,
+        )
+
+        if len(region_ids) == 0:
+            raise ValueError(f"Unable to find region with name [{region_name}]")
+        should_conds.append(
+            QueryDSL.terms(GeoPlaceIndexField.hierarchies_region_id, list(region_ids))
+        )
+    return should_conds
+
+
 class GeocodeIndexPlaceLookup(PlaceLookup):
     """TODO docs."""
 
@@ -70,55 +117,18 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         explain: bool = False,
     ) -> SearchResponse:
         """TODO docs."""
-        # Dis_max is used so that the score will come from only the highest matching condition.
-
         should_conds: list[QueryCondition] = []
         if place_type:
             should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, place_type.value))
 
-        continent_ids: set[str] | None = None
-        country_ids: set[str] | None = None
+        should_conds = [
+            *should_conds,
+            *_continent_country_region_to_conditions(
+                self._place_cache, continent_name, country_name, region_name
+            ),
+        ]
 
-        if continent_name:
-            continent_ids = self._place_cache.find_ids(
-                name=continent_name, place_type=GeoPlaceType.continent
-            )
-            if len(continent_ids) == 0:
-                raise ValueError(f"Unable to find continent with name [{continent_name}]")
-            if len(continent_ids) > 1:
-                raise Exception(
-                    f"Unexpectedly found multiple continents with name [{continent_name}]"
-                )
-            should_conds.append(
-                QueryDSL.term(
-                    GeoPlaceIndexField.hierarchies_continent_id, next(iter(continent_ids))
-                )
-            )
-
-        if country_name:
-            country_ids = self._place_cache.find_ids(
-                name=country_name, place_type=GeoPlaceType.country, continent_ids=continent_ids
-            )
-            if len(country_ids) == 0:
-                raise ValueError(f"Unable to find country with name [{country_name}]")
-            should_conds.append(
-                QueryDSL.terms(GeoPlaceIndexField.hierarchies_country_id, list(country_ids))
-            )
-
-        if region_name:
-            region_ids = self._place_cache.find_ids(
-                name=region_name,
-                place_type=GeoPlaceType.region,
-                continent_ids=continent_ids,
-                country_ids=country_ids,
-            )
-
-            if len(region_ids) == 0:
-                raise ValueError(f"Unable to find region with name [{region_name}]")
-            should_conds.append(
-                QueryDSL.terms(GeoPlaceIndexField.hierarchies_region_id, list(region_ids))
-            )
-
+        # Dis_max is used so that the score will come from only the highest matching condition.
         name_match = QueryDSL.dis_max(
             QueryDSL.term(GeoPlaceIndexField.place_name_keyword, name, boost=10.0),
             QueryDSL.term(GeoPlaceIndexField.alternate_names_keyword, name, boost=5.0),
