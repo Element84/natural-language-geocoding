@@ -1,3 +1,4 @@
+import os
 from collections.abc import Generator, Sequence
 from enum import Enum
 from textwrap import dedent
@@ -15,8 +16,14 @@ def create_opensearch_client() -> OpenSearch:
     host = get_env_var("GEOCODE_INDEX_HOST")
     port = int(get_env_var("GEOCODE_INDEX_PORT", "443"))
     region = get_env_var("GEOCODE_INDEX_REGION")
-    credentials = boto3.Session().get_credentials()
-    auth = AWSV4SignerAuth(credentials, region, "es")
+    username = os.getenv("GEOCODE_INDEX_USERNAME")
+    password = os.getenv("GEOCODE_INDEX_PASSWORD")
+
+    if username and password:
+        auth = (username, password)
+    else:
+        credentials = boto3.Session().get_credentials()
+        auth = AWSV4SignerAuth(credentials, region, "es")
 
     if host == "localhost":
         # Allow tunneling for easy local testing.
