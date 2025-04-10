@@ -208,16 +208,20 @@ def ordered_values_to_sort_cond(field: IndexField, values: Sequence[str]) -> dic
 
     sort_cond_script = dedent(
         f"""
-            def typeOrder = [
+            def fieldOrder = [
                 {order_values_str}
             ];
-            return typeOrder.containsKey(doc['type'].value) ? typeOrder[doc['type'].value] : 999;
+            if (fieldOrder.containsKey(doc['{field.value}'].value)) {{
+                return fieldOrder[doc['{field.value}'].value];
+            }} else {{
+                return 999;
+            }}
         """.strip()
     )
 
     return {
         "_script": {
-            field.value: "number",
+            "type": "number",
             "script": {
                 "source": sort_cond_script,
                 "lang": "painless",

@@ -33,7 +33,7 @@ _TYPE_SORT_COND = ordered_values_to_sort_cond(
     GeoPlaceIndexField.type, [pt.value for pt in PLACE_TYPE_SORT_ORDER]
 )
 _SOURCE_TYPE_SORT_COND = ordered_values_to_sort_cond(
-    GeoPlaceIndexField.type, [st.value for st in SOURCE_TYPE_SORT_ORDER]
+    GeoPlaceIndexField.source_type, [st.value for st in SOURCE_TYPE_SORT_ORDER]
 )
 
 
@@ -181,10 +181,6 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 ## Code for testing
 # ruff: noqa: ERA001,E501,RUF100
 
-# TODO mediterranean is still not sorting correctly
-
-# from e84_geoai_common.debugging import display_geometry  # noqa: E402
-
 # from natural_language_geocoding.geocode_index.index import (  # noqa: E402
 #     diff_explanations,
 #     print_places_with_names,
@@ -192,9 +188,9 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
 # lookup = GeocodeIndexPlaceLookup()
 
-# resp = lookup.search_for_places_raw(
+# resp = lookup.search_for_places(
 #     PlaceSearchRequest(
-#         name="Balearic Islands", place_type=GeoPlaceType.region, in_continent="Europe", in_country="Spain"
+#         name="Mediterranean Sea", place_type=GeoPlaceType.sea, in_continent="Europe"
 #     ),
 #     explain=True,
 #     limit=10,
@@ -206,22 +202,3 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 # print_places_with_names(index, resp.places)
 
 # diff_explanations(resp, 0, 2)
-
-# display_geometry([places[0].geom])
-
-
-# os_resp = lookup._index.client.mget(
-#     {
-#         "docs": [
-#             {"_id": place_id, "_source": {"include": GeoPlaceIndexField.place_name.value}}
-#             for place in resp.places
-#             for h in place.hierarchies
-#             for place_id in h.model_dump().values()
-#             if place_id is not None
-#         ]
-#     },
-#     "geoplaces",
-# )
-
-
-# print(json.dumps(os_resp, indent=2))

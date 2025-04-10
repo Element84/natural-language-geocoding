@@ -27,7 +27,7 @@ france_iberian_mask_geom = Polygon(
 )
 
 
-class IberianPeninsularCompositionComponent(CompositionComponent):
+class IberianPeninsulaCompositionComponent(CompositionComponent):
     """TODO docs."""
 
     def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:

@@ -20,7 +20,7 @@ from natural_language_geocoding.geocode_index.ingesters.composed_places.composer
     UnionComponent,
 )
 from natural_language_geocoding.geocode_index.ingesters.composed_places.iberian_peninsula import (
-    IberianPeninsularCompositionComponent,
+    IberianPeninsulaCompositionComponent,
 )
 from natural_language_geocoding.place_lookup import PlaceSearchRequest
 
@@ -49,7 +49,7 @@ class Composition(BaseModel):
             geom=composed.geom,
             source=GeoPlaceSource(source_type=GeoPlaceSourceType.comp, source_path="composed"),
             hierarchies=composed.hierarchies,
-            properties={"sources": [source.model_dump() for source in composed.sources]},
+            properties={"sources": [source.model_dump(mode="json") for source in composed.sources]},
         )
 
 
@@ -107,7 +107,7 @@ compositions = [
         id="comp_iberia",
         place_name="Iberian Peninsula",
         place_type=GeoPlaceType.peninsula,
-        component=IberianPeninsularCompositionComponent(),
+        component=IberianPeninsulaCompositionComponent(),
     ),
 ]
 
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
 
 # place_lookup = GeocodeIndexPlaceLookup()
-# logger.info("Generating combined compositions")
+
 # places = [comp.lookup(place_lookup) for comp in compositions]
 
 # len(places)
