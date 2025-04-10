@@ -480,7 +480,9 @@ class GeocodeIndex(GeocodeIndexBase):
             GEOPLACE_INDEX_NAME,
         )
         return {
-            doc["_id"]: doc["_source"][GeoPlaceIndexField.place_name.value] for doc in resp["docs"]
+            doc["_id"]: doc["_source"][GeoPlaceIndexField.place_name.value]
+            for doc in resp["docs"]
+            if doc["found"]
         }
 
 
