@@ -148,7 +148,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         )
 
     @timed_function(logger)
-    def search_for_places_raw(
+    def search_for_places(
         self,
         request: PlaceSearchRequest,
         *,
@@ -164,7 +164,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         request: PlaceSearchRequest,
     ) -> BaseGeometry:
         """TODO docs."""
-        search_resp = self.search_for_places_raw(request)
+        search_resp = self.search_for_places(request)
         places = search_resp.places
         if len(places) > 0:
             return places[0].geom

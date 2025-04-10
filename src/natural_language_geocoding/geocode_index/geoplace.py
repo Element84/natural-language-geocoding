@@ -3,7 +3,9 @@
 from enum import Enum
 from typing import Annotated, Any, cast
 
+from e84_geoai_common.debugging import display_geometry
 from e84_geoai_common.geometry import geometry_from_geojson_dict
+from folium import Map
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation, field_serializer, field_validator
 from shapely.geometry.base import BaseGeometry
 
@@ -160,6 +162,10 @@ class GeoPlace(BaseModel):
     area_sq_km: float | None = None
     population: int | None = None
     properties: dict[str, Any]
+
+    def display_geometry(self) -> Map:
+        """Displays geometry in a jupyter like environment for debugging."""
+        return display_geometry([self.geom])
 
     @field_validator("geom", mode="before")
     @classmethod
