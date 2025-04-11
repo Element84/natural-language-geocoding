@@ -19,5 +19,5 @@ def main() -> None:
         print("Unknown action. Please use 'init'.")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "get_ipython" not in globals():
     main()

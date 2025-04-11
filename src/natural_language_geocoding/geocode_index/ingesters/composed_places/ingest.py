@@ -2,6 +2,7 @@
 
 import logging
 
+from e84_geoai_common.debugging import display_geometry
 from pydantic import BaseModel, ConfigDict
 
 from natural_language_geocoding.geocode_index.geocode_index_place_lookup import (
@@ -13,16 +14,13 @@ from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlaceSourceType,
     GeoPlaceType,
 )
-from natural_language_geocoding.geocode_index.index import GeocodeIndex
+from natural_language_geocoding.geocode_index.index import GeocodeIndex, print_places_with_names
 from natural_language_geocoding.geocode_index.ingesters.composed_places.composers_core import (
     CompositionComponent,
     ContinentSubregion,
     IntersectionComponent,
     PlaceLookupComponent,
     UnionComponent,
-)
-from natural_language_geocoding.geocode_index.ingesters.composed_places.iberian_peninsula import (
-    IberianPeninsulaCompositionComponent,
 )
 from natural_language_geocoding.place_lookup import PlaceSearchRequest
 
@@ -58,61 +56,62 @@ class Composition(BaseModel):
 
 
 compositions = [
-    Composition(
-        id="comp_atlantic",
-        place_name="Atlantic Ocean",
-        place_type=GeoPlaceType.ocean,
-        component=UnionComponent(
-            components=[
-                PlaceLookupComponent.with_name_type("North Atlantic Ocean", GeoPlaceType.ocean),
-                PlaceLookupComponent.with_name_type("Sargasso Sea", GeoPlaceType.marinearea),
-                PlaceLookupComponent.with_name_type("South Atlantic Ocean", GeoPlaceType.ocean),
-            ]
-        ),
-    ),
-    Composition(
-        id="comp_pacific",
-        place_name="Pacific Ocean",
-        place_type=GeoPlaceType.ocean,
-        component=UnionComponent(
-            components=[
-                PlaceLookupComponent.with_name_type("North Pacific Ocean", GeoPlaceType.ocean),
-                PlaceLookupComponent.with_name_type("South Pacific Ocean", GeoPlaceType.ocean),
-            ]
-        ),
-    ),
-    Composition(
-        id="comp_mediterranean",
-        place_name="Mediterranean Sea",
-        place_type=GeoPlaceType.sea,
-        component=UnionComponent(
-            components=[
-                PlaceLookupComponent(
-                    request=PlaceSearchRequest(
-                        name="Mediterranean Sea",
-                        place_type=GeoPlaceType.sea,
-                        source_type=GeoPlaceSourceType.ne,
-                    ),
-                    num_to_combine=2,
-                ),
-                PlaceLookupComponent.with_name_type("Adriatic Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Aegean Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Tyrrhenian Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Ionian Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Balearic Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Alboran Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Ligurian Sea", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Sea of Crete", GeoPlaceType.sea),
-                PlaceLookupComponent.with_name_type("Gulf of Sidra", GeoPlaceType.marinearea),
-            ]
-        ),
-    ),
-    Composition(
-        id="comp_iberia",
-        place_name="Iberian Peninsula",
-        place_type=GeoPlaceType.peninsula,
-        component=IberianPeninsulaCompositionComponent(),
-    ),
+    # TODO temporarily commenting out these places that work.
+    # Composition(
+    #     id="comp_atlantic",
+    #     place_name="Atlantic Ocean",
+    #     place_type=GeoPlaceType.ocean,
+    #     component=UnionComponent(
+    #         components=[
+    #             PlaceLookupComponent.with_name_type("North Atlantic Ocean", GeoPlaceType.ocean),
+    #             PlaceLookupComponent.with_name_type("Sargasso Sea", GeoPlaceType.marinearea),
+    #             PlaceLookupComponent.with_name_type("South Atlantic Ocean", GeoPlaceType.ocean),
+    #         ]
+    #     ),
+    # ),
+    # Composition(
+    #     id="comp_pacific",
+    #     place_name="Pacific Ocean",
+    #     place_type=GeoPlaceType.ocean,
+    #     component=UnionComponent(
+    #         components=[
+    #             PlaceLookupComponent.with_name_type("North Pacific Ocean", GeoPlaceType.ocean),
+    #             PlaceLookupComponent.with_name_type("South Pacific Ocean", GeoPlaceType.ocean),
+    #         ]
+    #     ),
+    # ),
+    # Composition(
+    #     id="comp_mediterranean",
+    #     place_name="Mediterranean Sea",
+    #     place_type=GeoPlaceType.sea,
+    #     component=UnionComponent(
+    #         components=[
+    #             PlaceLookupComponent(
+    #                 request=PlaceSearchRequest(
+    #                     name="Mediterranean Sea",
+    #                     place_type=GeoPlaceType.sea,
+    #                     source_type=GeoPlaceSourceType.ne,
+    #                 ),
+    #                 num_to_combine=2,
+    #             ),
+    #             PlaceLookupComponent.with_name_type("Adriatic Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Aegean Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Tyrrhenian Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Ionian Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Balearic Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Alboran Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Ligurian Sea", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Sea of Crete", GeoPlaceType.sea),
+    #             PlaceLookupComponent.with_name_type("Gulf of Sidra", GeoPlaceType.marinearea),
+    #         ]
+    #     ),
+    # ),
+    # Composition(
+    #     id="comp_iberia",
+    #     place_name="Iberian Peninsula",
+    #     place_type=GeoPlaceType.peninsula,
+    #     component=IberianPeninsulaCompositionComponent(),
+    # ),
     Composition(
         id="comp_north_africa",
         place_name="North Africa",
@@ -145,6 +144,7 @@ compositions = [
                 "Guinea-Bissau",
                 "Cape Verde",
                 "Mauritania",
+                "Western Sahara",
             ],
         ),
     ),
@@ -164,6 +164,7 @@ compositions = [
                 "Djibouti",
                 "Eritrea",
                 "Somalia",
+                "Somaliland",
                 "South Sudan",
             ],
         ),
@@ -281,7 +282,7 @@ compositions = [
                 "Iraq",
                 "Israel",
                 "Syria",
-                "UAE",
+                "United Arab Emirates",
                 "Lebanon",
                 "Jordan",
                 "Kuwait",
@@ -463,7 +464,7 @@ def ingest_compositions() -> None:
     index.bulk_index(places)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "get_ipython" not in globals():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -476,11 +477,82 @@ if __name__ == "__main__":
 # ruff: noqa: ERA001
 
 
-# place_lookup = GeocodeIndexPlaceLookup()
+place_lookup = GeocodeIndexPlaceLookup()
+index = GeocodeIndex()
 
-# places = [comp.lookup(place_lookup) for comp in compositions]
+
+composed_places: list[GeoPlace] = []
+failed_compositions: list[Composition] = []
+
+for comp in compositions:
+    try:
+        composed_places.append(comp.lookup(place_lookup))
+    except Exception as e:  # noqa: BLE001
+        print(f"Failed {comp.place_name}", e)  # noqa: T201
+        failed_compositions.append(comp)
+
+
+len(composed_places)
 
 # len(places)
+# Missing part of somalia
+
+# North Africa
+composed_places[0].display_geometry()
+
+# West Africa
+composed_places[1].display_geometry()
+
+# east africa
+composed_places[2].display_geometry()
+
+
+# Central africa
+composed_places[3].display_geometry()
+# Southern Africa
+composed_places[4].display_geometry()
+
+# All of Africa
+display_geometry([p.geom for p in composed_places[0:5]])
+
+
+# East Asia
+composed_places[5].display_geometry()
+
+# southEast Asia
+composed_places[6].display_geometry()
+
+# South asia
+composed_places[7].display_geometry()
+
+# Central Asia
+composed_places[8].display_geometry()
+
+# Middle East
+composed_places[9].display_geometry()
+
+# Most of Asia
+display_geometry([p.geom for p in composed_places[5:10]])
+
+print(composed_places[10].place_name)  # noqa: T201
+
+# Western Europe TODO needs fixing
+composed_places[10].display_geometry()
+
+
+resp = place_lookup.search_for_places(
+    PlaceSearchRequest(name="Sahara", place_type=GeoPlaceType.country, in_continent="Africa"),
+    limit=50,
+)
+
+sahara_countries = [p for p in resp.places if p.type == GeoPlaceType.country]
+
+print_places_with_names(index, sahara_countries)
+sahara_countries[0].display_geometry()
+
+
+resp.places[3].display_geometry()
+
 
 # places[0].display_geometry()
 # places[1].display_geometry()

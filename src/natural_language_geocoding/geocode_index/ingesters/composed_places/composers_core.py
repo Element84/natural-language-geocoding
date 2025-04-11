@@ -194,7 +194,7 @@ class ContinentSubregion(CompositionComponent):
             )
             for country in self.countries
         ]
-        # My implementation of what I'm calling Bubble Merge
+        # Merges things together like bubble sort but is likely closer to O(log N)
         merged: ComposedPlace = countries[0]
         left_to_merge = countries[1:]
         while len(left_to_merge) > 0:
@@ -206,8 +206,11 @@ class ContinentSubregion(CompositionComponent):
                     remaining.append(country)
 
             if len(remaining) == len(left_to_merge):
-                # Nothing was actually merged in.
-                raise Exception("Failure to merge all geometries.")
+                # Nothing was actually merged in. The remaining areas don't intersect so we'll union
+                # them together.
+                for to_merge in remaining:
+                    merged = merged.union(to_merge)
+                remaining = []  # Nothing left to merge
             left_to_merge = remaining
         return merged
 

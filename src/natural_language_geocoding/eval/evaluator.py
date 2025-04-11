@@ -245,7 +245,7 @@ class ParseSpatialNodeEvaluator(Evaluator[AnySpatialNodeType]):
         return parse_spatial_node_from_text(llm, user_text).root
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "get_ipython" not in globals():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

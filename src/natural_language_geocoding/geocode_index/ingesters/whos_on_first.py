@@ -389,7 +389,7 @@ def index_wof_places() -> None:
         _index_placetype_tar_file(placetype_tar_file)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "get_ipython" not in globals():
     logging.getLogger("opensearch").setLevel(logging.WARNING)
 
     index_wof_places()
