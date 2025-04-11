@@ -112,7 +112,7 @@ class ComposedPlace(BaseModel):
             sources=self.sources,
         )
 
-    def union_at_border(self, other: "ComposedPlace", mask: "ComposedPlace") -> "ComposedPlace":
+    def union_at_border(self, other: "ComposedPlace") -> "ComposedPlace":
         """TODO docs. Note it covers the border."""
         combined = self.geom.union(other.geom)
         border = border_between(self.geom, other.geom)
@@ -124,8 +124,8 @@ class ComposedPlace(BaseModel):
         return ComposedPlace(
             place_name=f"Union at Border of [{self.place_name}] and [{other.place_name}]",
             geom=combined_with_border_cover,
-            hierarchies=[*self.hierarchies, *other.hierarchies, *mask.hierarchies],
-            sources=[*self.sources, *other.sources, *mask.sources],
+            hierarchies=[*self.hierarchies, *other.hierarchies],
+            sources=[*self.sources, *other.sources],
         )
 
 
@@ -178,3 +178,49 @@ class UnionComponent(CompositionComponent):
         if result is None:
             raise Exception("Unexpected None result")
         return result
+
+
+class ContinentSubregion(CompositionComponent):
+    continent: str
+    countries: list[str]
+
+    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:
+        countries = [
+            ComposedPlace.from_request(
+                place_lookup,
+                PlaceSearchRequest(
+                    name=country, place_type=GeoPlaceType.country, in_continent=self.continent
+                ),
+            )
+            for country in self.countries
+        ]
+        # My implementation of what I'm calling Bubble Merge
+        merged: ComposedPlace = countries[0]
+        left_to_merge = countries[1:]
+        while len(left_to_merge) > 0:
+            remaining: list[ComposedPlace] = []
+            for country in left_to_merge:
+                if country.geom.intersects(merged.geom):
+                    merged = merged.union_at_border(country)
+                else:
+                    remaining.append(country)
+
+            if len(remaining) == len(left_to_merge):
+                # Nothing was actually merged in.
+                raise Exception("Failure to merge all geometries.")
+            left_to_merge = remaining
+        return merged
+
+
+###########
+# Code for manual testing
+# ruff: noqa: ERA001
+
+# place_lookup = GeocodeIndexPlaceLookup()
+
+# subregion = ContinentSubregion(
+#     continent="Africa", countries=["Morocco", "Algeria", "Tunisia", "Libya", "Egypt", "Sudan"]
+# )
+# composed = subregion.lookup(place_lookup)
+
+# composed.display_geometry()

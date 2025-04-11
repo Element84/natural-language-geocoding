@@ -16,6 +16,8 @@ from natural_language_geocoding.geocode_index.geoplace import (
 from natural_language_geocoding.geocode_index.index import GeocodeIndex
 from natural_language_geocoding.geocode_index.ingesters.composed_places.composers_core import (
     CompositionComponent,
+    ContinentSubregion,
+    IntersectionComponent,
     PlaceLookupComponent,
     UnionComponent,
 )
@@ -33,6 +35,7 @@ class Composition(BaseModel):
     id: str
     place_name: str
     place_type: GeoPlaceType
+    alternate_names: list[str] | None = None
 
     component: CompositionComponent
 
@@ -50,6 +53,7 @@ class Composition(BaseModel):
             source=GeoPlaceSource(source_type=GeoPlaceSourceType.comp, source_path="composed"),
             hierarchies=composed.hierarchies,
             properties={"sources": [source.model_dump(mode="json") for source in composed.sources]},
+            alternate_names=self.alternate_names or [],
         )
 
 
@@ -108,6 +112,343 @@ compositions = [
         place_name="Iberian Peninsula",
         place_type=GeoPlaceType.peninsula,
         component=IberianPeninsulaCompositionComponent(),
+    ),
+    Composition(
+        id="comp_north_africa",
+        place_name="North Africa",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Africa",
+            countries=["Morocco", "Algeria", "Tunisia", "Libya", "Egypt", "Sudan"],
+        ),
+    ),
+    Composition(
+        id="comp_west_africa",
+        place_name="West Africa",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Africa",
+            countries=[
+                "Nigeria",
+                "Ghana",
+                "Côte d'Ivoire",
+                "Senegal",
+                "Mali",
+                "Burkina Faso",
+                "Niger",
+                "Benin",
+                "Togo",
+                "Guinea",
+                "Sierra Leone",
+                "Liberia",
+                "Gambia",
+                "Guinea-Bissau",
+                "Cape Verde",
+                "Mauritania",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_east_africa",
+        place_name="East Africa",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Africa",
+            countries=[
+                "Ethiopia",
+                "Kenya",
+                "Tanzania",
+                "Uganda",
+                "Rwanda",
+                "Burundi",
+                "Djibouti",
+                "Eritrea",
+                "Somalia",
+                "South Sudan",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_central_africa",
+        place_name="Central Africa",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Africa",
+            countries=[
+                "Democratic Republic of Congo",
+                "Cameroon",
+                "Central African Republic",
+                "Chad",
+                "Republic of Congo",
+                "Gabon",
+                "Equatorial Guinea",
+                "São Tomé and Príncipe",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_southern_africa",
+        place_name="Southern Africa",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Africa",
+            countries=[
+                "South Africa",
+                "Namibia",
+                "Botswana",
+                "Zimbabwe",
+                "Mozambique",
+                "Zambia",
+                "Malawi",
+                "Angola",
+                "Lesotho",
+                "Eswatini",
+                "Madagascar",
+                "Comoros",
+                "Mauritius",
+                "Seychelles",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_east_asia",
+        place_name="East Asia",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Asia",
+            countries=["China", "Japan", "South Korea", "North Korea", "Mongolia", "Taiwan"],
+        ),
+    ),
+    Composition(
+        id="comp_southeast_asia",
+        place_name="Southeast Asia",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Asia",
+            countries=[
+                "Indonesia",
+                "Thailand",
+                "Philippines",
+                "Vietnam",
+                "Myanmar",
+                "Malaysia",
+                "Singapore",
+                "Cambodia",
+                "Laos",
+                "Brunei",
+                "Timor-Leste",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_south_asia",
+        place_name="South Asia",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Asia",
+            countries=[
+                "India",
+                "Pakistan",
+                "Bangladesh",
+                "Afghanistan",
+                "Sri Lanka",
+                "Nepal",
+                "Bhutan",
+                "Maldives",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_central_asia",
+        place_name="Central Asia",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Asia",
+            countries=["Kazakhstan", "Uzbekistan", "Kyrgyzstan", "Tajikistan", "Turkmenistan"],
+        ),
+    ),
+    Composition(
+        id="comp_west_asia_middle_east",
+        place_name="Middle East",
+        alternate_names=["West Asia"],
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Asia",
+            countries=[
+                "Saudi Arabia",
+                "Iran",
+                "Turkey",
+                "Iraq",
+                "Israel",
+                "Syria",
+                "UAE",
+                "Lebanon",
+                "Jordan",
+                "Kuwait",
+                "Oman",
+                "Qatar",
+                "Bahrain",
+                "Yemen",
+                "Palestine",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_western_europe",
+        place_name="Western Europe",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Europe",
+            countries=[
+                "Austria",
+                "Belgium",
+                "France",
+                "Germany",
+                "Liechtenstein",
+                "Luxembourg",
+                "Monaco",
+                "Netherlands",
+                "Switzerland",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_northern_europe",
+        place_name="Northern Europe",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Europe",
+            countries=[
+                "Denmark",
+                "Estonia",
+                "Finland",
+                "Iceland",
+                "Latvia",
+                "Lithuania",
+                "Norway",
+                "Sweden",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_southern_europe",
+        place_name="Southern Europe",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Europe",
+            countries=[
+                "Italy",
+                "Spain",
+                "Portugal",
+                "Greece",
+                "Malta",
+                "Cyprus",
+                "San Marino",
+                "Vatican City",
+                "Andorra",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_eastern_europe",
+        place_name="Eastern Europe",
+        place_type=GeoPlaceType.geoarea,
+        component=UnionComponent(
+            components=[
+                ContinentSubregion(
+                    continent="Europe",
+                    countries=[
+                        "Poland",
+                        "Ukraine",
+                        "Romania",
+                        "Czech Republic",
+                        "Hungary",
+                        "Belarus",
+                        "Bulgaria",
+                        "Slovakia",
+                        "Moldova",
+                    ],
+                ),
+                # Plus the part of Russia in Europe
+                IntersectionComponent(
+                    components=[
+                        PlaceLookupComponent.with_name_type("Europe", GeoPlaceType.continent),
+                        PlaceLookupComponent.with_name_type("Russia", GeoPlaceType.country),
+                    ]
+                ),
+            ]
+        ),
+    ),
+    Composition(
+        id="comp_balkans",
+        place_name="Balkans",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Europe",
+            countries=[
+                "Croatia",
+                "Serbia",
+                "Bosnia and Herzegovina",
+                "Albania",
+                "North Macedonia",
+                "Montenegro",
+                "Slovenia",
+                "Kosovo",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_british_isles",
+        place_name="British Isles",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="Europe",
+            countries=[
+                "United Kingdom",
+                "Ireland",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_caribbean",
+        place_name="Caribbean",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="North America",
+            countries=[
+                "Cuba",
+                "Jamaica",
+                "Haiti",
+                "Dominican Republic",
+                "Puerto Rico",
+                "Bahamas",
+                "Trinidad and Tobago",
+                "Barbados",
+                "Saint Lucia",
+                "Grenada",
+                "Saint Vincent and the Grenadines",
+                "Antigua and Barbuda",
+                "Dominica",
+                "Saint Kitts and Nevis",
+            ],
+        ),
+    ),
+    Composition(
+        id="comp_central_america",
+        place_name="Central America",
+        place_type=GeoPlaceType.geoarea,
+        component=ContinentSubregion(
+            continent="North America",
+            countries=[
+                "Belize",
+                "Costa Rica",
+                "El Salvador",
+                "Guatemala",
+                "Honduras",
+                "Nicaragua",
+                "Panama",
+            ],
+        ),
     ),
 ]
 

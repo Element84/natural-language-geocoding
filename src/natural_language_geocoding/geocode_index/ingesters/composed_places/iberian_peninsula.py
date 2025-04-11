@@ -78,6 +78,6 @@ class IberianPeninsulaCompositionComponent(CompositionComponent):
         france_iberia_in_europe = france.intersection(europe).intersection(france_iberian_mask)
         andora_in_europe = andorra.intersection(europe)
 
-        spain_port = spain_in_europe.union_at_border(portugal_in_europe, europe)
-        spain_port_andorra = spain_port.union_at_border(andora_in_europe, europe)
-        return spain_port_andorra.union_at_border(france_iberia_in_europe, europe)
+        spain_port = spain_in_europe.union_at_border(portugal_in_europe)
+        spain_port_andorra = spain_port.union_at_border(andora_in_europe)
+        return spain_port_andorra.union_at_border(france_iberia_in_europe)
