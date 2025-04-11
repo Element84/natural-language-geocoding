@@ -1,29 +1,17 @@
 """Contains functions to calculate the tree edit distance between two spatial nodes."""
 
 from abc import ABC
+from enum import Enum
 from functools import singledispatch
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, SkipValidation
+from pydantic import BaseModel, ConfigDict, SkipValidation, field_serializer
+from shapely.geometry.base import BaseGeometry
 from zss import simple_distance  # type: ignore[reportUnknownVariableType]
 
-from natural_language_geocoding.models import (
-    AnySpatialNodeType,
-    Between,
-    BorderBetween,
-    BorderOf,
-    Buffer,
-    CoastOf,
-    Difference,
-    DirectionalConstraint,
-    Intersection,
-    NamedPlace,
-    SpatialNodeType,
-    Union,
-)
-
-_SimpleValue = str | int | float | bool | None
-_SpatialNodeValue = SpatialNodeType | list[SpatialNodeType]
-_Value = _SimpleValue | _SpatialNodeValue
+type _SimpleValue = str | int | float | bool | BaseGeometry | Enum | None
+type _ComplexNodeValue = BaseModel | list[BaseModel]
+type _Value = _SimpleValue | _ComplexNodeValue
 
 
 class _Attribute(BaseModel, ABC):
@@ -32,25 +20,43 @@ class _Attribute(BaseModel, ABC):
 
 
 class _SimpleAttribute(_Attribute):
+    model_config = ConfigDict(
+        strict=True, extra="forbid", frozen=True, arbitrary_types_allowed=True
+    )
     value: SkipValidation[_SimpleValue]
 
-
-class _SpatialNodeAttribute(_Attribute):
-    value: SkipValidation[_SpatialNodeValue]
-
-
-def _value_to_attribute(field: str, value: _Value) -> _Attribute:
-    if isinstance(value, SpatialNodeType):
-        return _SpatialNodeAttribute(name=field, value=value)
-    if (
-        isinstance(value, list) and len(value) > 0 and isinstance(value[0], SpatialNodeType)  # type: ignore[reportUnnecessaryIsInstance]
-    ):
-        return _SpatialNodeAttribute(name=field, value=value)
-
-    return _SimpleAttribute(name=field, value=value)  # type: ignore[reportArgumentType]
+    @field_serializer("value")
+    def _shapely_geometry_to_json(
+        self, v: _SimpleValue
+    ) -> dict[str, Any] | str | int | float | bool | None:
+        if isinstance(v, BaseGeometry):
+            return v.__geo_interface__
+        if isinstance(v, Enum):
+            return v.value
+        return v
 
 
-_GetChildrenResponse = list[_Attribute] | list[SpatialNodeType]
+class _ComplexNodeAttribute(_Attribute):
+    value: SkipValidation[_ComplexNodeValue]
+
+
+def _value_to_attribute(field: str, value: Any) -> _Attribute:  # noqa: ANN401
+    if isinstance(value, BaseModel):
+        return _ComplexNodeAttribute(name=field, value=value)
+    if isinstance(value, list):
+        items: list[Any] = value
+        if len(items) > 0 and isinstance(items[0], BaseModel):
+            return _ComplexNodeAttribute(name=field, value=items)
+        if len(items) == 0:
+            return _ComplexNodeAttribute(name=field, value=[])
+        raise ValueError(f"Unable to handle list value of: {value}")
+
+    if isinstance(value, (str, int, float, bool, BaseGeometry, Enum)) or value is None:
+        return _SimpleAttribute(name=field, value=value)
+    raise ValueError(f"Unable to handle value of type {type(value)}: {value}")
+
+
+_GetChildrenResponse = list[_Attribute] | list[BaseModel]
 
 
 @singledispatch
@@ -60,24 +66,8 @@ def _get_children(node: _Value) -> _GetChildrenResponse:
 
 
 @_get_children.register
-def _(node: SpatialNodeType) -> _GetChildrenResponse:
-    return [_value_to_attribute(field, value) for field, value in node if field != "node_type"]
-
-
-# Register the subclasses of SpatialNodeType explicitly
-@_get_children.register(NamedPlace)
-@_get_children.register(Buffer)
-@_get_children.register(BorderBetween)
-@_get_children.register(BorderOf)
-@_get_children.register(CoastOf)
-@_get_children.register(Intersection)
-@_get_children.register(Union)
-@_get_children.register(Difference)
-@_get_children.register(Between)
-@_get_children.register(DirectionalConstraint)
-def _(node: SpatialNodeType) -> _GetChildrenResponse:
-    # Call the implementation for SpatialNodeType
-    return _get_children.registry[SpatialNodeType](node)
+def _(node: BaseModel) -> _GetChildrenResponse:
+    return [_value_to_attribute(field, value) for field, value in node]
 
 
 @_get_children.register
@@ -86,13 +76,13 @@ def _(_node: _SimpleAttribute) -> _GetChildrenResponse:
 
 
 @_get_children.register
-def _(node: _SpatialNodeAttribute) -> _GetChildrenResponse:
+def _(node: _ComplexNodeAttribute) -> _GetChildrenResponse:
     if isinstance(node.value, list):
         return node.value
     return _get_children(node.value)
 
 
-def _get_label(node: _Attribute | SpatialNodeType) -> str:
+def _get_label(node: _Attribute | BaseModel) -> str:
     """Converts a node to string that can be used for comparision to see if it's equal.
 
     Children do not need to be part of the label.
@@ -100,10 +90,21 @@ def _get_label(node: _Attribute | SpatialNodeType) -> str:
     if isinstance(node, _SimpleAttribute):
         return node.model_dump_json()
 
-    if isinstance(node, _SpatialNodeAttribute):
+    if isinstance(node, _ComplexNodeAttribute):
         return node.name
 
     return node.__class__.__name__
+
+
+def tree_to_markdown(node: _Attribute | BaseModel, indent: str = "") -> str:
+    """TODO docs. for debugging."""
+    label = _get_label(node)
+    return "\n".join(
+        [
+            f"{indent}* {label}",
+            *[tree_to_markdown(child, indent=indent + "  ") for child in _get_children(node)],
+        ]
+    )
 
 
 def _label_distance(l1: str, l2: str) -> float:
@@ -115,9 +116,8 @@ def _label_distance(l1: str, l2: str) -> float:
     return 1
 
 
-# TODO unit test this method
-def get_spatial_node_tree_distance(node1: AnySpatialNodeType, node2: AnySpatialNodeType) -> float:
-    """Returns the edit distance between two spatial nodes.
+def get_tree_edit_distance(node1: BaseModel, node2: BaseModel) -> float:
+    """Returns the edit distance between two nodes.
 
     0 indicates that the nodes are identical. The distance gets larger for the more changes that are
     required to make the nodes match.
@@ -133,39 +133,3 @@ def get_spatial_node_tree_distance(node1: AnySpatialNodeType, node2: AnySpatialN
         raise Exception("Expected two nodes to be equal with an edit distance of 0")
 
     return distance
-
-
-#################
-# code for manual testing
-# ruff: noqa: ERA001
-
-# node = Intersection.from_nodes(
-#     NamedPlace(name="alpha"),
-#     DirectionalConstraint(child_node=NamedPlace(name="bravo"), direction="north"),
-# )
-# node2 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     DirectionalConstraint(child_node=NamedPlace(name="bravo"), direction="north"),
-# )
-# node3 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     DirectionalConstraint(child_node=NamedPlace(name="charlie"), direction="north"),
-# )
-# node4 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     NamedPlace(name="bravo"),
-# )
-# node5 = Intersection.from_nodes(
-#     NamedPlace(name="bravo"),
-#     NamedPlace(name="charlie"),
-# )
-
-# float(simple_distance(node, node, _get_children, _get_label, _label_distance))
-
-# [
-#     ("node", simple_distance(node, node, _get_children, _get_label, _label_distance)),
-#     ("node2", simple_distance(node, node2, _get_children, _get_label, _label_distance)),
-#     ("node3", simple_distance(node, node3, _get_children, _get_label, _label_distance)),
-#     ("node4", simple_distance(node, node4, _get_children, _get_label, _label_distance)),
-#     ("node5", simple_distance(node, node5, _get_children, _get_label, _label_distance)),
-# ]

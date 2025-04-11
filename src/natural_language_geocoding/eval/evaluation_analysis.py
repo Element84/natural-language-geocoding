@@ -5,11 +5,12 @@ from e84_geoai_common.llm.core import LLMInferenceConfig, LLMMessage, TextConten
 from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS, BedrockClaudeLLM
 
 import natural_language_geocoding.prompt
-from natural_language_geocoding.eval.evaluator import evaluate_examples
+from natural_language_geocoding.eval.evaluator import ALL_EXAMPLES, ParseSpatialNodeEvaluator
 
 llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 
-full_eval = evaluate_examples(llm)
+evaluator = ParseSpatialNodeEvaluator()
+full_eval = evaluator.evaluate_examples(llm, ALL_EXAMPLES)
 
 _TEMP_DIR = Path("temp")
 

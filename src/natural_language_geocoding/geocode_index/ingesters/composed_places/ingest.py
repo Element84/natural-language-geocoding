@@ -132,6 +132,7 @@ if __name__ == "__main__":
 
 #################################
 # Code for debugging
+# ruff: noqa: ERA001
 
 
 # place_lookup = GeocodeIndexPlaceLookup()
