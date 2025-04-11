@@ -1,6 +1,7 @@
 """Contains functions to calculate the tree edit distance between two spatial nodes."""
 
 from abc import ABC
+from datetime import datetime
 from enum import Enum
 from functools import singledispatch
 from typing import Any
@@ -9,8 +10,15 @@ from pydantic import BaseModel, ConfigDict, SkipValidation, field_serializer
 from shapely.geometry.base import BaseGeometry
 from zss import simple_distance  # type: ignore[reportUnknownVariableType]
 
-type _SimpleValue = str | int | float | bool | BaseGeometry | Enum | None
+type _SimpleValue = str | int | float | bool | datetime | BaseGeometry | Enum | None
+
+
+def _is_simple_value(v: Any) -> bool:  # noqa: ANN401
+    return isinstance(v, (str, int, float, bool, datetime, BaseGeometry, Enum)) or v is None
+
+
 type _ComplexNodeValue = BaseModel | list[BaseModel]
+
 type _Value = _SimpleValue | _ComplexNodeValue
 
 
@@ -33,6 +41,8 @@ class _SimpleAttribute(_Attribute):
             return v.__geo_interface__
         if isinstance(v, Enum):
             return v.value
+        if isinstance(v, datetime):
+            return v.isoformat()
         return v
 
 
@@ -51,7 +61,7 @@ def _value_to_attribute(field: str, value: Any) -> _Attribute:  # noqa: ANN401
             return _ComplexNodeAttribute(name=field, value=[])
         raise ValueError(f"Unable to handle list value of: {value}")
 
-    if isinstance(value, (str, int, float, bool, BaseGeometry, Enum)) or value is None:
+    if _is_simple_value(value):
         return _SimpleAttribute(name=field, value=value)
     raise ValueError(f"Unable to handle value of type {type(value)}: {value}")
 
