@@ -155,8 +155,8 @@ _DOWNLOADABLE_PLACETYPES = [
     _WhosOnFirstPlaceType.microhood,  # (5.6 MB) 2,287 records
     _WhosOnFirstPlaceType.neighbourhood,  # (412.3 MB) 413,374 records
     _WhosOnFirstPlaceType.ocean,  # (110 KB) 7 records
-    _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 28,41 records
-    _WhosOnFirstPlaceType.region,  # (259.7 MB) 531 records
+    _WhosOnFirstPlaceType.postalregion,  # (49.5 MB) 2841 records
+    _WhosOnFirstPlaceType.region,  # (259.7 MB) 5315 records
     # We won't download these
     # WhosOnFirstPlaceType.planet (3 KB)
     # WhosOnFirstPlaceType.campus  (72.2 MB)
