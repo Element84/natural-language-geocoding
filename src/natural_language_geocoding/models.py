@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from functools import cached_property
 from typing import Literal, Self
 
 from e84_geoai_common.geometry import (
@@ -15,6 +14,20 @@ from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
 from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
+
+
+def _to_kilometers(
+    distance_unit: Literal["kilometers", "meters", "miles", "nautical miles"], distance: float
+) -> float:
+    match distance_unit:
+        case "kilometers":
+            return distance
+        case "meters":
+            return distance / 1000.0
+        case "miles":
+            return distance * 1.60934
+        case "nautical miles":
+            return distance * 1.852
 
 
 class SpatialNodeType(BaseModel, ABC):
@@ -90,6 +103,31 @@ class CoastOf(SpatialNodeType):
         return coast
 
 
+class OffTheCoastOf(SpatialNodeType):
+    """Represents the area off the coast of an area away from land."""
+
+    # FUTURE add directional constraint in here like "off the west coast of the US"
+
+    node_type: Literal["OffTheCoastOf"] = "OffTheCoastOf"
+    child_node: "AnySpatialNodeType"
+    distance: float
+    distance_unit: Literal["kilometers", "meters", "miles", "nautical miles"]
+
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
+        # Find the area mentioned
+        child_bounds = self.child_node.to_geometry(place_lookup)
+        # Get it's coastline
+        coast = coastline_of(child_bounds)
+        if coast is None:
+            # TODO these errors would benefit from being more specific.
+            # Maybe the LLM should generate it?
+            raise GeocodeError("Could not find a coastline of the area.")
+        # Add a buffer of the specified amount.
+        buffered_coast = add_buffer(coast, _to_kilometers(self.distance_unit, self.distance))
+        # Remove the original place itself that would be covered by the buffer.
+        return buffered_coast.difference(child_bounds)
+
+
 # The number of kilometers of buffer added to each shape to ensure that the areas that are very
 # close to intersection do intersect when computing border collisions
 _BORDER_BUFFER_SIZE = 3.5
@@ -149,21 +187,9 @@ class Buffer(SpatialNodeType):
     distance: float
     distance_unit: Literal["kilometers", "meters", "miles", "nautical miles"]
 
-    @cached_property
-    def distance_km(self) -> float:
-        match self.distance_unit:
-            case "kilometers":
-                return self.distance
-            case "meters":
-                return self.distance / 1000.0
-            case "miles":
-                return self.distance * 1.60934
-            case "nautical miles":
-                return self.distance * 1.852
-
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         child_bounds = self.child_node.to_geometry(place_lookup)
-        return add_buffer(child_bounds, self.distance_km)
+        return add_buffer(child_bounds, _to_kilometers(self.distance_unit, self.distance))
 
 
 class DirectionalConstraint(BaseModel):
@@ -292,6 +318,7 @@ AnySpatialNodeType = (
     | BorderBetween
     | BorderOf
     | CoastOf
+    | OffTheCoastOf
     | Intersection
     | Union
     | Difference
