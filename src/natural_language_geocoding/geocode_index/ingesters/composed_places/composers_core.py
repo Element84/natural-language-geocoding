@@ -183,6 +183,7 @@ class UnionComponent(CompositionComponent):
 class ContinentSubregion(CompositionComponent):
     continent: str
     countries: list[str]
+    constrain_to_continent: bool = False
 
     def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:
         countries = [
@@ -194,6 +195,14 @@ class ContinentSubregion(CompositionComponent):
             )
             for country in self.countries
         ]
+        # Clip the country to only the parts that are in the continent
+        if self.constrain_to_continent:
+            continent = ComposedPlace.from_request(
+                place_lookup,
+                PlaceSearchRequest(name=self.continent, place_type=GeoPlaceType.continent),
+            )
+            countries = [country.intersection(continent) for country in countries]
+
         # Merges things together like bubble sort but is likely closer to O(log N)
         merged: ComposedPlace = countries[0]
         left_to_merge = countries[1:]
