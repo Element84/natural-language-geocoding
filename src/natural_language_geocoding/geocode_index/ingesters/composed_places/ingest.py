@@ -58,6 +58,7 @@ class Composition(BaseModel):
 
 
 # TODO test searching for all of these
+# TODO some of them have way too many points. They can't be simplified.
 
 compositions = [
     Composition(
