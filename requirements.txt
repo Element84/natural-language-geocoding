@@ -4,8 +4,6 @@ altair==5.5.0
     # via streamlit
 annotated-types==0.7.0
     # via pydantic
-appnope==0.1.4
-    # via ipykernel
 asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
@@ -56,7 +54,7 @@ distlib==0.3.9
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@a057780dc7d2d356cab578865fe75b57019cd5f1
+e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@9d1c3a284d20a4cb80d252f3a9e33047df5f7015
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
     # via opensearch-py
@@ -304,6 +302,7 @@ watchdog==6.0.0
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   pytest-watch
+    #   streamlit
 wcwidth==0.2.13
     # via prompt-toolkit
 xyzservices==2025.1.0
