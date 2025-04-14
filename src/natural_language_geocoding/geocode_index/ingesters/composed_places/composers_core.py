@@ -1,9 +1,8 @@
 """TODO docs."""
 
 from abc import ABC, abstractmethod
+from typing import Any
 
-from e84_geoai_common.debugging import display_geometry
-from folium import Map
 from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry.base import BaseGeometry
 
@@ -52,8 +51,10 @@ class ComposedPlace(BaseModel):
     # TODO this should be a set
     sources: list[GeoPlaceSource] = Field(default_factory=list)
 
-    def display_geometry(self) -> Map:
+    def display_geometry(self) -> Any:  # noqa: ANN401
         """TODO docs. Note for debugging."""
+        from e84_geoai_common.debugging import display_geometry
+
         return display_geometry([self.geom])
 
     @staticmethod
