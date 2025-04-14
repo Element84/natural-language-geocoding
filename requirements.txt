@@ -4,6 +4,8 @@ altair==5.5.0
     # via streamlit
 annotated-types==0.7.0
     # via pydantic
+appnope==0.1.4
+    # via ipykernel
 asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
@@ -302,7 +304,6 @@ watchdog==6.0.0
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   pytest-watch
-    #   streamlit
 wcwidth==0.2.13
     # via prompt-toolkit
 xyzservices==2025.1.0
