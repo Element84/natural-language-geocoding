@@ -21,26 +21,19 @@ def create_opensearch_client() -> OpenSearch:
 
     if username and password:
         auth = (username, password)
-    else:
+    elif host != "localhost":
         credentials = boto3.Session().get_credentials()
         auth = AWSV4SignerAuth(credentials, region, "es")
+    else:
+        auth = None
 
-    if host == "localhost":
-        # Allow tunneling for easy local testing.
-        return OpenSearch(
-            hosts=[{"host": host, "port": port}],
-            use_ssl=True,
-            verify_certs=False,
-            connection_class=RequestsHttpConnection,
-            pool_maxsize=20,
-        )
     return OpenSearch(
         hosts=[{"host": host, "port": port}],
-        http_auth=auth,
         use_ssl=True,
         verify_certs=host != "localhost",
         connection_class=RequestsHttpConnection,
         pool_maxsize=20,
+        http_auth=auth,
     )
 
 

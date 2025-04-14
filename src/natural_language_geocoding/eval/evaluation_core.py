@@ -1,8 +1,10 @@
 """Defines examples and methods for evaluating natural language geocoding."""
 
+import concurrent.futures
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -105,6 +107,12 @@ class Evaluations[T: BaseModel](BaseModel):
             single_eval_markdown=child_eval_markdown,
         )
 
+    def save(self) -> None:
+        date_str = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
+
+        with (_TEMP_DIR / f"full_eval_{date_str}.md").open("w") as f:
+            f.write(self.to_markdown())
+
 
 class Evaluator[T: BaseModel](ABC):
     """TODO docs."""
@@ -145,7 +153,37 @@ class Evaluator[T: BaseModel](ABC):
             diff_explanations=diff_explanations,
         )
 
-    def evaluate_examples(self, llm: LLM, examples: Sequence[ExampleEval[T]]) -> Evaluations[T]:
-        """Evaluates all of the examples defined in this module."""
-        evaluations = [self.evaluate(llm, example) for example in examples]
-        return Evaluations(evaluations=evaluations)
+    def evaluate_examples(
+        self, llm: LLM, examples: Sequence[ExampleEval[T]], *, max_concurrent: int = 5
+    ) -> Evaluations[T]:
+        """Evaluates all of the examples defined in this module in parallel."""
+        indexed_evaluations: list[tuple[int, SingleEvaluation[T]]] = []
+
+        def eval_with_index(
+            llm: LLM, example: ExampleEval[T], index: int
+        ) -> tuple[int, SingleEvaluation[T]]:
+            return (index, self.evaluate(llm, example))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent) as executor:
+            # Submit all evaluation tasks to the executor
+            future_to_example = {
+                executor.submit(eval_with_index, llm, example, index): example
+                for index, example in enumerate(examples)
+            }
+
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_example):
+                example = future_to_example[future]
+                try:
+                    index, evaluation = future.result()
+                    indexed_evaluations.append((index, evaluation))
+                except Exception:
+                    logger.exception("Evaluation failed for example '%s'", example.user_text)
+                    raise
+
+        return Evaluations(
+            # Return the evaluations in order
+            evaluations=[
+                evaluation for _, evaluation in sorted(indexed_evaluations, key=lambda i_e: i_e[0])
+            ]
+        )

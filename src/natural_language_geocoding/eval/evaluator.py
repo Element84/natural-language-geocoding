@@ -1,7 +1,6 @@
 """Defines examples and methods for evaluating natural language geocoding."""
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from e84_geoai_common.llm.core import LLM
@@ -109,6 +108,11 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
             in_country="United States",
             in_region="Hawaii",
         ),
+    ),
+    ExampleEval(
+        user_text="The mediterranean",
+        description="A sea",
+        expected_node=NamedPlace(name="Mediterranean Sea", type=GeoPlaceType.sea),
     ),
 ]
 
@@ -254,19 +258,20 @@ if __name__ == "__main__" and "get_ipython" not in globals():
     llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
     evaluator = ParseSpatialNodeEvaluator()
     full_eval = evaluator.evaluate_examples(llm, ALL_EXAMPLES)
-    print(full_eval.to_markdown())
+    print(full_eval.to_markdown())  # noqa: T201
 
-    date_str = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
-
-    with (_TEMP_DIR / f"full_eval_{date_str}.md").open("w") as f:
-        f.write(full_eval.to_markdown())
+    full_eval.save()
 
 
 #################
 # code for manual testing
-# ruff: noqa: ERA001,T201
+# ruff: noqa: ERA001
 
 # llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
+# evaluator = ParseSpatialNodeEvaluator()
+
+# example = NAMED_PLACE_EXAMPLES[-1]
+
 # example: ExampleEval[AnySpatialNodeType] = ExampleEval(
 #     user_text="along the Oman-Yemen border",
 #     description="Simple border between two areas that may miss continent",
@@ -276,9 +281,9 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 #     ),
 # )
 
-# evaluator = ParseSpatialNodeEvaluator()
 
 # eval_result = evaluator.evaluate(llm, example)
 # print(eval_result.to_markdown())
 
-# eval_result.actual
+# full_eval = evaluator.evaluate_examples(llm, ALL_EXAMPLES)
+# print(full_eval.to_markdown())

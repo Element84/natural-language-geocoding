@@ -51,6 +51,10 @@ GUIDELINES = [
             - Use in_country for country context (e.g., "France" for Paris)
             - Use in_region for state/province context (e.g., "Maryland" for Annapolis)
             - Use in_continent for continental context where appropriate
+            - Always populate in_continent when the location is on a continent, even if the user
+              doesn't explicitly mention it.
+            - Note that in_continent, in_country, in_region should not be used for large bodies of
+              water like seas.
         """
     ).strip(),
     "Always specify the place type when it can be determined",

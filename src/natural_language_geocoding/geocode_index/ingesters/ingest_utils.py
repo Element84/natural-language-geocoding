@@ -193,7 +193,6 @@ def process_ingest_items[T](
         index_item(index, items_in_chunk)
 
     with ThreadPoolExecutor(max_workers=max_workers) as e:
-        # The maximum number of concurrent future to queue before waiting.
         futures: list[Future[None]] = []
 
         for features in chunk_items(items, chunk_size):
