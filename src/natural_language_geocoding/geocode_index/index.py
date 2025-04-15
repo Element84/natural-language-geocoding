@@ -407,8 +407,8 @@ class GeocodeIndex(GeocodeIndexBase):
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
     client: OpenSearch
 
-    def __init__(self) -> None:
-        self.client = create_opensearch_client()
+    def __init__(self, client: OpenSearch | None = None) -> None:
+        self.client = client or create_opensearch_client()
 
     def create_index(self, *, recreate: bool = False) -> None:
         if recreate and self.client.indices.exists(index=GEOPLACE_INDEX_NAME):

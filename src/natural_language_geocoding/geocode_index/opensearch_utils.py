@@ -19,9 +19,11 @@ def create_opensearch_client() -> OpenSearch:
     username = os.getenv("GEOCODE_INDEX_USERNAME")
     password = os.getenv("GEOCODE_INDEX_PASSWORD")
 
+    is_localhost = host in {"localhost", "host.docker.internal"}
+
     if username and password:
         auth = (username, password)
-    elif host != "localhost":
+    elif not is_localhost:
         credentials = boto3.Session().get_credentials()
         auth = AWSV4SignerAuth(credentials, region, "es")
     else:
@@ -30,7 +32,7 @@ def create_opensearch_client() -> OpenSearch:
     return OpenSearch(
         hosts=[{"host": host, "port": port}],
         use_ssl=True,
-        verify_certs=host != "localhost",
+        verify_certs=not is_localhost,
         connection_class=RequestsHttpConnection,
         pool_maxsize=20,
         http_auth=auth,

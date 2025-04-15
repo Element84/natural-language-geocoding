@@ -92,8 +92,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
     _index: GeocodeIndex
     _place_cache: PlaceCache
 
-    def __init__(self) -> None:
-        self._index = GeocodeIndex()
+    def __init__(self, index: GeocodeIndex | None = None) -> None:
+        self._index = index or GeocodeIndex()
         self._place_cache = PlaceCache()
 
     def create_search_request(
