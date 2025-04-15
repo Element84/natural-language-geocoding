@@ -14,11 +14,11 @@ attrs==25.3.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.37.33
+boto3==1.37.34
     # via e84-geoai-common
-boto3-stubs==1.37.33
+boto3-stubs==1.37.34
     # via e84-geoai-common
-botocore==1.37.33
+botocore==1.37.34
     # via
     #   boto3
     #   s3transfer
@@ -56,7 +56,7 @@ distlib==0.3.9
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@9d1c3a284d20a4cb80d252f3a9e33047df5f7015
+e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@8d4300f38e28d1edc7f143701e676eb2bb24099c
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
     # via opensearch-py
@@ -121,7 +121,7 @@ mypy-boto3-bedrock-runtime==1.37.30
     # via
     #   boto3-stubs
     #   e84-geoai-common
-narwhals==1.34.1
+narwhals==1.35.0
     # via altair
 nest-asyncio==1.6.0
     # via ipykernel
@@ -166,7 +166,7 @@ pre-commit==4.2.0
     # via natural-language-geocoding (pyproject.toml)
 pre-commit-hooks==5.0.0
     # via natural-language-geocoding (pyproject.toml)
-prompt-toolkit==3.0.50
+prompt-toolkit==3.0.51
     # via ipython
 protobuf==5.29.4
     # via streamlit

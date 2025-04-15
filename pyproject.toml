@@ -17,7 +17,7 @@ dependencies = [
   # "e84-geoai-common>=0.0.5"
   # "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@jgilman/misc_improvements"
   # Temporarily set to this to avoid a downstream dependency issue
-  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@9d1c3a284d20a4cb80d252f3a9e33047df5f7015"]
+  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@8d4300f38e28d1edc7f143701e676eb2bb24099c"]
 dynamic = ["version"]
 
 [tool.setuptools-git-versioning]

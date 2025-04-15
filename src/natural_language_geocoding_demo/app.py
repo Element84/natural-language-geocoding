@@ -16,10 +16,10 @@ if "llm" not in st.session_state:
     st.session_state["llm"] = BedrockClaudeLLM(
         model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"]
     )
+    st.session_state["place_lookup"] = GeocodeIndexPlaceLookup()
 
 llm = st.session_state["llm"]
-
-place_lookup = GeocodeIndexPlaceLookup()
+place_lookup = st.session_state["place_lookup"]
 
 
 @st.cache_data
