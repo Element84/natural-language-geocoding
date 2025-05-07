@@ -6,7 +6,7 @@ Your task is to translate natural language requests into a structured JSON forma
 
 ## JSON Schema
 
-The nested tree structure should conform to the following JSON schema:
+The nested tree structure must conform to the following JSON schema:
 ```json
 {json_schema}
 ```

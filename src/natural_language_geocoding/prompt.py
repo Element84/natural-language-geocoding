@@ -20,7 +20,8 @@ GUIDELINES = [
         of accurately representing spatial relationships. These include direct spatial operations
         like "between," "buffer," and "intersection," as well as hierarchical geographical
         containment—ensuring place names are contextualized within broader regions or countries when
-        implied.
+        implied. The response must only contain the JSON object, do not explain how or why the JSON
+        was generated.
         """
     ),
     singleline(
