@@ -8,6 +8,7 @@ from e84_geoai_common.geometry import geometry_from_wkt
 from e84_geoai_common.util import get_env_var, timed_function
 from shapely.geometry.base import BaseGeometry
 
+logger = logging.getLogger(__name__)
 
 def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
     """Filters the nominatim places to try and select the most relevant place."""
@@ -26,7 +27,7 @@ class NominatimAPI(PlaceLookup):
     @timed_function
     def search(self, name: str) -> BaseGeometry:
         """Finds the geometry of a place using Nominatim."""
-        logging.info("Searching for [%s] geometry", name)
+        logger.info("Searching for [%s] geometry", name)
 
         nominatim_user_agent = get_env_var("NOMINATIM_USER_AGENT")
 
@@ -38,7 +39,7 @@ class NominatimAPI(PlaceLookup):
         ).json()
         if len(places) > 0:
             selected_place = _get_best_place(places)
-            logging.info(
+            logger.info(
                 "Nominatim place found for [%s]: %s", name, json.dumps(selected_place)[0:100]
             )
             return geometry_from_wkt(selected_place["geotext"])
