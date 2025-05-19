@@ -246,7 +246,6 @@ ALL_EXAMPLES = [*NAMED_PLACE_EXAMPLES, *FEATURE_EXAMPLES]
 
 class ParseSpatialNodeEvaluator(Evaluator[AnySpatialNodeType]):
     def parse(self, llm: LLM, user_text: str) -> AnySpatialNodeType:
-        """TODO docs."""
         return parse_spatial_node_from_text(llm, user_text).root
 
 

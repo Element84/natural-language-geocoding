@@ -14,10 +14,10 @@ tar.
 
 import logging
 import tarfile
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import requests
 from e84_geoai_common.geojson import Feature
@@ -175,7 +175,7 @@ def _wof_hierarchy_parser(value: Any) -> Any:  # noqa: ANN401
     This gets the value that is not -1 that's available. It ignores all other keys in the hierarchy
     """
     if isinstance(value, dict):
-        value_dict: dict[Any, Any] = value
+        value_dict: dict[Any, Any] = cast("dict[Any, Any]", value)
 
         def _pick_value(hierarchy_field: str) -> str | None:
             id_value = value_dict.get(hierarchy_field)
@@ -217,30 +217,32 @@ class _WhosOnFirstPlaceProperties(BaseModel):
     )
 
     eng_x_colloquial: list[str | None] = Field(
-        validation_alias="name:eng_x_colloquial", default_factory=list
+        validation_alias="name:eng_x_colloquial", default_factory=list[str | None]
     )
     eng_x_historical: list[str | None] = Field(
-        validation_alias="name:eng_x_historical", default_factory=list
+        validation_alias="name:eng_x_historical", default_factory=list[str | None]
     )
     eng_x_preferred: list[str | None] = Field(
-        validation_alias="name:eng_x_preferred", default_factory=list
+        validation_alias="name:eng_x_preferred", default_factory=list[str | None]
     )
     eng_x_unknown: list[str | None] = Field(
-        validation_alias="name:eng_x_unknown", default_factory=list
+        validation_alias="name:eng_x_unknown", default_factory=list[str | None]
     )
     eng_x_variant: list[str | None] = Field(
-        validation_alias="name:eng_x_variant", default_factory=list
+        validation_alias="name:eng_x_variant", default_factory=list[str | None]
     )
     area_square_m: float | None = Field(validation_alias="geom:area_square_m", default=None)
     population: int | None = Field(validation_alias="wof:population", default=None)
 
-    hierarchies: list[Hierarchy] = Field(validation_alias="wof:hierarchy", default_factory=list)
+    hierarchies: list[Hierarchy] = Field(
+        validation_alias="wof:hierarchy", default_factory=list[Hierarchy]
+    )
 
     @field_validator("hierarchies", mode="before")
     @classmethod
     def _wof_hierarchies_parser(cls, value: Any) -> Any:  # noqa: ANN401
         if isinstance(value, list):
-            values: list[Any] = value
+            values: list[Any] = cast("list[Any]", value)
             return [_wof_hierarchy_parser(item) for item in values]
         return value
 
@@ -370,7 +372,7 @@ def _placetype_tar_file_to_features_for_ingest(
 def _index_placetype_tar_file(placetype_tar_file: Path) -> None:
     """Indexes all of the features in the tar file."""
 
-    def _bulk_index(index: GeocodeIndex, features: list[_WhosOnFirstFeature]) -> None:
+    def _bulk_index(index: GeocodeIndex, features: Sequence[_WhosOnFirstFeature]) -> None:
         places = [_wof_feature_to_geoplace(f, placetype_tar_file.name) for f in features]
         index.bulk_index(places)
 

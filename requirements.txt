@@ -14,15 +14,15 @@ attrs==25.3.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.37.34
+boto3==1.38.18
     # via e84-geoai-common
-boto3-stubs==1.37.34
+boto3-stubs==1.38.18
     # via e84-geoai-common
-botocore==1.37.34
+botocore==1.38.18
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.37.29
+botocore-stubs==1.38.18
     # via boto3-stubs
 branca==0.8.1
     # via
@@ -32,15 +32,15 @@ build==1.2.2.post1
     # via natural-language-geocoding (pyproject.toml)
 cachetools==5.5.2
     # via streamlit
-certifi==2025.1.31
+certifi==2025.4.26
     # via
     #   opensearch-py
     #   requests
 cfgv==3.4.0
     # via pre-commit
-charset-normalizer==3.4.1
+charset-normalizer==3.4.2
     # via requests
-click==8.1.8
+click==8.2.0
     # via streamlit
 colorama==0.4.6
     # via pytest-watch
@@ -50,13 +50,13 @@ debugpy==1.8.14
     # via ipykernel
 decorator==5.2.1
     # via ipython
-deepdiff==8.4.2
+deepdiff==8.5.0
     # via natural-language-geocoding (pyproject.toml)
 distlib==0.3.9
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@8d4300f38e28d1edc7f143701e676eb2bb24099c
+e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@555274c256246f965ed675eb9159781347df5a78
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
     # via opensearch-py
@@ -64,7 +64,7 @@ executing==2.2.0
     # via stack-data
 filelock==3.18.0
     # via virtualenv
-folium==0.19.5
+folium==0.19.6
     # via streamlit-folium
 function-schema==0.4.5
     # via e84-geoai-common
@@ -72,7 +72,7 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
     # via streamlit
-identify==2.6.9
+identify==2.6.10
     # via pre-commit
 idna==3.10
     # via requests
@@ -80,7 +80,7 @@ iniconfig==2.1.0
     # via pytest
 ipykernel==6.29.5
     # via natural-language-geocoding (pyproject.toml)
-ipython==9.1.0
+ipython==9.2.0
     # via ipykernel
 ipython-pygments-lexers==1.1.1
     # via ipython
@@ -99,7 +99,7 @@ jmespath==1.0.1
     #   botocore
 jsonschema==4.23.0
     # via altair
-jsonschema-specifications==2024.10.1
+jsonschema-specifications==2025.4.1
     # via jsonschema
 jupyter-client==8.6.3
     # via ipykernel
@@ -117,11 +117,15 @@ matplotlib-inline==0.1.7
     #   ipython
 mdurl==0.1.2
     # via markdown-it-py
-mypy-boto3-bedrock-runtime==1.37.30
+mypy-boto3-bedrock==1.38.15
+    # via boto3-stubs
+mypy-boto3-bedrock-runtime==1.38.4
     # via
     #   boto3-stubs
     #   e84-geoai-common
-narwhals==1.35.0
+mypy-boto3-s3==1.38.0
+    # via boto3-stubs
+narwhals==1.40.0
     # via altair
 nest-asyncio==1.6.0
     # via ipykernel
@@ -129,7 +133,7 @@ nodeenv==1.9.1
     # via
     #   pre-commit
     #   pyright
-numpy==2.2.4
+numpy==2.2.6
     # via
     #   folium
     #   pandas
@@ -139,7 +143,7 @@ numpy==2.2.4
     #   types-shapely
 opensearch-py==2.8.0
     # via natural-language-geocoding (pyproject.toml)
-orderly-set==5.4.0
+orderly-set==5.4.1
     # via deepdiff
 packaging==24.2
     # via
@@ -156,11 +160,11 @@ pexpect==4.9.0
     # via ipython
 pillow==11.2.1
     # via streamlit
-platformdirs==4.3.7
+platformdirs==4.3.8
     # via
     #   jupyter-core
     #   virtualenv
-pluggy==1.5.0
+pluggy==1.6.0
     # via pytest
 pre-commit==4.2.0
     # via natural-language-geocoding (pyproject.toml)
@@ -168,7 +172,7 @@ pre-commit-hooks==5.0.0
     # via natural-language-geocoding (pyproject.toml)
 prompt-toolkit==3.0.51
     # via ipython
-protobuf==5.29.4
+protobuf==6.31.0
     # via streamlit
 psutil==7.0.0
     # via ipykernel
@@ -176,11 +180,11 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pyarrow==19.0.1
+pyarrow==20.0.0
     # via streamlit
-pydantic==2.11.3
+pydantic==2.11.4
     # via e84-geoai-common
-pydantic-core==2.33.1
+pydantic-core==2.33.2
     # via pydantic
 pydeck==0.9.1
     # via streamlit
@@ -191,7 +195,7 @@ pygments==2.19.1
     #   rich
 pyproject-hooks==1.2.0
     # via build
-pyright==1.1.399
+pyright==1.1.400
     # via natural-language-geocoding (pyproject.toml)
 pytest==8.3.5
     # via
@@ -227,7 +231,7 @@ rich==14.0.0
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   e84-geoai-common
-rpds-py==0.24.0
+rpds-py==0.25.0
     # via
     #   jsonschema
     #   referencing
@@ -235,11 +239,11 @@ ruamel-yaml==0.18.10
     # via pre-commit-hooks
 ruamel-yaml-clib==0.2.12
     # via ruamel-yaml
-ruff==0.11.5
+ruff==0.11.10
     # via natural-language-geocoding (pyproject.toml)
-s3transfer==0.11.4
+s3transfer==0.12.0
     # via boto3
-shapely==2.1.0
+shapely==2.1.1
     # via e84-geoai-common
 six==1.17.0
     # via
@@ -249,11 +253,11 @@ smmap==5.0.2
     # via gitdb
 stack-data==0.6.3
     # via ipython
-streamlit==1.44.1
+streamlit==1.45.1
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   streamlit-folium
-streamlit-folium==0.24.1
+streamlit-folium==0.25.0
     # via natural-language-geocoding (pyproject.toml)
 tabulate==0.9.0
     # via natural-language-geocoding (pyproject.toml)
@@ -261,7 +265,7 @@ tenacity==9.1.2
     # via streamlit
 toml==0.10.2
     # via streamlit
-tornado==6.4.2
+tornado==6.5
     # via
     #   ipykernel
     #   jupyter-client
@@ -274,11 +278,11 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-types-awscrt==0.26.1
+types-awscrt==0.27.2
     # via botocore-stubs
-types-s3transfer==0.11.4
+types-s3transfer==0.12.0
     # via boto3-stubs
-types-shapely==2.0.0.20250404
+types-shapely==2.1.0.20250512
     # via e84-geoai-common
 typing-extensions==4.13.2
     # via
@@ -298,7 +302,7 @@ urllib3==2.4.0
     #   botocore
     #   opensearch-py
     #   requests
-virtualenv==20.30.0
+virtualenv==20.31.2
     # via pre-commit
 watchdog==6.0.0
     # via
@@ -306,7 +310,7 @@ watchdog==6.0.0
     #   pytest-watch
 wcwidth==0.2.13
     # via prompt-toolkit
-xyzservices==2025.1.0
+xyzservices==2025.4.0
     # via folium
 zss==1.2.0
     # via natural-language-geocoding (pyproject.toml)

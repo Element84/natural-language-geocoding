@@ -97,8 +97,7 @@ class CoastOf(SpatialNodeType):
         child_bounds = self.child_node.to_geometry(place_lookup)
         coast = coastline_of(child_bounds)
         if coast is None:
-            # TODO these errors would benefit from being more specific.
-            # Maybe the LLM should generate it?
+            # FUTURE these errors would benefit from being more specific.
             raise GeocodeError("Could not find a coastline of the area.")
         return coast
 
@@ -119,8 +118,7 @@ class OffTheCoastOf(SpatialNodeType):
         # Get it's coastline
         coast = coastline_of(child_bounds)
         if coast is None:
-            # TODO these errors would benefit from being more specific.
-            # Maybe the LLM should generate it?
+            # FUTURE these errors would benefit from being more specific.
             raise GeocodeError("Could not find a coastline of the area.")
         # Add a buffer of the specified amount.
         buffered_coast = add_buffer(coast, _to_kilometers(self.distance_unit, self.distance))

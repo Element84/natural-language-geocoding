@@ -4,7 +4,7 @@ from e84_geoai_common.llm.models import (
     BedrockClaudeLLM,
     BedrockNovaLLM,
 )
-from e84_geoai_common.llm.tests.mock_bedrock import USE_REAL_BEDROCK_CLIENT
+from e84_geoai_common.llm.tests.mock_bedrock_runtime import USE_REAL_BEDROCK_RUNTIME_CLIENT
 
 import natural_language_geocoding
 from natural_language_geocoding.models import (
@@ -34,7 +34,7 @@ EXAMPLES: list[tuple[str, AnySpatialNodeType]] = [
 
 
 @pytest.mark.skipif(
-    not USE_REAL_BEDROCK_CLIENT, reason="Test is only run when using real bedrock clients"
+    not USE_REAL_BEDROCK_RUNTIME_CLIENT, reason="Test is only run when using real bedrock clients"
 )
 @pytest.mark.parametrize(("example_pair"), EXAMPLES)
 def test_nova_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
@@ -45,7 +45,7 @@ def test_nova_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
 
 
 @pytest.mark.skipif(
-    not USE_REAL_BEDROCK_CLIENT, reason="Test is only run when using real bedrock clients"
+    not USE_REAL_BEDROCK_RUNTIME_CLIENT, reason="Test is only run when using real bedrock clients"
 )
 @pytest.mark.parametrize(("example_pair"), EXAMPLES)
 def test_claude_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:

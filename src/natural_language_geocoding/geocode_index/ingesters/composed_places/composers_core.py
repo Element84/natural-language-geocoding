@@ -47,9 +47,9 @@ class ComposedPlace(BaseModel):
 
     geom: BaseGeometry
     # TODO this should be a set and remove hierarchies that are a parent of a lower hierarchy
-    hierarchies: list[Hierarchy] = Field(default_factory=list)
+    hierarchies: list[Hierarchy] = Field(default_factory=list[Hierarchy])
     # TODO this should be a set
-    sources: list[GeoPlaceSource] = Field(default_factory=list)
+    sources: list[GeoPlaceSource] = Field(default_factory=list[GeoPlaceSource])
 
     def display_geometry(self) -> Any:  # noqa: ANN401
         """TODO docs. Note for debugging."""

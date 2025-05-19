@@ -1,4 +1,8 @@
-"""Defines examples and methods for evaluating natural language geocoding."""
+"""Defines examples and methods for evaluating natural language geocoding.
+
+Eventually we want to move this to e84-geoai-common once we establish what a general evaluation
+framework looks like consistently.
+"""
 
 import concurrent.futures
 import logging
@@ -14,8 +18,6 @@ from e84_geoai_common.llm.core import LLM
 from pydantic import BaseModel, ConfigDict, Field
 
 from natural_language_geocoding.eval.tree_distance import get_tree_edit_distance
-
-# TODO move this into geoai common
 
 logger = logging.getLogger(__name__)
 _TEMP_DIR = Path("temp")
@@ -34,7 +36,10 @@ _FULL_EVAL_TEMPLATE = _load_template("full_eval_result.md")
 
 
 class ExampleEval[T: BaseModel](BaseModel):
-    """A single example of natural language geocoding.."""
+    """A single example evaluating an LLM.
+
+    It defines the input user text and the expected parsed object from the LLM response.
+    """
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
@@ -115,15 +120,15 @@ class Evaluations[T: BaseModel](BaseModel):
 
 
 class Evaluator[T: BaseModel](ABC):
-    """TODO docs."""
+    """Provides a base class for evaluating the ability to extract data from natural language."""
 
     @abstractmethod
     def parse(self, llm: LLM, user_text: str) -> T:
-        """TODO docs."""
+        """Subclases implement this to parse the text given an LLM and return the parsed object."""
         ...
 
     def get_edit_distance(self, node1: T, node2: T) -> float:
-        """TODO docs."""
+        """Returns the tree edit distance between the two nodes."""
         return get_tree_edit_distance(node1, node2)
 
     def evaluate(self, llm: LLM, example: ExampleEval[T]) -> SingleEvaluation[T]:

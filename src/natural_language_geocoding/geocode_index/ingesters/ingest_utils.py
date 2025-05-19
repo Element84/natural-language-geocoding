@@ -1,13 +1,13 @@
 import threading
-from collections.abc import Callable, Generator, Iterable, Iterator
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, as_completed, wait
 from functools import singledispatch
+from itertools import batched
 from logging import Logger
 from math import ceil
 from time import time
 from typing import TypeVar
 
-from e84_geoai_common.util import chunk_items
 from shapely import (
     GEOSException,
     LinearRing,
@@ -171,7 +171,7 @@ def fix_geometry(feature_id: str, orig_geom: BaseGeometry) -> BaseGeometry:
 
 def process_ingest_items[T](
     items: Iterable[T],
-    index_item: Callable[[GeocodeIndex, list[T]], None],
+    index_items: Callable[[GeocodeIndex, Sequence[T]], None],
     *,
     max_workers: int = 10,
     max_inflight: int = 20,
@@ -188,14 +188,14 @@ def process_ingest_items[T](
 
         return thread_local.index
 
-    def _bulk_index(items_in_chunk: list[T]) -> None:
+    def _bulk_index(items_in_chunk: Sequence[T]) -> None:
         index = _get_index()
-        index_item(index, items_in_chunk)
+        index_items(index, items_in_chunk)
 
     with ThreadPoolExecutor(max_workers=max_workers) as e:
         futures: list[Future[None]] = []
 
-        for features in chunk_items(items, chunk_size):
+        for features in batched(items, chunk_size):
             futures.append(e.submit(_bulk_index, features))
 
             # We only append until the maximum number of futures is reached to avoid OOM errors

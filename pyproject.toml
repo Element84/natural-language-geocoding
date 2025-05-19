@@ -15,9 +15,7 @@ dependencies = [
   "requests>=2.32.3",
   # TODO switch to the published version after merging in changes.
   # "e84-geoai-common>=0.0.5"
-  # "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@jgilman/misc_improvements"
-  # Temporarily set to this to avoid a downstream dependency issue
-  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@8d4300f38e28d1edc7f143701e676eb2bb24099c"]
+  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@main"]
 dynamic = ["version"]
 
 [tool.setuptools-git-versioning]
@@ -107,11 +105,11 @@ ignore = [
   'TRY003',
   'EM101',
   'EM102',
-  # TODOs
+  # T O D Os
   'TD002',
   'TD003',
   'TD004',
-  # Allow TODOs in code.
+  # Allow T O D O s in code.
   'FIX002']
 
 [tool.ruff.lint.per-file-ignores]

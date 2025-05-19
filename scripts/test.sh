@@ -3,22 +3,22 @@
 ####################################################################################################
 # Runs the tests.
 #
-# Testing against LLMs will use canned responses unless --use-real-bedrock-client is passed in which
+# Testing against LLMs will use canned responses unless --use-real-client is passed in which
 # case the tests will be run against the real bedrock. It assumes AWS credentials have been
 # configured in that case.
 ####################################################################################################
 
 set -e -o pipefail
 
-USE_REAL_BEDROCK_CLIENT=false
+USE_REAL_BEDROCK_RUNTIME_CLIENT=false
 WATCH_MODE=false
 
 EXTRA_ARGS=()
 
 for arg in "$@"; do
   case $arg in
-    --use-real-bedrock-client)
-      USE_REAL_BEDROCK_CLIENT=true
+    --use-real-client)
+      USE_REAL_BEDROCK_RUNTIME_CLIENT=true
       shift
       ;;
     --watch)
@@ -30,7 +30,7 @@ for arg in "$@"; do
   esac
 done
 
-export USE_REAL_BEDROCK_CLIENT
+export USE_REAL_BEDROCK_RUNTIME_CLIENT
 export PYTHONPATH=src:tests
 
 if [[ "$WATCH_MODE" = true ]]; then

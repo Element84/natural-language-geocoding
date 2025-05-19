@@ -155,8 +155,8 @@ class GeoPlace(BaseModel):
     type: GeoPlaceType
     geom: Annotated[BaseGeometry, SkipValidation]
     source: GeoPlaceSource
-    alternate_names: list[str] = Field(default_factory=list)
-    hierarchies: list[Hierarchy] = Field(default_factory=list)
+    alternate_names: list[str] = Field(default_factory=list[str])
+    hierarchies: list[Hierarchy] = Field(default_factory=list[Hierarchy])
     area_sq_km: float | None = None
     population: int | None = None
     properties: dict[str, Any]

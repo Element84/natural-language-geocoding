@@ -2,7 +2,7 @@
 
 import json
 import logging
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
@@ -369,7 +369,7 @@ def _get_all_ne_features() -> Generator[tuple[_NESourceFile, _NEFeature], None, 
 
 
 def _bulk_index_features(
-    index: GeocodeIndex, source_features: list[tuple[_NESourceFile, _NEFeature]]
+    index: GeocodeIndex, source_features: Sequence[tuple[_NESourceFile, _NEFeature]]
 ) -> None:
     """TODO docs."""
     places: list[GeoPlace] = [
