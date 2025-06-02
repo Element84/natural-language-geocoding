@@ -1,4 +1,4 @@
-"""TODO document this module."""
+"""Provides a cache of place name data for fast lookups of hierarchical relationships."""
 
 import json
 from collections.abc import Collection
@@ -22,9 +22,13 @@ def _append_to_dict[K](d: dict[K, set[str]], key: K, item: str) -> None:
 
 
 class HierchicalPlaceCache:
-    """TODO docs."""
+    """A in memory cache for looking up geographic places by name, type, and hierarchy."""
 
+    # The source of truth for which ids are in the cache. Will contain every id of every place
+    # mapped to the hierarchies of that place
     _id_to_name_place_hierarchies: dict[str, tuple[str, GeoPlaceType, list[Hierarchy]]]
+
+    # Fast reverse lookups of name and place type with other parent ids.
     _name_place_to_ids: dict[tuple[str, GeoPlaceType], set[str]]
     _name_place_continent_to_ids: dict[tuple[str, GeoPlaceType, str], set[str]]
     _name_place_country_to_ids: dict[tuple[str, GeoPlaceType, str], set[str]]
@@ -44,7 +48,17 @@ class HierchicalPlaceCache:
         place_type: GeoPlaceType,
         hierarchies: list[Hierarchy],
     ) -> None:
-        """TODO docs."""
+        """Add a geographic place to the cache.
+
+        Args:
+            feature_id: Unique identifier for the place
+            name: The place name
+            place_type: The type of place (country, region, etc.)
+            hierarchies: List of hierarchical relationships this place belongs to
+
+        Raises:
+            Exception: If the feature_id already exists in the cache
+        """
         # A sanity check
         if feature_id in self._id_to_name_place_hierarchies:
             raise Exception(
@@ -84,7 +98,20 @@ class HierchicalPlaceCache:
         continent_ids: Collection[str] | None = None,
         country_ids: Collection[str] | None = None,
     ) -> set[str]:
-        """TODO docs."""
+        """Find feature IDs matching the given name, place type, and parents.
+
+        Args:
+            name: Place name to search for
+            place_type: Type of place to search for
+            continent_ids: Optional filter to limit results to specific continents
+            country_ids: Optional filter to limit results to specific countries
+
+        Returns:
+            A set of feature IDs matching the search criteria
+
+        Raises:
+            ValueError: If empty collections are provided for continent_ids or country_ids
+        """
         # Validate args
         if continent_ids is not None and len(continent_ids) == 0:
             raise ValueError("if continent_ids are provided at least one must be specified")
@@ -121,7 +148,14 @@ class HierchicalPlaceCache:
         return matches
 
     def to_json(self, *, indent: int | str | None = None) -> str:
-        """TODO docs."""
+        """Serialize the cache to a JSON string.
+
+        Args:
+            indent: Optional indentation to use for formatting the JSON
+
+        Returns:
+            JSON string representation of the cache data
+        """
         rows = [
             (
                 feature_id,
@@ -139,7 +173,14 @@ class HierchicalPlaceCache:
 
     @staticmethod
     def from_json(json_str: str) -> "HierchicalPlaceCache":
-        """TODO docs."""
+        """Create a cache instance from a JSON string.
+
+        Args:
+            json_str: JSON serialized cache data
+
+        Returns:
+            A new HierchicalPlaceCache populated with the deserialized data
+        """
         dicts = HierchicalPlaceCache()
         rows = json.loads(json_str)
         for feature_id, name, place_type_str, hierarchies_data in rows:
@@ -151,11 +192,14 @@ class HierchicalPlaceCache:
 
 @timed_function
 def _populate() -> HierchicalPlaceCache:
-    """TODO docs."""
+    """Populate a new cache by querying the geoplace index in OpenSearch.
+
+    Returns:
+        A populated HierchicalPlaceCache with continents, countries, and regions
+    """
     # Otherwise, populate from OpenSearch
     client = create_opensearch_client()
-
-    dicts = HierchicalPlaceCache()
+    cache = HierchicalPlaceCache()
 
     for hit in scroll_fetch_all(
         client,
@@ -178,13 +222,13 @@ def _populate() -> HierchicalPlaceCache:
         place_type = GeoPlaceType(hit["_source"]["type"])
         name = hit["_source"]["place_name"]
         hierarchies = [Hierarchy.model_validate(h) for h in hit["_source"]["hierarchies"]]
-        dicts.add(feature_id, name, place_type, hierarchies)
+        cache.add(feature_id, name, place_type, hierarchies)
 
-    return dicts
+    return cache
 
 
 class PlaceCache:
-    """TODO docs."""
+    """A persistent hierarchical place cache loaded from disk if available."""
 
     # The problem with this current approach is that there are duplicates. We need a way to ensure
     # there are no duplicates. It won't be duplicated by hierachy probably so we can do that.
@@ -212,7 +256,17 @@ class PlaceCache:
         continent_ids: Collection[str] | None = None,
         country_ids: Collection[str] | None = None,
     ) -> set[str]:
-        """TODO docs."""
+        """Find feature IDs matching the given criteria.
+
+        Args:
+            name: Place name to search for
+            place_type: Type of place to search for
+            continent_ids: Optional filter for specific continents
+            country_ids: Optional filter for specific countries
+
+        Returns:
+            A set of feature IDs matching the search criteria
+        """
         results = self._dicts.find_ids(
             name=name,
             place_type=place_type,

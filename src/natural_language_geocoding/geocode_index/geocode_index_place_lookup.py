@@ -1,4 +1,4 @@
-"""TODO document this module."""
+"""Provides an implementation of Place Lookup that uses an index of places in OpenSearch."""
 
 import logging
 
@@ -85,7 +85,7 @@ def _continent_country_region_to_conditions(
 
 
 class GeocodeIndexPlaceLookup(PlaceLookup):
-    """TODO docs."""
+    """Implements PlaceLookup that uses an index of places in OpenSearch."""
 
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
 
@@ -155,7 +155,11 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         limit: int = 5,
         explain: bool = False,
     ) -> SearchResponse:
-        """TODO docs."""
+        """Searches for places and returns the most likely matches.
+
+        The explain parameter is used for debugging search relevancy results. Use only for debugging
+        as it will increase the search time and add more data to the response.
+        """
         search_request = self.create_search_request(request, limit=limit, explain=explain)
         return self._index.search(search_request)
 
@@ -163,12 +167,11 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         self,
         request: PlaceSearchRequest,
     ) -> BaseGeometry:
-        """TODO docs."""
+        """Searches for places and returns the most likely geometry of the place."""
         search_resp = self.search_for_places(request)
         places = search_resp.places
         if len(places) > 0:
             return places[0].geom
-        # TODO I'm not sure this is the error that should be shown to the user.
         raise GeocodeError(
             f"Unable find place with name [{request.name}] "
             f"type [{request.place_type}] "

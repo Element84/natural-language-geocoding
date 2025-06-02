@@ -1,3 +1,5 @@
+"""Contains utility functions for working with opensearch."""
+
 import os
 from collections.abc import Generator, Sequence
 from enum import Enum
@@ -43,9 +45,11 @@ QueryCondition = dict[str, Any]
 
 
 class IndexField(Enum):
-    """TODO docs."""
+    """Represents a single indexed field in Opensearch."""
 
+    # The parent field in opensearch if this is for a nested document.
     parent: str | None
+
     _name: str
 
     def __init__(self, parent_or_name: str, subname: str | None = None) -> None:
@@ -62,19 +66,23 @@ class IndexField(Enum):
 
     @property
     def path(self) -> str:
-        """TODO docs."""
+        """Returns the path to the node."""
         if self.parent:
             return f"{self.parent}.{self._name}"
         return self._name
 
     @property
     def is_nested(self) -> bool:
-        """TODO docs."""
+        """Returns true if this is for a nested document."""
         return self.parent is not None
 
 
 class QueryDSL:
-    """TODO docs."""
+    """Utility functions for creating OpenSearch query objects for complex search operations.
+
+    This class provides static methods that help build structured query conditions
+    for OpenSearch, allowing for readable and maintainable query composition.
+    """
 
     @staticmethod
     def bool_cond(
@@ -84,7 +92,19 @@ class QueryDSL:
         should_conds: Sequence[QueryCondition] | None = None,
         filter_cond: QueryCondition | None = None,
     ) -> QueryCondition:
-        """See https://opensearch.org/docs/latest/query-dsl/compound/bool/."""
+        """Creates a boolean query condition that combines multiple clauses with boolean logic.
+
+        Args:
+            must_conds: Sequence of query conditions that must match (AND logic)
+            must_not_conds: Sequence of query conditions that must not match (NOT logic)
+            should_conds: Sequence of query conditions where at least one should match (OR logic)
+            filter_cond: Query condition that must match, but doesn't contribute to the score
+
+        Returns:
+            A properly formatted boolean query condition for OpenSearch
+
+        See https://opensearch.org/docs/latest/query-dsl/compound/bool/
+        """
         bool_dict: dict[str, Any] = {}
 
         if should_conds:
@@ -100,17 +120,40 @@ class QueryDSL:
 
     @staticmethod
     def and_conds(*conds: QueryCondition) -> QueryCondition:
-        """TODO docs."""
+        """Combines multiple query conditions with logical AND.
+
+        Args:
+            *conds: One or more query conditions to be combined with AND logic
+
+        Returns:
+            A boolean query where all conditions must match
+        """
         return QueryDSL.bool_cond(must_conds=conds)
 
     @staticmethod
     def or_conds(*conds: QueryCondition) -> QueryCondition:
-        """TODO docs."""
+        """Combines multiple query conditions with logical OR.
+
+        Args:
+            *conds: One or more query conditions where at least one should match
+
+        Returns:
+            A boolean query where at least one condition should match
+        """
         return QueryDSL.bool_cond(should_conds=conds)
 
     @staticmethod
     def dis_max(*conds: QueryCondition) -> QueryCondition:
         """Combines conjunctions into a dis_max query.
+
+        The dis_max query generates the union of documents produced by its subqueries,
+        and scores each document with the maximum score for that document across all subqueries.
+
+        Args:
+            *conds: The query conditions to combine
+
+        Returns:
+            A dis_max query condition
 
         See https://opensearch.org/docs/latest/query-dsl/compound/disjunction-max/
         """
@@ -120,7 +163,17 @@ class QueryDSL:
     def match(
         field: IndexField, text: str, *, fuzzy: bool = False, boost: float | None = None
     ) -> QueryCondition:
-        """TODO docs."""
+        """Creates a match query condition for text searches.
+
+        Args:
+            field: The index field to search in
+            text: The text to search for
+            fuzzy: Whether to enable fuzzy matching (tolerates typos)
+            boost: Optional relevance boost factor for this condition
+
+        Returns:
+            A match query condition for the specified field and text
+        """
         inner_cond: dict[str, str | int | float] = {"query": text}
         if fuzzy:
             inner_cond["fuzziness"] = "AUTO"
@@ -130,7 +183,19 @@ class QueryDSL:
 
     @staticmethod
     def term(field: IndexField, value: str, *, boost: float | None = None) -> QueryCondition:
-        """TODO docs."""
+        """Creates a term query condition for exact match searches.
+
+        Term queries are not analyzed and will only match if the field contains exactly
+        the specified value.
+
+        Args:
+            field: The index field to search in
+            value: The exact value to match
+            boost: Optional relevance boost factor for this condition
+
+        Returns:
+            A term query condition for the specified field and value
+        """
         inner_cond: dict[str, str | float] = {"value": value}
         if boost is not None:
             inner_cond["boost"] = boost
@@ -141,7 +206,21 @@ class QueryDSL:
     def terms(
         field: IndexField, values: list[str], *, boost: float | None = None
     ) -> QueryCondition:
-        """TODO docs."""
+        """Creates a terms query condition for matching multiple possible values.
+
+        This is equivalent to a series of term queries combined with OR logic.
+
+        Args:
+            field: The index field to search in
+            values: List of values where any can match
+            boost: Optional relevance boost factor for this condition
+
+        Returns:
+            A terms query condition for the specified field and values
+
+        Raises:
+            ValueError: If the values list is empty
+        """
         if len(values) == 0:
             raise ValueError("Must have one or more values")
         inner_cond: dict[str, float | list[str]] = {field.path: values}
@@ -158,12 +237,21 @@ class QueryDSL:
         *,
         relation: Literal["CONTAINS", "WITHIN", "DISJOINT", "INTERSECTS"] = "INTERSECTS",
     ) -> QueryCondition:
-        """TODO docs."""
+        """Creates a geo_shape query condition for spatial queries.
+
+        Args:
+            field: The index field containing geo shapes to query against
+            geom: The geometry to use for the spatial query
+            relation: The spatial relationship to test (INTERSECTS, CONTAINS, WITHIN, or DISJOINT)
+
+        Returns:
+            A geo_shape query condition for the specified field and geometry
+        """
         return {"geo_shape": {field.path: {"shape": geom.__geo_interface__, "relation": relation}}}
 
 
 class Hit(TypedDict):
-    """TODO docs."""
+    """Represents the results of a single match of an opesearch query."""
 
     _id: str
     _source: dict[str, Any]
