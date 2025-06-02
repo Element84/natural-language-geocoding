@@ -57,6 +57,8 @@ def _value_to_attribute(field: str, value: Any) -> _Attribute:  # noqa: ANN401
         items: list[Any] = value
         if len(items) > 0 and isinstance(items[0], BaseModel):
             return _ComplexNodeAttribute(name=field, value=items)
+        if len(items) > 0 and isinstance(items[0], list):
+            return _ComplexNodeAttribute(name="geometry", value=items[0])
         if len(items) == 0:
             return _ComplexNodeAttribute(name=field, value=[])
         raise ValueError(f"Unable to handle list value of: {value}")
@@ -90,6 +92,10 @@ def _(node: _ComplexNodeAttribute) -> _GetChildrenResponse:
     if isinstance(node.value, list):
         return node.value
     return _get_children(node.value)
+
+@_get_children.register
+def _(_node: tuple) -> _GetChildrenResponse:
+    return []
 
 
 def _get_label(node: _Attribute | BaseModel) -> str:

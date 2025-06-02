@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 from e84_geoai_common.geometry import (
     BoundingBox,
@@ -7,7 +7,8 @@ from e84_geoai_common.geometry import (
     between,
     simplify_geometry,
 )
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, RootModel, conlist
+from shapely import Polygon
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
@@ -311,6 +312,36 @@ class Between(SpatialNodeType):
         b2 = self.child_node_2.to_geometry(place_lookup)
         return between(b1, b2)
 
+class RawPolygon(RootModel):
+    root: conlist(
+        conlist(
+            tuple[
+                float, # Annotated[float, Field(ge = -90, le = 90)],
+                float, # Annotated[float, Field(ge = -180, le = 180)],
+            ],
+            min_length=3,
+        ), min_length=1
+    )
+    _polygon: Polygon = PrivateAttr()
+
+    def __init__(self, **data: Any) -> None: # noqa: ANN401
+        super().__init__(**data)
+        self._polygon = Polygon(data["__root__"][0], data["__root__"][1:])
+
+    @property
+    def polygon(self) -> Polygon:
+        return self._polygon
+
+class GeoJSON(SpatialNodeType):
+    """Represents a spatial area bounded by a list of coordinates."""
+
+    node_type: Literal["GeoJSON"] = "GeoJSON"
+    geometry: RawPolygon = Field(...)
+
+    def to_geometry(self, _place_lookup: PlaceLookup) -> BaseGeometry:
+        result: BaseGeometry | None = None
+        result = self.geometry.polygon
+        return result
 
 AnySpatialNodeType = (
     NamedPlace
@@ -324,6 +355,7 @@ AnySpatialNodeType = (
     | Difference
     | Between
     | DirectionalConstraint
+    | GeoJSON
 )
 
 

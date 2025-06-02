@@ -18,6 +18,7 @@ from natural_language_geocoding.models import (
     CoastOf,
     Difference,
     DirectionalConstraint,
+    GeoJSON,
     Intersection,
     NamedPlace,
     Union,
@@ -237,6 +238,24 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
                 in_continent="North America",
                 in_country="United States",
             ),
+        ),
+    ),
+    ExampleEval(
+        user_text={
+            "can you find wildfire issues within 10 miles of "
+            '{"type": "LineString","coordinates":'
+            " [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]]}"
+        },
+        description="geojson lookup",
+
+        expected_node=Buffer(
+            child_node=GeoJSON(
+                geometry = [
+                    [(45, -100), (45, -101), (46, -101)]
+                ]
+            ),
+            distance=10,
+            distance_unit="miles",
         ),
     ),
 ]

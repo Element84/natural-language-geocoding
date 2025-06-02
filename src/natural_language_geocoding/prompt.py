@@ -8,6 +8,7 @@ from e84_geoai_common.util import singleline
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.models import (
     DirectionalConstraint,
+    GeoJSON,
     Intersection,
     NamedPlace,
     SpatialNode,
@@ -41,9 +42,25 @@ GUIDELINES = [
         multiple spatial relationships and geographical contexts.
         """
     ),
+
+    singleline("""
+        If the user queries using numeric values instead of named geographic featues for a location,
+        then the response should contain a sequence of coordinates that represents
+        a geogaphic polygon for the requested area instead of a named place.
+        Numeric values in the user query may be either latitude/longitude, well-known text (WKT),
+        or geoJSON representations of the desired geographic area.
+        If the user specifies a single coordinate, the polygon coordinates in the response
+        should represent a one-kilometer area centered on the coordinate.
+        If the user specifies "between" two coordinates, the polygon coordinates in the response
+        should represent a box using those two coordinates as opposing corners.
+    """),
+
     dedent(
         """
         GEOGRAPHICAL HIERARCHY
+            - Use polygon_coordinates only if the the query specifies numeric values
+              (latitude/longitude, geojson, or WKT) for the geographic area.  The
+              polygon_coordinates field must be in geojson format.
             - Always use separate fields (in_continent, in_country, in_region) instead of combining
               them in the name field
             - The name field should contain only the specific place name (e.g., "Paris" not
@@ -54,7 +71,7 @@ GUIDELINES = [
             - Always populate in_continent when the location is on a continent, even if the user
               doesn't explicitly mention it.
             - Note that in_continent, in_country, in_region should not be used for large bodies of
-              water like seas.
+              water like seas or marine areas.
         """
     ).strip(),
     "Always specify the place type when it can be determined",
@@ -92,6 +109,7 @@ GUIDELINES = [
         not use "Port of" or similar phrasings in the name. Instead, represent the location using
         its geographical name (e.g., "Miami Florida" for the port of Miami).
     """),
+
 ]
 
 
@@ -129,6 +147,19 @@ EXAMPLES = [
                 ),
             ]
         ),
+    ),
+    ExtractDataExample(
+        name="Numeric Spatial Example",
+        user_query="within (-11.867351,-65.917969) and (-4.039618,-54.843750)",
+        structure=GeoJSON(
+            geometry=[[
+                (-11.867351,-65.917969),
+                (-4.039618,-65.917969),
+                (-4.039618,-54.843750),
+                (-11.867351,-54.843750),
+                (-11.867351,-65.917969),
+            ]]
+        )
     ),
 ]
 
