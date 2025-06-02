@@ -241,18 +241,18 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         ),
     ),
     ExampleEval(
-        user_text={
+        user_text=(
             "can you find wildfire issues within 10 miles of "
             '{"type": "LineString","coordinates":'
             " [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]]}"
-        },
+        ),
         description="geojson lookup",
-
         expected_node=Buffer(
             child_node=GeoJSON(
-                geometry = [
-                    [(102.0, 0.0), (103.0, 1.0), (104.0, 0.0), (105.0, 0.0)]
-                ]
+                geojson=(
+                    '{"type": "LineString","coordinates":'
+                    " [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]]}"
+                )
             ),
             distance=10,
             distance_unit="miles",
@@ -289,7 +289,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 # evaluator = ParseSpatialNodeEvaluator()
 
-# example = NAMED_PLACE_EXAMPLES[-1]
+# example = ALL_EXAMPLES[-1]
 
 # example: ExampleEval[AnySpatialNodeType] = ExampleEval(
 #     user_text="along the Oman-Yemen border",

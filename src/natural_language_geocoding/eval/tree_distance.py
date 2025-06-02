@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import datetime
 from enum import Enum
 from functools import singledispatch
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, SkipValidation, field_serializer
 from shapely.geometry.base import BaseGeometry
@@ -54,11 +54,9 @@ def _value_to_attribute(field: str, value: Any) -> _Attribute:  # noqa: ANN401
     if isinstance(value, BaseModel):
         return _ComplexNodeAttribute(name=field, value=value)
     if isinstance(value, list):
-        items: list[Any] = value
+        items: list[Any] = cast("list[Any]", value)
         if len(items) > 0 and isinstance(items[0], BaseModel):
             return _ComplexNodeAttribute(name=field, value=items)
-        if len(items) > 0 and isinstance(items[0], list):
-            return _ComplexNodeAttribute(name="geometry", value=items[0])
         if len(items) == 0:
             return _ComplexNodeAttribute(name=field, value=[])
         raise ValueError(f"Unable to handle list value of: {value}")
@@ -92,10 +90,6 @@ def _(node: _ComplexNodeAttribute) -> _GetChildrenResponse:
     if isinstance(node.value, list):
         return node.value
     return _get_children(node.value)
-
-@_get_children.register
-def _(_node: tuple) -> _GetChildrenResponse:
-    return []
 
 
 def _get_label(node: _Attribute | BaseModel) -> str:
