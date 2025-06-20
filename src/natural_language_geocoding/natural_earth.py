@@ -18,8 +18,6 @@ NE_COASTLINE_FILE = NATURAL_EARTH_DATA_DIR / "ne_10m_coastline.json"
 
 logger = logging.getLogger(f"{__name__}")
 
-# TODO refactor this with the new code
-
 
 class NaturalEarthProperties(BaseModel):
     """A model for parsing Natural Earth GeoJSON properties."""

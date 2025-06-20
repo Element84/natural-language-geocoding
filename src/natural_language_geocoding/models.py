@@ -47,7 +47,7 @@ class NamedPlace(SpatialNodeType):
             "to help ensure the correct area is found."
         )
     )
-    type: GeoPlaceType | None = Field(
+    type: GeoPlaceType | str | None = Field(
         default=None, description="Limits the search to a specific type of location"
     )
 

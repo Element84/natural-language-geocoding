@@ -199,10 +199,10 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
     doc: GeoPlaceDoc = {
         "id": geoplace.id,
         "place_name": geoplace.place_name,
-        "type": geoplace.type.value,
+        "type": geoplace.type_value,
         "geom_str": json.dumps(geoplace.geom.__geo_interface__),
         "geom_spatial": None,
-        "source_type": geoplace.source.source_type.value,
+        "source_type": geoplace.source.source_type_value,
         "source_path": geoplace.source.source_path,
         "alternate_names": geoplace.alternate_names,
         "properties": json.dumps(geoplace.properties),
@@ -216,7 +216,7 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
 
 
 class FoundGeoPlace(GeoPlace):
-    """TODO docs."""
+    """A Geoplace that has been found in a search query."""
 
     score: float | None
     sort: list[float] | None
@@ -503,7 +503,7 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
         return json.dumps(
             {
                 "place_name": place.place_name,
-                "type": place.type.value,
+                "type": place.type_value,
                 "alternate_names": place.alternate_names,
                 "explanation": exp,
             },
@@ -566,7 +566,7 @@ def print_places_with_names(index: GeocodeIndex, places: list[FoundGeoPlace]) ->
             "sort": place.sort,
             "id": place.id,
             "name": place.place_name,
-            "type": place.type.value,
+            "type": place.type_value,
             "alternate_names": place.alternate_names,
             "hierarchies": [
                 {k: id_to_name.get(v, v) for k, v in h if v is not None} for h in place.hierarchies

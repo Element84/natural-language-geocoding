@@ -1,14 +1,16 @@
 """Provides an implementation of Place Lookup that uses an index of places in OpenSearch."""
 
 import logging
+from typing import Any
 
 from e84_geoai_common.util import timed_function
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import (
-    PLACE_TYPE_SORT_ORDER,
+    DEFAULT_PLACE_TYPE_SORT_ORDER,
     SOURCE_TYPE_SORT_ORDER,
+    GeoPlaceSourceType,
     GeoPlaceType,
 )
 from natural_language_geocoding.geocode_index.hierachical_place_cache import PlaceCache
@@ -25,16 +27,6 @@ from natural_language_geocoding.geocode_index.opensearch_utils import (
     ordered_values_to_sort_cond,
 )
 from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
-
-# Note that using a script for sorting is slow. Eventually we should switch this to an indexed id
-# to improve performance.
-
-_TYPE_SORT_COND = ordered_values_to_sort_cond(
-    GeoPlaceIndexField.type, [pt.value for pt in PLACE_TYPE_SORT_ORDER]
-)
-_SOURCE_TYPE_SORT_COND = ordered_values_to_sort_cond(
-    GeoPlaceIndexField.source_type, [st.value for st in SOURCE_TYPE_SORT_ORDER]
-)
 
 
 def _continent_country_region_to_conditions(
@@ -92,9 +84,28 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
     _index: GeocodeIndex
     _place_cache: PlaceCache
 
-    def __init__(self, index: GeocodeIndex | None = None) -> None:
+    _type_sort_cond: dict[str, Any]
+    _source_type_sort_cond: dict[str, Any]
+
+    def __init__(
+        self,
+        index: GeocodeIndex | None = None,
+        *,
+        place_type_sort_order: list[GeoPlaceType | str] = DEFAULT_PLACE_TYPE_SORT_ORDER,
+        source_type_sort_order: list[GeoPlaceSourceType | str] = SOURCE_TYPE_SORT_ORDER,
+    ) -> None:
         self._index = index or GeocodeIndex()
         self._place_cache = PlaceCache()
+
+        # Note that using a script for sorting is slow. Eventually we should switch this to an
+        # indexed id to improve performance.
+
+        self._type_sort_cond = ordered_values_to_sort_cond(
+            GeoPlaceIndexField.type, place_type_sort_order
+        )
+        self._source_type_sort_cond = ordered_values_to_sort_cond(
+            GeoPlaceIndexField.source_type, source_type_sort_order
+        )
 
     def create_search_request(
         self,
@@ -106,8 +117,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         should_conds: list[QueryCondition] = []
         must_conds: list[QueryCondition] = []
         must_not_conds: list[QueryCondition] = []
-        if request.place_type:
-            should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, request.place_type.value))
+        if request.place_type_value:
+            should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, request.place_type_value))
             if request.place_type == GeoPlaceType.geoarea:
                 # If we're looking for a general geoarea we exclude locality so that we are more
                 # likely to find other areas first.
@@ -140,8 +151,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
             ),
             sort=[
                 SortField(field="_score", order="desc"),
-                _TYPE_SORT_COND,
-                _SOURCE_TYPE_SORT_COND,
+                self._type_sort_cond,
+                self._source_type_sort_cond,
                 SortField(field="population", order="desc"),
             ],
             explain=explain,

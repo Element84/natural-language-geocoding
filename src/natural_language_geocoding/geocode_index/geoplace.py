@@ -74,7 +74,7 @@ class GeoPlaceType(Enum):
 
 # The sort order for search results by place type. If the place type is not in this list then it
 # should appear after any of these
-PLACE_TYPE_SORT_ORDER = [
+DEFAULT_PLACE_TYPE_SORT_ORDER: list[GeoPlaceType | str] = [
     GeoPlaceType.continent,
     GeoPlaceType.country,
     GeoPlaceType.empire,
@@ -99,7 +99,7 @@ class GeoPlaceSourceType(Enum):
 
 # The sort order for search results by source type. If the source type is not in this list then it
 # should appear after any of these
-SOURCE_TYPE_SORT_ORDER = [
+DEFAULT_SOURCE_TYPE_SORT_ORDER: list[GeoPlaceSourceType | str] = [
     GeoPlaceSourceType.comp,
     GeoPlaceSourceType.ne,
     GeoPlaceSourceType.wof,
@@ -108,8 +108,13 @@ SOURCE_TYPE_SORT_ORDER = [
 
 class GeoPlaceSource(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
-    source_type: GeoPlaceSourceType
+    source_type: GeoPlaceSourceType | str
     source_path: str
+
+    @property
+    def source_type_value(self) -> str:
+        """Returns the source type as a string."""
+        return self.source_type if isinstance(self.source_type, str) else self.source_type.value
 
 
 class Hierarchy(BaseModel, frozen=True):
@@ -138,10 +143,11 @@ class Hierarchy(BaseModel, frozen=True):
     def get_by_place_type(self, place_type: GeoPlaceType) -> str | None:
         return getattr(self, f"{place_type.value}_id")
 
-    def with_id(self, feature_id: str, place_type: GeoPlaceType) -> "Hierarchy":
+    def with_id(self, feature_id: str, place_type: GeoPlaceType | str) -> "Hierarchy":
         """Creates a new hierarchy with the specified id set."""
         model = self.model_dump()
-        model[f"{place_type.value}_id"] = feature_id
+        place_type_value = place_type if isinstance(place_type, str) else place_type.value
+        model[f"{place_type_value}_id"] = feature_id
         return Hierarchy.model_validate(model)
 
 
@@ -152,7 +158,7 @@ class GeoPlace(BaseModel):
 
     id: str
     place_name: str
-    type: GeoPlaceType
+    type: GeoPlaceType | str
     geom: Annotated[BaseGeometry, SkipValidation]
     source: GeoPlaceSource
     alternate_names: list[str] = Field(default_factory=list[str])
@@ -160,6 +166,11 @@ class GeoPlace(BaseModel):
     area_sq_km: float | None = None
     population: int | None = None
     properties: dict[str, Any]
+
+    @property
+    def type_value(self) -> str:
+        """Returns the place type as a string."""
+        return self.type if isinstance(self.type, str) else self.type.value
 
     def display_geometry(self) -> Any:  # noqa: ANN401
         """Displays geometry in a jupyter like environment for debugging."""
@@ -185,5 +196,5 @@ class GeoPlace(BaseModel):
         """Returns a set of hierarchies representing this place in the hierarchy."""
         if len(self.hierarchies) > 0:
             return [h.with_id(self.id, self.type) for h in self.hierarchies]
-        model = {f"{self.type.value}_id": self.id}
+        model = {f"{self.type_value}_id": self.id}
         return [Hierarchy.model_validate(model)]

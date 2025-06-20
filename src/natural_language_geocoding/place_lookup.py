@@ -24,11 +24,17 @@ def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
 class PlaceSearchRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     name: str
-    place_type: GeoPlaceType | None = None
+    place_type: GeoPlaceType | str | None = None
     in_continent: str | None = None
     in_country: str | None = None
     in_region: str | None = None
-    source_type: GeoPlaceSourceType | None = None
+    source_type: GeoPlaceSourceType | str | None = None
+
+    @property
+    def place_type_value(self) -> str | None:
+        if self.place_type is None:
+            return None
+        return self.place_type if isinstance(self.place_type, str) else self.place_type.value
 
 
 class PlaceLookup(ABC):
@@ -37,6 +43,11 @@ class PlaceLookup(ABC):
 
 
 class NominatimAPI(PlaceLookup):
+    """Uses the OpenStreetMap API, Nominatim, as a source of places.
+
+    This is deprecated. Use the GeocodeIndexPlaceLookup instead.
+    """
+
     logger = logging.getLogger(f"{__name__}.{__qualname__}")
 
     @timed_function(logger)

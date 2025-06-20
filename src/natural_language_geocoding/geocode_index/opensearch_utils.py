@@ -14,7 +14,6 @@ from shapely.geometry.base import BaseGeometry
 
 def create_opensearch_client() -> OpenSearch:
     """Creates an opensearch client object."""
-    # TODO include these env vars as part of the documentation
     host = get_env_var("GEOCODE_INDEX_HOST")
     port = int(get_env_var("GEOCODE_INDEX_PORT", "443"))
     region = get_env_var("GEOCODE_INDEX_REGION")
@@ -287,13 +286,15 @@ def scroll_fetch_all(
     client.clear_scroll(scroll_id=scroll_id)
 
 
-def ordered_values_to_sort_cond(field: IndexField, values: Sequence[str]) -> dict[str, Any]:
+def ordered_values_to_sort_cond(field: IndexField, values: Sequence[str | Enum]) -> dict[str, Any]:
     """Generates a sort condition for a field based on a predefined order of known values.
 
     Note that sorting this way can be slow and it's better to index a new field with the integer
     values instead and sort by that. It does require reindexing when changing sort order though.
     """
-    order_values = [f"    '{value}': {index}" for index, value in enumerate(values)]
+    value_strs = [(v if isinstance(v, str) else v.value) for v in values]
+
+    order_values = [f"    '{value}': {index}" for index, value in enumerate(value_strs)]
     order_values_str = "\n,".join(order_values)
 
     sort_cond_script = dedent(

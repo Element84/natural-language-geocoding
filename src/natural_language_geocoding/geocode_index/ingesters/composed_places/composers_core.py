@@ -25,7 +25,7 @@ class GeoPlaceSource(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     id: str
-    source_type: GeoPlaceSourceType
+    source_type: GeoPlaceSourceType | str
     source_path: str
 
     @staticmethod

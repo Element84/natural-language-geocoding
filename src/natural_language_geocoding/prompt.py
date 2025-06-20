@@ -13,9 +13,10 @@ from natural_language_geocoding.models import (
     SpatialNode,
 )
 
-# TODO try pruning guidelines and seeing the effect once there is a more complete evaluation.
+# FUTURE Some of these may be unnecessary. Try pruning guidelines and seeing the effect once there
+# are more evaluations
 
-GUIDELINES = [
+GUIDELINES_01_GENERAL = [
     singleline(
         """
         These requests will define spatial areas through direct mentions or implied geographical
@@ -41,35 +42,38 @@ GUIDELINES = [
         multiple spatial relationships and geographical contexts.
         """
     ),
-    dedent(
-        """
-        GEOGRAPHICAL HIERARCHY
-            - Always use separate fields (in_continent, in_country, in_region) instead of combining
-              them in the name field
-            - The name field should contain only the specific place name (e.g., "Paris" not
-              "Paris France")
-            - Use in_country for country context (e.g., "France" for Paris)
-            - Use in_region for state/province context (e.g., "Maryland" for Annapolis)
-            - Use in_continent for continental context where appropriate
-            - Always populate in_continent when the location is on a continent, even if the user
-              doesn't explicitly mention it.
-            - Note that in_continent, in_country, in_region should not be used for large bodies of
-              water like seas.
-        """
-    ).strip(),
-    "Always specify the place type when it can be determined",
+]
+
+GUIDELINE_02_HIERARCHY = dedent(
+    """
+    GEOGRAPHICAL HIERARCHY
+        - Always use separate fields (in_continent, in_country, in_region) instead of combining
+            them in the name field
+        - The name field should contain only the specific place name (e.g., "Paris" not
+            "Paris France")
+        - Use in_country for country context (e.g., "France" for Paris)
+        - Use in_region for state/province context (e.g., "Maryland" for Annapolis)
+        - Use in_continent for continental context where appropriate
+        - Always populate in_continent when the location is on a continent, even if the user
+            doesn't explicitly mention it.
+        - Note that in_continent, in_country, in_region should not be used for large bodies of
+            water like seas.
+    """
+).strip()
+
+GUIDELINE_03_PLACETYPE = (
+    "Always specify the place type when it can be determined. "
+    "The place type must be one of the following values: "
+    + (", ".join([pt.value for pt in GeoPlaceType]))
+)
+
+GUIDELINES_04_SIMPLIFY = [
+    # FUTURE these two seem redundant and could probably be combined.
     singleline(
         """
         Simplify When Possible: Always generate the simplest version of the tree possible to
         accurately represent the user's request. This often means direct mapping of queries to a
         "NamedPlace" for singular geographical locations without implied spatial operations.
-        """
-    ),
-    singleline(
-        """
-        Appropriate Use of Node Types: Only employ complex node types (e.g., "Intersection",
-        "Buffer") when the user's query explicitly or implicitly requires the representation of
-        spatial relationships or operations between two or more places.
         """
     ),
     singleline(
@@ -80,18 +84,38 @@ GUIDELINES = [
         to accurately represent the user's search area.
         """
     ),
-    singleline(
-        """
-        Incorporate Hierarchical Geographical Contexts: Always consider and explicitly include
-        broader geographical contexts if implied or directly mentioned in the query. This ensures
-        the spatial query is accurately scoped within the correct geographical boundaries.
-        """
-    ),
-    singleline("""
-        When a user mentions a PORT, translate this into the coastline of the specified location. Do
-        not use "Port of" or similar phrasings in the name. Instead, represent the location using
-        its geographical name (e.g., "Miami Florida" for the port of Miami).
-    """),
+]
+
+GUIDELINE_05_APPROPRIATE_NODE_TYPE = singleline(
+    """
+    Appropriate Use of Node Types: Only employ complex node types (e.g., "Intersection",
+    "Buffer") when the user's query explicitly or implicitly requires the representation of
+    spatial relationships or operations between two or more places.
+    """
+)
+
+GUIDELINE_06_HIERARCHICAL_CONTEXT = singleline(
+    """
+    Incorporate Hierarchical Geographical Contexts: Always consider and explicitly include
+    broader geographical contexts if implied or directly mentioned in the query. This ensures
+    the spatial query is accurately scoped within the correct geographical boundaries.
+    """
+)
+
+GUIDELINE_07_PORTS = singleline("""
+    When a user mentions a PORT, translate this into the coastline of the specified location. Do
+    not use "Port of" or similar phrasings in the name. Instead, represent the location using
+    its geographical name (e.g., "Miami Florida" for the port of Miami).
+""")
+
+GUIDELINES: list[str] = [
+    *GUIDELINES_01_GENERAL,
+    GUIDELINE_02_HIERARCHY,
+    GUIDELINE_03_PLACETYPE,
+    *GUIDELINES_04_SIMPLIFY,
+    GUIDELINE_05_APPROPRIATE_NODE_TYPE,
+    GUIDELINE_06_HIERARCHICAL_CONTEXT,
+    GUIDELINE_07_PORTS,
 ]
 
 
