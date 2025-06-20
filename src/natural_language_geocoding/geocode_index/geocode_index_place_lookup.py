@@ -9,7 +9,7 @@ from shapely.geometry.base import BaseGeometry
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import (
     DEFAULT_PLACE_TYPE_SORT_ORDER,
-    SOURCE_TYPE_SORT_ORDER,
+    DEFAULT_SOURCE_TYPE_SORT_ORDER,
     GeoPlaceSourceType,
     GeoPlaceType,
 )
@@ -92,7 +92,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         index: GeocodeIndex | None = None,
         *,
         place_type_sort_order: list[GeoPlaceType | str] = DEFAULT_PLACE_TYPE_SORT_ORDER,
-        source_type_sort_order: list[GeoPlaceSourceType | str] = SOURCE_TYPE_SORT_ORDER,
+        source_type_sort_order: list[GeoPlaceSourceType | str] = DEFAULT_SOURCE_TYPE_SORT_ORDER,
     ) -> None:
         self._index = index or GeocodeIndex()
         self._place_cache = PlaceCache()

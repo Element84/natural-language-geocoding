@@ -6,7 +6,6 @@ from itertools import batched
 from logging import Logger
 from math import ceil
 from time import time
-from typing import TypeVar
 
 from shapely import (
     GEOSException,
@@ -76,8 +75,6 @@ def filter_items[T](
 # Used for removing repeated points so that shapely and opensearch will consider them valid.
 _DUPLICATE_POINT_TOLERANCE = 0.00001
 
-T_Geom = TypeVar("T_Geom", bound=BaseGeometry)
-
 
 def _is_tiny_linear_ring_error(e: GEOSException) -> bool:
     msg = str(e.args[0])
@@ -86,7 +83,7 @@ def _is_tiny_linear_ring_error(e: GEOSException) -> bool:
 
 
 @singledispatch
-def remove_duplicate_points(geom: T_Geom, tolerance: float) -> T_Geom:
+def remove_duplicate_points[T_Geom: BaseGeometry](geom: T_Geom, tolerance: float) -> T_Geom:
     """Removes the duplicate points switching based on type."""
     return remove_repeated_points(geom, tolerance)
 

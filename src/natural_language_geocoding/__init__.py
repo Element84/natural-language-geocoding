@@ -34,7 +34,7 @@ def extract_geometry_from_text(
 
 #########################
 # Code for manual testing
-# ruff: noqa: ERA001, T201
+# ruff: noqa: ERA001
 
 # from e84_geoai_common.llm.core import BedrockClaudeLLM
 # llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])

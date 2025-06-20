@@ -111,6 +111,19 @@ class GeoPlaceSource(BaseModel):
     source_type: GeoPlaceSourceType | str
     source_path: str
 
+    @field_validator("source_type", mode="before")
+    @classmethod
+    def _parse_place_source_type(cls, v: Any) -> GeoPlaceSourceType | str:  # noqa: ANN401
+        if isinstance(v, str):
+            try:
+                return GeoPlaceSourceType(v)
+            except ValueError:
+                return v
+        if isinstance(v, GeoPlaceSourceType):
+            return v
+        msg = "source_type must be a string or GeoPlaceSourceType."
+        raise TypeError(msg)
+
     @property
     def source_type_value(self) -> str:
         """Returns the source type as a string."""
@@ -167,6 +180,19 @@ class GeoPlace(BaseModel):
     population: int | None = None
     properties: dict[str, Any]
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def _parse_place_type(cls, v: Any) -> GeoPlaceType | str:  # noqa: ANN401
+        if isinstance(v, str):
+            try:
+                return GeoPlaceType(v)
+            except ValueError:
+                return v
+        if isinstance(v, GeoPlaceType):
+            return v
+        msg = "type must be a string or GeoPlaceType."
+        raise TypeError(msg)
+
     @property
     def type_value(self) -> str:
         """Returns the place type as a string."""
@@ -174,7 +200,7 @@ class GeoPlace(BaseModel):
 
     def display_geometry(self) -> Any:  # noqa: ANN401
         """Displays geometry in a jupyter like environment for debugging."""
-        from e84_geoai_common.debugging import display_geometry
+        from e84_geoai_common.debugging import display_geometry  # noqa: PLC0415
 
         return display_geometry([self.geom])
 

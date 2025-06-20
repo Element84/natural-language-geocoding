@@ -4,7 +4,6 @@ from shapely import LinearRing, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.geocode_index.ingesters.ingest_utils import (
-    T_Geom,
     remove_duplicate_points,
 )
 
@@ -38,7 +37,7 @@ geoms_without_dups = [
 
 
 @singledispatch
-def _add_duplicates(geom: T_Geom, separation: float) -> T_Geom:
+def _add_duplicates[T_Geom: BaseGeometry](geom: T_Geom, separation: float) -> T_Geom:
     raise NotImplementedError
 
 

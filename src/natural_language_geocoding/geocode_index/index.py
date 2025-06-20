@@ -419,8 +419,8 @@ class GeocodeIndex(GeocodeIndexBase):
 
         self.logger.info("Creating index %s", GEOPLACE_INDEX_NAME)
         self.client.indices.create(
-            GEOPLACE_INDEX_NAME,
-            {
+            index=GEOPLACE_INDEX_NAME,
+            body={
                 "settings": _GEOPLACE_INDEX_SETTINGS,
                 "mappings": _GEOPLACE_INDEX_MAPPINGS,
             },
@@ -436,7 +436,7 @@ class GeocodeIndex(GeocodeIndexBase):
             ]
         ]
         bulk_body = "\n".join(bulk_command_lines)
-        resp = self.client.bulk(bulk_body)
+        resp = self.client.bulk(body=bulk_body)
 
         if resp["errors"]:
             failed_items = [item["index"] for item in resp["items"] if "error" in item["index"]]
@@ -464,20 +464,20 @@ class GeocodeIndex(GeocodeIndexBase):
     @timed_function(logger)
     def get_by_ids(self, ids: Iterable[str]) -> list[GeoPlace]:
         resp = self.client.mget(
-            {"docs": [{"_id": place_id} for place_id in ids]}, GEOPLACE_INDEX_NAME
+            body={"docs": [{"_id": place_id} for place_id in ids]}, index=GEOPLACE_INDEX_NAME
         )
         return [FoundGeoPlace.from_hit(doc) for doc in resp["docs"]]
 
     @timed_function(logger)
     def get_names_by_ids(self, ids: Iterable[str]) -> dict[str, str]:
         resp = self.client.mget(
-            {
+            body={
                 "docs": [
                     {"_id": place_id, "_source": {"include": GeoPlaceIndexField.place_name.value}}
                     for place_id in ids
                 ]
             },
-            GEOPLACE_INDEX_NAME,
+            index=GEOPLACE_INDEX_NAME,
         )
         return {
             doc["_id"]: doc["_source"][GeoPlaceIndexField.place_name.value]
@@ -515,8 +515,8 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
     with open("temp/compare2.json", "w") as f:  # noqa: PTH123
         f.write(to_compare_str(place2, exp2))
 
-    subprocess.run(["code", "temp/compare1.json"], check=True)  # noqa: S603, S607
-    subprocess.run(["code", "temp/compare2.json"], check=True)  # noqa: S603, S607
+    subprocess.run(["code", "temp/compare1.json"], check=True)  # noqa: S607
+    subprocess.run(["code", "temp/compare2.json"], check=True)  # noqa: S607
 
 
 def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarchy]) -> None:
@@ -531,7 +531,7 @@ def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarch
         for h in hierarchies
     ]
 
-    from tabulate import tabulate
+    from tabulate import tabulate  # noqa: PLC0415
 
     # Print the table
     print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
@@ -542,7 +542,7 @@ def print_hierarchies_as_table(hierarchies: list[Hierarchy]) -> None:
     table_data: list[dict[str, Any]] = [h.model_dump(exclude_none=True) for h in hierarchies]
 
     # Print the table
-    from tabulate import tabulate
+    from tabulate import tabulate  # noqa: PLC0415
 
     print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
 
@@ -574,7 +574,7 @@ def print_places_with_names(index: GeocodeIndex, places: list[FoundGeoPlace]) ->
         }
         table_data.append(place_dict)
 
-    from tabulate import tabulate
+    from tabulate import tabulate  # noqa: PLC0415
 
     # Print the table
     print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201

@@ -398,7 +398,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 
 
 # Code for manual testing
-# ruff: noqa: ERA001,T201,E402,S101,B018,PLR2004,B015,PGH003
+# ruff: noqa: ERA001
 
 # placetype_tar_file = Path("temp/whosonfirst-data-locality-latest.tar.bz2")
 

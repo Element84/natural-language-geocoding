@@ -399,7 +399,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
     process_features()
 
 ## Code for manual testing
-# ruff: noqa: ERA001,T201,E402,E501
+# ruff: noqa: ERA001, E501
 
 # logging.basicConfig(
 #     level=logging.INFO,
