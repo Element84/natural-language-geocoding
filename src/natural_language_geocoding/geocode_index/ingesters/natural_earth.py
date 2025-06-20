@@ -105,7 +105,7 @@ _NE_SOURCE_FILES: list[tuple[_NESourceFile, int]] = [
 ]
 
 
-# TODO move this into a common
+# FUTURE move this into a common place
 class EnumWithValueLookup(Enum):
     """Enum subclass with built-in fast value lookup capability.
 
@@ -133,7 +133,7 @@ class EnumWithValueLookup(Enum):
 
 
 class _NEPlaceType(EnumWithValueLookup):
-    """TODO docs."""
+    """Identifies the type of place from Natural Earth."""
 
     airport = "Airport"
     alkaline_lake = "Alkaline Lake"

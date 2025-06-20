@@ -202,7 +202,7 @@ class _WhosOnFirstPlaceProperties(BaseModel):
         strict=True,
         extra="allow",
         frozen=True,
-        # TODO this is depreceated. Move to a different implementations
+        # FUTURE this is deprecated in pydantic. Move to a different implementations
         json_encoders={_WhosOnFirstPlaceType: lambda x: x.value},
     )
 

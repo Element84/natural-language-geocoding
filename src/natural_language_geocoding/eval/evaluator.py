@@ -25,7 +25,7 @@ from natural_language_geocoding.models import (
 
 _TEMP_DIR = Path("temp")
 
-# TODO Add evaluations for problem areas
+# FUTURE Add evaluations for problem areas that will fail
 # TODO add "off the coast off" tests and manually test this.
 
 NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [

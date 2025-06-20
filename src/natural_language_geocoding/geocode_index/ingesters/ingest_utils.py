@@ -65,7 +65,7 @@ def counting_generator[T](
 def filter_items[T](
     items: Iterator[T], filter_fn: Callable[[T], bool], *, logger: Logger | None = None
 ) -> Generator[T, None, None]:
-    """TODO docs."""
+    """Filters out items that don't match the filter_fn."""
     for item in items:
         if filter_fn(item):
             yield item
@@ -125,7 +125,7 @@ def _(geom: MultiPolygon, tolerance: float) -> MultiPolygon:
     return MultiPolygon(polygons)
 
 
-# TODO test this
+# FUTURE add unit tests for this function.
 def fix_geometry(feature_id: str, orig_geom: BaseGeometry) -> BaseGeometry:
     """Attempts to fix the geometry if it's invalid.
 
@@ -171,13 +171,13 @@ def fix_geometry(feature_id: str, orig_geom: BaseGeometry) -> BaseGeometry:
 
 def process_ingest_items[T](
     items: Iterable[T],
-    index_items: Callable[[GeocodeIndex, Sequence[T]], None],
+    index_items_fn: Callable[[GeocodeIndex, Sequence[T]], None],
     *,
     max_workers: int = 10,
     max_inflight: int = 20,
     chunk_size: int = 25,
 ) -> None:
-    """TODO docs."""
+    """Ingests the items in parallel using the index_items_fn."""
     thread_local = threading.local()
     all_conns: set[GeocodeIndex] = set()
 
@@ -190,7 +190,7 @@ def process_ingest_items[T](
 
     def _bulk_index(items_in_chunk: Sequence[T]) -> None:
         index = _get_index()
-        index_items(index, items_in_chunk)
+        index_items_fn(index, items_in_chunk)
 
     with ThreadPoolExecutor(max_workers=max_workers) as e:
         futures: list[Future[None]] = []

@@ -1,6 +1,6 @@
 # natural-language-geocoding
 
-Natural Language Geocoding implements an AI technique to convert natural language descriptions of spatial areas into polygons.
+Geocoding is the process of converting a place into the location of that place. Natural Language Geocoding can geocode natural language descriptions of places on the Earth into the geometry.
 
 ## Installing and Using
 
@@ -9,8 +9,7 @@ pip install natural-language-geocoding
 natural-language-geocoding init
 ```
 
-Set the `NOMINATIM_USER_AGENT` environment variable to identify your application with the [Nominatim](https://nominatim.org/) API.
-
+See documentation on how to configure and populate the OpenSearch cluster in [Sources](docs/sources.md).
 
 ## Running the demo
 
@@ -18,8 +17,9 @@ There's a streamlit demo in `src/natural_language_geocoding_demo`. It can be run
 
 1. Set up AWS credentials. The demo uses AWS Bedrock Anthropic Claude as the LLM. Valid AWS access keys to an account need to be present.
 2. Follow steps for local development
-3. Run `NOMINATIM_USER_AGENT=your-nominatim-user-agent scripts/run_demo.sh`
-4. It will open in your browser
+3. Create and populate an OpenSearch cluster following the instructions in [Sources](docs/sources.md).
+4. Run `scripts/run_demo.sh`
+5. It will open in your browser
 
 
 ## Developing
@@ -56,12 +56,4 @@ Everyone who contributes code to natural language geocoding will be asked to sig
 
 ## Attribution
 
-### OpenStreetMap
-
-This library uses the OpenStreetMap Nominatim API for geocoding. Users of this library must follow OpenStreetMap's [attribution guidelines](https://osmfoundation.org/wiki/Licence/Attribution_Guidelines)
-
-Users must also conform to the [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/). The environment variable `NOMINATIM_USER_AGENT` should be set to identify your application.
-
-### Natural Earth
-
-This library uses coastlines from https://github.com/martynafford/natural-earth-geojson which is distributed under the CC0-1.0 license. These are downloaded when the project is initialized.
+See [Sources](docs/sources.md) for attribution and licensing information.
