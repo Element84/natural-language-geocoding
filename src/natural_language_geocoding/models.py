@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 from e84_geoai_common.geometry import (
     BoundingBox,
@@ -7,7 +7,7 @@ from e84_geoai_common.geometry import (
     between,
     simplify_geometry,
 )
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
@@ -69,6 +69,21 @@ class NamedPlace(SpatialNodeType):
             "Region names are not globally unique so in_country must be specified as well."
         ),
     )
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _parse_place_type(cls, v: Any) -> GeoPlaceType | str | None:  # noqa: ANN401
+        if v is None:
+            return v
+        if isinstance(v, str):
+            try:
+                return GeoPlaceType(v)
+            except ValueError:
+                return v
+        if isinstance(v, GeoPlaceType):
+            return v
+        msg = "type must be None, a string, or GeoPlaceType."
+        raise TypeError(msg)
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
         geometry = place_lookup.search(

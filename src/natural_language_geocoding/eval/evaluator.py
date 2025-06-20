@@ -269,7 +269,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 # evaluator = ParseSpatialNodeEvaluator()
 
-# example = NAMED_PLACE_EXAMPLES[-1]
+# example = NAMED_PLACE_EXAMPLES[3]
 
 # example: ExampleEval[AnySpatialNodeType] = ExampleEval(
 #     user_text="along the Oman-Yemen border",
