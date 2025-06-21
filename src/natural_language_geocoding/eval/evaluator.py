@@ -20,13 +20,14 @@ from natural_language_geocoding.models import (
     DirectionalConstraint,
     Intersection,
     NamedPlace,
+    OffTheCoastOf,
     Union,
 )
 
 _TEMP_DIR = Path("temp")
 
-# FUTURE Add evaluations for problem areas that will fail
-# TODO add "off the coast off" tests and manually test this.
+# FUTURE Add failure case evaluations. The LLM should be able to detect that it can't return an
+# area and return an error.
 
 NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
     ExampleEval(
@@ -104,7 +105,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         expected_node=NamedPlace(
             name="Maui",
             type=GeoPlaceType.island,
-            in_continent="Oceania",
+            in_continent="North America",
             in_country="United States",
             in_region="Hawaii",
         ),
@@ -127,6 +128,20 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
                 in_continent="North America",
                 in_country="United States",
             )
+        ),
+    ),
+    ExampleEval(
+        user_text="3km off the coast of Maryland",
+        description="Off the coast of a US state",
+        expected_node=OffTheCoastOf(
+            child_node=NamedPlace(
+                name="Maryland",
+                type=GeoPlaceType.region,
+                in_continent="North America",
+                in_country="United States",
+            ),
+            distance=3,
+            distance_unit="kilometers",
         ),
     ),
     ExampleEval(
