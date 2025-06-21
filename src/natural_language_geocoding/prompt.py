@@ -86,13 +86,22 @@ GUIDELINES_04_SIMPLIFY = [
     ),
 ]
 
-GUIDELINE_05_APPROPRIATE_NODE_TYPE = singleline(
-    """
-    Appropriate Use of Node Types: Only employ complex node types (e.g., "Intersection",
-    "Buffer") when the user's query explicitly or implicitly requires the representation of
-    spatial relationships or operations between two or more places.
-    """
-)
+GUIDELINES_05_APPROPRIATE_NODE_TYPE = [
+    singleline(
+        """
+        Appropriate Use of Node Types: Only employ complex node types (e.g., "Intersection",
+        "Buffer") when the user's query explicitly or implicitly requires the representation of
+        spatial relationships or operations between two or more places.
+        """
+    ),
+    singleline(
+        """
+        When interpreting combinations of areas through the use of words like "and", use clues from
+        the phrasing to determine if the area is an intersection or a union. It is most likely the
+        user wants a union unless they very specifically say something like "the overlap of A and B"
+        """
+    ),
+]
 
 GUIDELINE_06_HIERARCHICAL_CONTEXT = singleline(
     """
@@ -102,20 +111,27 @@ GUIDELINE_06_HIERARCHICAL_CONTEXT = singleline(
     """
 )
 
-GUIDELINE_07_PORTS = singleline("""
-    When a user mentions a PORT, translate this into the coastline of the specified location. Do
-    not use "Port of" or similar phrasings in the name. Instead, represent the location using
-    its geographical name (e.g., "Miami Florida" for the port of Miami).
-""")
+GUIDELINE_07_PLACE_NAME_SIMPLIFICATION = """
+PLACE NAME SIMPLIFICATION
+    - When users refer to features or aspects of a place (e.g., "Shanghai's shipping lanes", "the
+      business district of New York"), extract just the core place name ("Shanghai", "New York")
+    - Do not include descriptive qualifiers in the name field that wouldn't exist in a standard
+      geocoding database
+    - Use the appropriate place type to indicate the nature of the location (e.g., "port" for
+      Shanghai when shipping is mentioned)
+    - Focus on mapping to standard geographical entities that would exist in geocoding databases
+    - Remember that descriptive phrases like "business district," "shipping lanes," or "territorial
+      waters" should inform your choice of place type but should not be included in the name field
+"""
 
 GUIDELINES: list[str] = [
     *GUIDELINES_01_GENERAL,
     GUIDELINE_02_HIERARCHY,
     GUIDELINE_03_PLACETYPE,
     *GUIDELINES_04_SIMPLIFY,
-    GUIDELINE_05_APPROPRIATE_NODE_TYPE,
+    *GUIDELINES_05_APPROPRIATE_NODE_TYPE,
     GUIDELINE_06_HIERARCHICAL_CONTEXT,
-    GUIDELINE_07_PORTS,
+    GUIDELINE_07_PLACE_NAME_SIMPLIFICATION,
 ]
 
 

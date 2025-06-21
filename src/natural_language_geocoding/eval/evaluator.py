@@ -254,6 +254,28 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
             ),
         ),
     ),
+    ExampleEval(
+        user_text="""
+            within 50km of the port of Shanghai's shipping lanes and South China Sea
+            territorial waters
+        """.strip(),
+        description="Union of an area on the water.",
+        expected_node=Union(
+            child_nodes=[
+                Buffer(
+                    distance=50,
+                    distance_unit="kilometers",
+                    child_node=NamedPlace(
+                        name="Shanghai",
+                        type=GeoPlaceType.port,
+                        in_country="China",
+                        in_continent="Asia",
+                    ),
+                ),
+                NamedPlace(name="South China Sea", type=GeoPlaceType.sea),
+            ]
+        ),
+    ),
 ]
 
 ALL_EXAMPLES = [*NAMED_PLACE_EXAMPLES, *FEATURE_EXAMPLES]
@@ -284,7 +306,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
 # evaluator = ParseSpatialNodeEvaluator()
 
-# example = NAMED_PLACE_EXAMPLES[3]
+# example = FEATURE_EXAMPLES[-1]
 
 # example: ExampleEval[AnySpatialNodeType] = ExampleEval(
 #     user_text="along the Oman-Yemen border",
