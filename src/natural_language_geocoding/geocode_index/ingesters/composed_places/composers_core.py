@@ -1,4 +1,4 @@
-"""TODO docs."""
+"""Composition of geographic places for complex spatial queries and operations."""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -20,13 +20,16 @@ from natural_language_geocoding.place_lookup import PlaceSearchRequest
 
 
 class GeoPlaceSource(BaseModel):
-    """TODO docs."""
+    """Represents the source of a geoplace."""
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     id: str
     source_type: GeoPlaceSourceType | str
     source_path: str
+
+    def __hash__(self) -> int:
+        return hash((self.id, self.source_type, self.source_path))
 
     @staticmethod
     def from_place(place: GeoPlace) -> "GeoPlaceSource":
@@ -36,7 +39,12 @@ class GeoPlaceSource(BaseModel):
 
 
 class ComposedPlace(BaseModel):
-    """TODO docs."""
+    """A geographic place that can be composed from multiple sources through geometric operations.
+
+    ComposedPlace allows for complex spatial queries by combining, intersecting, or modifying
+    geographic places. It maintains references to source places and supports operations like
+    union, intersection, and difference.
+    """
 
     model_config = ConfigDict(
         strict=True, extra="forbid", frozen=True, arbitrary_types_allowed=True
@@ -46,10 +54,10 @@ class ComposedPlace(BaseModel):
     place_name: str
 
     geom: BaseGeometry
-    # TODO this should be a set and remove hierarchies that are a parent of a lower hierarchy
+    # FUTURE ideally this should be a set and remove hierarchies that are a parent of a lower
+    # hierarchy.
     hierarchies: list[Hierarchy] = Field(default_factory=list[Hierarchy])
-    # TODO this should be a set
-    sources: list[GeoPlaceSource] = Field(default_factory=list[GeoPlaceSource])
+    sources: set[GeoPlaceSource] = Field(default_factory=set[GeoPlaceSource])
 
     def display_geometry(self) -> Any:  # noqa: ANN401
         """Displays the geometry of this place on a map when run in a Jupyter Notebook."""
@@ -63,7 +71,7 @@ class ComposedPlace(BaseModel):
             place_name=place.place_name,
             geom=place.geom,
             hierarchies=place.hierarchies,
-            sources=[GeoPlaceSource.from_place(place)],
+            sources={GeoPlaceSource.from_place(place)},
         )
 
     @staticmethod
@@ -86,7 +94,7 @@ class ComposedPlace(BaseModel):
     def union(self, place: "GeoPlace | ComposedPlace") -> "ComposedPlace":
         sources = self.sources
         if isinstance(place, GeoPlace):
-            sources = [*sources, GeoPlaceSource.from_place(place)]
+            sources = {*sources, GeoPlaceSource.from_place(place)}
         return ComposedPlace(
             place_name=f"Union of [{self.place_name}] and [{place.place_name}]",
             geom=self.geom.union(place.geom),
@@ -97,7 +105,7 @@ class ComposedPlace(BaseModel):
     def intersection(self, place: "GeoPlace | ComposedPlace") -> "ComposedPlace":
         sources = self.sources
         if isinstance(place, GeoPlace):
-            sources = [*sources, GeoPlaceSource.from_place(place)]
+            sources = {*sources, GeoPlaceSource.from_place(place)}
         return ComposedPlace(
             place_name=f"Intersection of [{self.place_name}] and [{place.place_name}]",
             geom=self.geom.intersection(place.geom),
@@ -114,7 +122,20 @@ class ComposedPlace(BaseModel):
         )
 
     def union_at_border(self, other: "ComposedPlace") -> "ComposedPlace":
-        """TODO docs. Note it covers the border."""
+        """Creates a union of two places that includes their shared border.
+
+        This method finds the border between two places and includes it in the resulting
+        geometry, ensuring complete coverage of the combined area including boundary regions.
+
+        Args:
+            other: The other ComposedPlace to union with
+
+        Returns:
+            A new ComposedPlace representing the union including the border
+
+        Raises:
+            Exception: If no border is found between the two places
+        """
         combined = self.geom.union(other.geom)
         border = border_between(self.geom, other.geom)
         if border is None:
@@ -126,23 +147,37 @@ class ComposedPlace(BaseModel):
             place_name=f"Union at Border of [{self.place_name}] and [{other.place_name}]",
             geom=combined_with_border_cover,
             hierarchies=[*self.hierarchies, *other.hierarchies],
-            sources=[*self.sources, *other.sources],
+            sources={*self.sources, *other.sources},
         )
 
 
 class CompositionComponent(BaseModel, ABC):
-    """TODO docs."""
+    """Abstract base class for components that can be composed to create complex geographic places.
+
+    CompositionComponent defines the interface for objects that can perform place lookups
+    and return ComposedPlace objects. Concrete implementations handle different types of
+    spatial operations and place queries.
+    """
 
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     @abstractmethod
-    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace: ...
+    def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:
+        """Performs a place lookup operation and returns a ComposedPlace.
+
+        Args:
+            place_lookup: The geocode index to search for places
+
+        Returns:
+            A ComposedPlace representing the result of the lookup operation
+        """
+        ...
 
 
 class PlaceLookupComponent(CompositionComponent):
     request: PlaceSearchRequest
 
-    # TODO document that this will take the top N and combine them
+    # This will take the top N and combine them
     num_to_combine: int = 1
 
     def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:

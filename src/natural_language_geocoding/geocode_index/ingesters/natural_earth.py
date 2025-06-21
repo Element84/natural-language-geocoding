@@ -1,4 +1,13 @@
-"""TODO document this module."""
+"""Natural Earth Data Ingester for Geocoding Index.
+
+This module provides functionality to download, process, and index geographic features
+from the Natural Earth dataset into a geocoding index. Natural Earth is a public domain
+map dataset available at naturalearthdata.com that provides cultural, physical, and
+raster data themes.
+
+Each feature is assigned a unique ID, processed for geometry validation, and enriched
+with hierarchical relationships before being indexed for geocoding operations.
+"""
 
 import json
 import logging
@@ -36,7 +45,17 @@ _LOCAL_TEMP_DIR = Path("temp")
 
 
 class _NESourceFile(BaseModel):
-    """TODO docs."""
+    """Represents a source file from the Natural Earth dataset.
+
+    This class handles the configuration and downloading of GeoJSON files from the
+    Natural Earth dataset hosted on GitHub. It provides properties for generating
+    URLs, local file paths, and handles the download process.
+
+    Attributes:
+        resolution: The resolution of the dataset (10m, 50m, or 110m)
+        area_type: The type of geographic data (cultural or physical)
+        name: The specific dataset name (e.g., 'airports', 'lakes')
+    """
 
     model_config = ConfigDict(strict=True, extra="allow", frozen=True)
 
@@ -255,11 +274,9 @@ _SKIPPABLE_PLACE_TYPES = {
 
 
 class _NEPlaceProperties(BaseModel):
-    """TODO docs."""
+    """Properties of a Natural Earth place feature."""
 
     model_config = ConfigDict(strict=True, extra="allow", frozen=True)
-
-    # TODO add the additional name fields I found
 
     name: str | None = None
     name_abb: str | None = None
@@ -292,7 +309,7 @@ class _NEPlaceProperties(BaseModel):
 
 
 class _NEFeature(Feature[_NEPlaceProperties]):
-    """TODO docs."""
+    """A Natural Earth geographic feature with properties and geometry."""
 
     id: str = Field(
         description=(
@@ -305,7 +322,17 @@ class _NEFeature(Feature[_NEPlaceProperties]):
 def _get_ne_features_from_source(
     source_idx: int, source: _NESourceFile
 ) -> Generator[_NEFeature, None, None]:
-    """TODO docs."""
+    """Get Natural Earth features from a source file.
+
+    Downloads the source file if necessary and yields parsed features with generated IDs.
+
+    Args:
+        source_idx: Index of the source file for ID generation
+        source: The Natural Earth source file to process
+
+    Yields:
+        _NEFeature: Parsed Natural Earth features with generated IDs
+    """
     source.download()
 
     with source.local_path.open() as f:
@@ -332,7 +359,19 @@ def _get_ne_features_from_source(
 def _ne_feature_to_geoplace(
     index: GeocodeIndex, source: _NESourceFile, feature: _NEFeature
 ) -> GeoPlace:
-    """TODO docs."""
+    """Convert a Natural Earth feature to a GeoPlace for indexing.
+
+    Args:
+        index: The geocode index for hierarchy lookup
+        source: The source file the feature came from
+        feature: The Natural Earth feature to convert
+
+    Returns:
+        GeoPlace: A GeoPlace ready for indexing
+
+    Raises:
+        Exception: If the feature has no name
+    """
     props = feature.properties
     name = props.feature_name
 
@@ -358,7 +397,13 @@ def _ne_feature_to_geoplace(
 
 
 def _get_all_ne_features() -> Generator[tuple[_NESourceFile, _NEFeature], None, None]:
-    """TODO docs."""
+    """Get all valid Natural Earth features from all configured source files.
+
+    Filters out features without names and features with skippable place types.
+
+    Yields:
+        tuple[_NESourceFile, _NEFeature]: Source file and feature pairs
+    """
     for source, source_idx in _NE_SOURCE_FILES:
         for feature in _get_ne_features_from_source(source_idx, source):
             if (
@@ -371,7 +416,12 @@ def _get_all_ne_features() -> Generator[tuple[_NESourceFile, _NEFeature], None, 
 def _bulk_index_features(
     index: GeocodeIndex, source_features: Sequence[tuple[_NESourceFile, _NEFeature]]
 ) -> None:
-    """TODO docs."""
+    """Bulk index a batch of Natural Earth features into the geocode index.
+
+    Args:
+        index: The geocode index to add features to
+        source_features: Sequence of (source, feature) pairs to index
+    """
     places: list[GeoPlace] = [
         _ne_feature_to_geoplace(index, source, feature) for source, feature in source_features
     ]
@@ -379,24 +429,23 @@ def _bulk_index_features(
 
 
 def process_features() -> None:
-    """TODO docs."""
+    """Process and index all Natural Earth features into the geocode index.
+
+    Downloads source files as needed, processes features, and bulk indexes them
+    with progress logging.
+    """
     logger.info("Starting to ingest natural earth features")
     process_ingest_items(
         counting_generator(_get_all_ne_features(), logger=logger), _bulk_index_features
     )
 
-
-if __name__ == "__main__" and "get_ipython" not in globals():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
     logging.getLogger("opensearch").setLevel(logging.WARNING)
     logging.getLogger("natural_language_geocoding.geocode_index.index.GeocodeIndex").setLevel(
         logging.WARNING
     )
 
     process_features()
+
 
 ## Code for manual testing
 # ruff: noqa: ERA001, E501

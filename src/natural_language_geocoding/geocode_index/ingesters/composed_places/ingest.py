@@ -1,4 +1,15 @@
-"""TODO docs."""
+"""Composed places ingester for geographic regions.
+
+This module defines and ingests composed geographic places that are created by combining
+multiple existing places or regions. It handles complex geographic entities like:
+
+- Ocean regions (Atlantic, Pacific, Mediterranean)
+- Continental subregions (North Africa, East Asia, Western Europe, etc.)
+- Geographic areas formed by unions or intersections of other places
+
+The compositions are defined declaratively and can be ingested into the geocoding index
+for use in natural language geocoding queries.
+"""
 
 import logging
 
@@ -56,9 +67,6 @@ class Composition(BaseModel):
             alternate_names=self.alternate_names or [],
         )
 
-
-# TODO test searching for all of these
-# TODO some of them have way too many points. They can't be simplified.
 
 compositions = [
     Composition(
@@ -479,7 +487,7 @@ compositions = [
 
 
 def ingest_compositions() -> None:
-    """TODO docs."""
+    """Ingests all of the composed places."""
     place_lookup = GeocodeIndexPlaceLookup()
     logger.info("Generating combined compositions")
     places = [comp.lookup(place_lookup) for comp in compositions]

@@ -1,4 +1,4 @@
-"""TODO docs."""
+"""Defines the Iberian peninsual as a composed place."""
 
 from shapely import LinearRing, Polygon
 
@@ -12,6 +12,7 @@ from natural_language_geocoding.geocode_index.ingesters.composed_places.composer
 )
 from natural_language_geocoding.place_lookup import PlaceSearchRequest
 
+# A geometric mask that's the portion of France that's considered in the Iberian Peninsula.
 france_iberian_mask_geom = Polygon(
     LinearRing(
         [
@@ -28,7 +29,7 @@ france_iberian_mask_geom = Polygon(
 
 
 class IberianPeninsulaCompositionComponent(CompositionComponent):
-    """TODO docs."""
+    """Defines the Iberian Peninsula as a place composed for various countries."""
 
     def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:
         europe = ComposedPlace.from_request(

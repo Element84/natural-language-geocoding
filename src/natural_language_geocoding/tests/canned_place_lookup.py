@@ -72,8 +72,6 @@ DELTA = Polygon([
 
 # fmt: on
 
-# TODO update this for the new searches
-
 
 class CannedPlaceLookup(PlaceLookup):
     """Implements place lookup using a set of known geometries in a file."""
