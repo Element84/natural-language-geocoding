@@ -225,14 +225,19 @@ class FoundGeoPlace(GeoPlace):
     def from_hit(hit: dict[str, Any]) -> "FoundGeoPlace":
         doc: GeoPlaceDoc = hit["_source"]
         """Converts an opensearch document to the GeoPlace model."""
+        place_type = GeoPlaceType(doc["type"]) if doc["type"] in GeoPlaceType else doc["type"]
+        source_type = (
+            GeoPlaceSourceType(doc["source_type"])
+            if doc["source_type"] in GeoPlaceSourceType
+            else doc["source_type"]
+        )
+
         return FoundGeoPlace(
             id=doc["id"],
             place_name=doc["place_name"],
-            type=GeoPlaceType(doc["type"]),
+            type=place_type,
             geom=geometry_from_geojson(doc["geom_str"]),
-            source=GeoPlaceSource(
-                source_type=GeoPlaceSourceType(doc["source_type"]), source_path=doc["source_path"]
-            ),
+            source=GeoPlaceSource(source_type=source_type, source_path=doc["source_path"]),
             alternate_names=doc["alternate_names"],
             properties=json.loads(doc["properties"]),
             hierarchies=[
