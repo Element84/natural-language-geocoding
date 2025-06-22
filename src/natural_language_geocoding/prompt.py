@@ -53,7 +53,8 @@ GUIDELINE_HIERARCHY = dedent(
             "Paris France")
         - Use in_country for country context (e.g., "France" for Paris)
         - Use in_region for state/province context (e.g., "Maryland" for Annapolis)
-        - Use in_continent for continental context where appropriate
+        - Use in_continent for continental context where appropriate. Note that Oceania should be
+          used instead of Australia as a continent.
         - Always populate in_continent when the location is on a continent, even if the user
             doesn't explicitly mention it.
         - Note that in_continent, in_country, in_region should not be used for large bodies of
