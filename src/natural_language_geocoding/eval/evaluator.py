@@ -115,6 +115,11 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="A sea",
         expected_node=NamedPlace(name="Mediterranean Sea", type=GeoPlaceType.sea),
     ),
+    ExampleEval(
+        user_text="West Africa",
+        description="Geoarea",
+        expected_node=NamedPlace(name="West Africa", type=GeoPlaceType.geoarea),
+    ),
 ]
 
 FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [

@@ -16,7 +16,7 @@ from natural_language_geocoding.models import (
 # FUTURE Some of these may be unnecessary. Try pruning guidelines and seeing the effect once there
 # are more evaluations
 
-GUIDELINES_01_GENERAL = [
+GUIDELINES_GENERAL = [
     singleline(
         """
         These requests will define spatial areas through direct mentions or implied geographical
@@ -44,7 +44,7 @@ GUIDELINES_01_GENERAL = [
     ),
 ]
 
-GUIDELINE_02_HIERARCHY = dedent(
+GUIDELINE_HIERARCHY = dedent(
     """
     GEOGRAPHICAL HIERARCHY
         - Always use separate fields (in_continent, in_country, in_region) instead of combining
@@ -61,13 +61,29 @@ GUIDELINE_02_HIERARCHY = dedent(
     """
 ).strip()
 
-GUIDELINE_03_PLACETYPE = (
+GUIDELINE_PLACETYPE = (
     "Always specify the place type when it can be determined. "
     "The place type must be one of the following values: "
     + (", ".join([pt.value for pt in GeoPlaceType]))
 )
 
-GUIDELINES_04_SIMPLIFY = [
+GUIDELINE_PLACETYPE_MACROAREA = singleline(
+    """
+    MACRO-GEOGRAPHICAL AREAS
+        - Use "geoarea" for any geographical area that represents a collection of countries or spans
+          multiple countries but is not itself a continent (e.g., "Southern Africa",
+          "Southeast Asia", "Scandinavia", "Middle East", "Caribbean", "Balkans", "Central America",
+          "South Asia")
+        - "macroregion" should only be used for large regions within a single country (e.g.,
+          "Normandy" in France)
+        - For geoareas, do not populate in_continent, in_country, or in_region fields as they
+          represent collections of countries themselves
+        - When in doubt about whether a region spans multiple countries, default to using "geoarea"
+          rather than "macroregion"
+    """
+)
+
+GUIDELINES_SIMPLIFY = [
     # FUTURE these two seem redundant and could probably be combined.
     singleline(
         """
@@ -86,7 +102,7 @@ GUIDELINES_04_SIMPLIFY = [
     ),
 ]
 
-GUIDELINES_05_APPROPRIATE_NODE_TYPE = [
+GUIDELINES_APPROPRIATE_NODE_TYPE = [
     singleline(
         """
         Appropriate Use of Node Types: Only employ complex node types (e.g., "Intersection",
@@ -103,7 +119,7 @@ GUIDELINES_05_APPROPRIATE_NODE_TYPE = [
     ),
 ]
 
-GUIDELINE_06_HIERARCHICAL_CONTEXT = singleline(
+GUIDELINE_HIERARCHICAL_CONTEXT = singleline(
     """
     Incorporate Hierarchical Geographical Contexts: Always consider and explicitly include
     broader geographical contexts if implied or directly mentioned in the query. This ensures
@@ -111,7 +127,7 @@ GUIDELINE_06_HIERARCHICAL_CONTEXT = singleline(
     """
 )
 
-GUIDELINE_07_PLACE_NAME_SIMPLIFICATION = """
+GUIDELINE_PLACE_NAME_SIMPLIFICATION = """
 PLACE NAME SIMPLIFICATION
     - When users refer to features or aspects of a place (e.g., "Shanghai's shipping lanes", "the
       business district of New York"), extract just the core place name ("Shanghai", "New York")
@@ -125,13 +141,14 @@ PLACE NAME SIMPLIFICATION
 """
 
 GUIDELINES: list[str] = [
-    *GUIDELINES_01_GENERAL,
-    GUIDELINE_02_HIERARCHY,
-    GUIDELINE_03_PLACETYPE,
-    *GUIDELINES_04_SIMPLIFY,
-    *GUIDELINES_05_APPROPRIATE_NODE_TYPE,
-    GUIDELINE_06_HIERARCHICAL_CONTEXT,
-    GUIDELINE_07_PLACE_NAME_SIMPLIFICATION,
+    *GUIDELINES_GENERAL,
+    GUIDELINE_HIERARCHY,
+    GUIDELINE_PLACETYPE,
+    GUIDELINE_PLACETYPE_MACROAREA,
+    *GUIDELINES_SIMPLIFY,
+    *GUIDELINES_APPROPRIATE_NODE_TYPE,
+    GUIDELINE_HIERARCHICAL_CONTEXT,
+    GUIDELINE_PLACE_NAME_SIMPLIFICATION,
 ]
 
 
