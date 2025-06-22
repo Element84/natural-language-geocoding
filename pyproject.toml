@@ -15,7 +15,7 @@ dependencies = [
   "requests>=2.32.3",
   # TODO switch to the published version after merging in changes.
   # "e84-geoai-common>=0.0.5"
-  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@main"]
+  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@jgilman/update_dependencies"]
 dynamic = ["version"]
 
 [tool.setuptools-git-versioning]

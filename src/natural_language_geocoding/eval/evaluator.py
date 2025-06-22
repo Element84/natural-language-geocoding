@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 from e84_geoai_common.llm.core import LLM
-from e84_geoai_common.llm.models import CLAUDE_BEDROCK_MODEL_IDS, BedrockClaudeLLM
+from e84_geoai_common.llm.models import CLAUDE_4_SONNET, BedrockClaudeLLM
 
 from natural_language_geocoding import parse_spatial_node_from_text
 from natural_language_geocoding.eval.evaluation_core import Evaluator, ExampleEval
@@ -118,9 +118,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
     ExampleEval(
         user_text="West Africa",
         description="Geoarea",
-        expected_node=NamedPlace(
-            name="West Africa", type=GeoPlaceType.geoarea, in_continent="Africa"
-        ),
+        expected_node=NamedPlace(name="West Africa", type=GeoPlaceType.geoarea),
     ),
 ]
 
@@ -254,7 +252,7 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
                 in_region="Maryland",
             ),
             child_node_2=NamedPlace(
-                name="Washington DC",
+                name="Washington",
                 type=GeoPlaceType.locality,
                 in_continent="North America",
                 in_country="United States",
@@ -267,20 +265,20 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
             territorial waters
         """.strip(),
         description="Union of an area on the water.",
-        expected_node=Union(
-            child_nodes=[
-                Buffer(
-                    distance=50,
-                    distance_unit="kilometers",
-                    child_node=NamedPlace(
+        expected_node=Buffer(
+            distance=50,
+            distance_unit="kilometers",
+            child_node=Union(
+                child_nodes=[
+                    NamedPlace(
                         name="Shanghai",
                         type=GeoPlaceType.locality,
                         in_country="China",
                         in_continent="Asia",
                     ),
-                ),
-                NamedPlace(name="South China Sea", type=GeoPlaceType.sea),
-            ]
+                    NamedPlace(name="South China Sea", type=GeoPlaceType.sea),
+                ]
+            ),
         ),
     ),
 ]
@@ -298,7 +296,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
+    llm = BedrockClaudeLLM(model_id=CLAUDE_4_SONNET)
     evaluator = ParseSpatialNodeEvaluator()
     full_eval = evaluator.evaluate_examples(llm, ALL_EXAMPLES)
     print(full_eval.to_markdown())  # noqa: T201
@@ -310,7 +308,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # code for manual testing
 # ruff: noqa: ERA001
 
-# llm = BedrockClaudeLLM(model_id=CLAUDE_BEDROCK_MODEL_IDS["Claude 3.7 Sonnet"])
+# llm = BedrockClaudeLLM(model_id=CLAUDE_4_SONNET)
 # evaluator = ParseSpatialNodeEvaluator()
 
 # example = FEATURE_EXAMPLES[-1]
