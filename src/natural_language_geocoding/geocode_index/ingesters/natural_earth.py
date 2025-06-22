@@ -379,7 +379,7 @@ def _ne_feature_to_geoplace(
         raise Exception(f"Unexpected feature without name {feature}")
     place_type = props.place_type.to_geoplace_type()
     fixed_geom = fix_geometry(feature.id, feature.geometry)
-    hierarchies = get_hierarchies(index, name, place_type, fixed_geom)
+    hierarchies = get_hierarchies(index, fixed_geom)
 
     return GeoPlace(
         id=feature.id,

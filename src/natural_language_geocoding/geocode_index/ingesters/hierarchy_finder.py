@@ -92,8 +92,6 @@ class _ContinentCountryRegionTracker:
 
 def get_hierarchies(
     index: GeocodeIndex,
-    place_name: str,
-    place_type: GeoPlaceType,
     geom: BaseGeometry,
 ) -> set[Hierarchy]:
     """Finds the parents of a place using spatial location and returns them as a set of Hierarchies.
@@ -121,7 +119,7 @@ def get_hierarchies(
     )
     resp = index.search(request)
     if resp.hits > max_parents:
-        raise Exception(f"Found more than {max_parents} for place {place_name} {place_type}")
+        raise Exception(f"Found more than {max_parents}")
 
     tracker = _ContinentCountryRegionTracker()
     for parent in resp.places:
