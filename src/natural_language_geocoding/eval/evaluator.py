@@ -118,7 +118,9 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
     ExampleEval(
         user_text="West Africa",
         description="Geoarea",
-        expected_node=NamedPlace(name="West Africa", type=GeoPlaceType.geoarea),
+        expected_node=NamedPlace(
+            name="West Africa", type=GeoPlaceType.geoarea, in_continent="Africa"
+        ),
     ),
 ]
 
@@ -272,7 +274,7 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
                     distance_unit="kilometers",
                     child_node=NamedPlace(
                         name="Shanghai",
-                        type=GeoPlaceType.port,
+                        type=GeoPlaceType.locality,
                         in_country="China",
                         in_continent="Asia",
                     ),
