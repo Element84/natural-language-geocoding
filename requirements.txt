@@ -14,15 +14,15 @@ attrs==25.3.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.38.41
+boto3==1.39.1
     # via e84-geoai-common
-boto3-stubs==1.38.41
+boto3-stubs==1.39.1
     # via e84-geoai-common
-botocore==1.38.41
+botocore==1.39.1
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.38.30
+botocore-stubs==1.38.46
     # via boto3-stubs
 branca==0.8.1
     # via
@@ -56,7 +56,7 @@ distlib==0.3.9
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@9698f9a86e7d27d1e808e71a6849d252244fa2fc
+e84-geoai-common==0.0.6
     # via natural-language-geocoding (pyproject.toml)
 events==0.5
     # via opensearch-py
@@ -80,7 +80,7 @@ iniconfig==2.1.0
     # via pytest
 ipykernel==6.29.5
     # via natural-language-geocoding (pyproject.toml)
-ipython==9.3.0
+ipython==9.4.0
     # via ipykernel
 ipython-pygments-lexers==1.1.1
     # via ipython
@@ -117,15 +117,15 @@ matplotlib-inline==0.1.7
     #   ipython
 mdurl==0.1.2
     # via markdown-it-py
-mypy-boto3-bedrock==1.38.41
+mypy-boto3-bedrock==1.39.0
     # via boto3-stubs
-mypy-boto3-bedrock-runtime==1.38.4
+mypy-boto3-bedrock-runtime==1.39.0
     # via
     #   boto3-stubs
     #   e84-geoai-common
-mypy-boto3-s3==1.38.39
+mypy-boto3-s3==1.39.0
     # via boto3-stubs
-narwhals==1.43.1
+narwhals==1.45.0
     # via altair
 nest-asyncio==1.6.0
     # via ipykernel
@@ -158,7 +158,7 @@ parso==0.8.4
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==11.2.1
+pillow==11.3.0
     # via streamlit
 platformdirs==4.3.8
     # via
@@ -232,7 +232,7 @@ rich==14.0.0
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   e84-geoai-common
-rpds-py==0.25.1
+rpds-py==0.26.0
     # via
     #   jsonschema
     #   referencing
@@ -240,7 +240,7 @@ ruamel-yaml==0.18.14
     # via pre-commit-hooks
 ruamel-yaml-clib==0.2.12
     # via ruamel-yaml
-ruff==0.12.0
+ruff==0.12.1
     # via natural-language-geocoding (pyproject.toml)
 s3transfer==0.13.0
     # via boto3
@@ -254,7 +254,7 @@ smmap==5.0.2
     # via gitdb
 stack-data==0.6.3
     # via ipython
-streamlit==1.46.0
+streamlit==1.46.1
     # via
     #   natural-language-geocoding (pyproject.toml)
     #   streamlit-folium
@@ -279,7 +279,7 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-types-awscrt==0.27.2
+types-awscrt==0.27.4
     # via botocore-stubs
 types-s3transfer==0.13.0
     # via boto3-stubs
