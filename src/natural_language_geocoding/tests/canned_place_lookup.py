@@ -7,7 +7,7 @@ from e84_geoai_common.geometry import geometry_from_geojson_dict
 from shapely import Polygon
 from shapely.geometry.base import BaseGeometry
 
-from natural_language_geocoding.place_lookup import PlaceLookup
+from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
 
 _STATES_TO_GEOM_FILE = Path(__file__).parent / "states_to_geom.yaml"
 
@@ -88,10 +88,10 @@ class CannedPlaceLookup(PlaceLookup):
             "delta": DELTA,
         }
 
-    def search(self, name: str) -> BaseGeometry:
+    def search(self, request: PlaceSearchRequest) -> BaseGeometry:
         # Help make the name more consistent for when testing with a real LLM.
-        lower_name = name.lower().replace("USA", "").strip()
+        lower_name = request.name.lower().replace("USA", "").strip()
 
         if lower_name in self.name_to_geom:
             return self.name_to_geom[lower_name]
-        raise LookupError(f"Unable to find location with name {name}")
+        raise LookupError(f"Unable to find location with name {request.name}")

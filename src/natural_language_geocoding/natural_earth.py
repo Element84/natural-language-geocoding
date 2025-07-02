@@ -1,6 +1,7 @@
 """Helpers for dealing with GeoJSON from Natural Earth."""
 
 import json
+import logging
 import urllib.request
 from functools import lru_cache
 from pathlib import Path
@@ -14,6 +15,8 @@ from shapely.geometry.base import BaseGeometry
 
 NATURAL_EARTH_DATA_DIR = Path(__file__).parent / "natural_earth_data"
 NE_COASTLINE_FILE = NATURAL_EARTH_DATA_DIR / "ne_10m_coastline.json"
+
+logger = logging.getLogger(f"{__name__}")
 
 
 class NaturalEarthProperties(BaseModel):
@@ -72,7 +75,7 @@ def _get_coastlines() -> GeometryCollection:
 # Public Functions
 
 
-@timed_function
+@timed_function(logger)
 def coastline_of(g: BaseGeometry) -> BaseGeometry | None:
     """Given a geometry finds the area that intersects with a coastline."""
     buffered_geom = add_buffer(g, 2)

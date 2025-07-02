@@ -13,8 +13,11 @@ requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
   "requests>=2.32.3",
-  "e84-geoai-common>=0.0.4"
-]
+  # TODO switch to the published version after merging in changes.
+  # "e84-geoai-common>=0.0.5"
+  # "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@jgilman/update_dependencies"]
+  # For this to work downstream we have to reference the exact commit.
+  "e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@9698f9a86e7d27d1e808e71a6849d252244fa2fc"]
 dynamic = ["version"]
 
 [tool.setuptools-git-versioning]
@@ -29,24 +32,30 @@ Github = "https://github.com/Element84/natural-language-geocoding"
 natural-language-geocoding = "natural_language_geocoding.main:main"
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [project.optional-dependencies]
 demo = [
   "streamlit>=1.38.0",
   "streamlit-folium>=0.22.1",
-  "watchdog>=6.0.0"
-]
+  "watchdog>=6.0.0"]
+eval = [
+  "deepdiff",
+  "zss"]
 dev = [
   "pytest>=8.3.3",
+  "pytest-watch",
   "ipykernel>=6.29.5",
   "ruff>=0.6.8",
   "pyright>=1.1.381",
   "build>=1.2.2",
   "pre-commit>=3.8.0",
   "pre-commit-hooks>=4.6.0",
-]
+  "rich"]
+geocode_index = [
+  "tabulate",
+  "opensearch-py"]
 
 [tool.pyright]
 pythonVersion = "3.12"
@@ -97,16 +106,20 @@ ignore = [
   'TRY002',
   'TRY003',
   'EM101',
-  'EM102'
-]
+  'EM102',
+  # T O D Os
+  'TD002',
+  'TD003',
+  'TD004',
+  # Allow T O D O s in code.
+  'FIX002']
 
 [tool.ruff.lint.per-file-ignores]
 '__init__.py' = [
   # Module level import not at top of cell
   'E402',
   # Imported but unused
-  'F401',
-]
+  'F401']
 'tests/**/*' = [
   # Use of assert detected
   'S101',
@@ -117,5 +130,4 @@ ignore = [
   # Private member accessed
   'SLF001',
   # magic values
-  'PLR2004',
-]
+  'PLR2004']

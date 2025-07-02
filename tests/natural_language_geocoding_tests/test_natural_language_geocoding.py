@@ -1,8 +1,8 @@
 from e84_geoai_common.llm.core import LLM
 from e84_geoai_common.llm.models.claude import BedrockClaudeLLM
-from e84_geoai_common.llm.tests.mock_bedrock import (
+from e84_geoai_common.llm.tests.mock_bedrock_runtime import (
     claude_response_with_content,
-    make_test_bedrock_client,
+    make_test_bedrock_runtime_client,
 )
 from shapely import Polygon
 
@@ -32,7 +32,7 @@ from natural_language_geocoding.tests.canned_place_lookup import (
 def make_llm(spatial_node: AnySpatialNodeType) -> LLM:
     claude_resp = spatial_node.model_dump_json()[1:]
     return BedrockClaudeLLM(
-        client=make_test_bedrock_client([claude_response_with_content(claude_resp)])
+        client=make_test_bedrock_runtime_client([claude_response_with_content(claude_resp)])
     )
 
 
