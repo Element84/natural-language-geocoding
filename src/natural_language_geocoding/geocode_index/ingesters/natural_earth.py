@@ -439,12 +439,16 @@ def process_features() -> None:
         counting_generator(_get_all_ne_features(), logger=logger), _bulk_index_features
     )
 
+
+if __name__ == "__main__" and "get_ipython" not in globals():
     logging.getLogger("opensearch").setLevel(logging.WARNING)
     logging.getLogger("natural_language_geocoding.geocode_index.index.GeocodeIndex").setLevel(
         logging.WARNING
     )
 
     process_features()
+
+
 
 
 ## Code for manual testing
@@ -512,3 +516,4 @@ def process_features() -> None:
 # print_hierarchies_with_names(index, place.hierarchies)
 
 # display_geometry([place.geom])
+
