@@ -17,10 +17,10 @@ When calling `extract_geometry_from_text` a `PlaceLookup` implementation is requ
 **Environment Variables**
 
 * `GEOCODE_INDEX_HOST` - The host name of the OpenSearch index.
-* `GEOCODE_INDEX_PORT` - The port to connect to the OpenSearch index.
+* `GEOCODE_INDEX_PORT` - (Optional) The port to connect to the OpenSearch index. Default: 443
 * `GEOCODE_INDEX_REGION` - The AWS region where the OpenSearch cluster is hosted.
-* `GEOCODE_INDEX_USERNAME` - The username of the user to connect to OpenSearch.
-* `GEOCODE_INDEX_PASSWORD` - The password of the user to connect to OpenSearch.
+* `GEOCODE_INDEX_USERNAME` - (Optional) The username of the user to connect to OpenSearch. Default: None
+* `GEOCODE_INDEX_PASSWORD` - (Optional) The password of the user to connect to OpenSearch. Default: None
 
 ### Populating OpenSearch
 
