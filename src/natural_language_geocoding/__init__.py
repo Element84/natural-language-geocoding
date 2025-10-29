@@ -27,9 +27,7 @@ def extract_geometry_from_text(
     place_lookup = place_lookup or NominatimAPI()
     spatial_node = parse_spatial_node_from_text(llm, text)
     logger.info("Found spatial node from text %s: %s", text, spatial_node.model_dump_json(indent=2))
-    if g := spatial_node.to_geometry(place_lookup):
-        return g
-    raise Exception(f"Unable to extract geometry from text: {text}")
+    return spatial_node.to_geometry(place_lookup)
 
 
 #########################
