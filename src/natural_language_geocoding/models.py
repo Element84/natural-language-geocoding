@@ -14,6 +14,7 @@ from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
 from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
+from natural_language_geocoding.splitter import take_compass_subset
 
 
 def _to_kilometers(
@@ -248,6 +249,25 @@ class DirectionalConstraint(BaseModel):
                 )
 
 
+class DirectionalSubset(BaseModel):
+    """Finds a subset of an area based on compass directions.
+
+    Example: 'Northern London' represents the northern half of London.
+    Bi-directional phrases like Southwestern USA can be handled by nesting these, i.e the western
+    half of the southern half of the USA.
+    """
+
+    node_type: Literal["DirectionalSubset"] = "DirectionalSubset"
+    child_node: "AnySpatialNodeType"
+    direction: Literal["west", "north", "south", "east"] = Field(
+        description="Which portion of the area to include."
+    )
+
+    def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:
+        child_geom = self.child_node.to_geometry(place_lookup)
+        return take_compass_subset(self.direction, child_geom)
+
+
 class Intersection(SpatialNodeType):
     """Represents the spatial intersection of two areas."""
 
@@ -337,6 +357,7 @@ AnySpatialNodeType = (
     | Difference
     | Between
     | DirectionalConstraint
+    | DirectionalSubset
 )
 
 

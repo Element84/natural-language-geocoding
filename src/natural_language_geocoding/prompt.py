@@ -68,7 +68,7 @@ GUIDELINE_PLACETYPE = (
     + (", ".join([pt.value for pt in GeoPlaceType]))
 )
 
-GUIDELINE_PLACETYPE_MACROAREA = singleline(
+GUIDELINE_PLACETYPE_MACROAREA = dedent(
     """
     MACRO-GEOGRAPHICAL AREAS
         - Use "geoarea" for any geographical area that represents a collection of countries or spans
@@ -82,7 +82,22 @@ GUIDELINE_PLACETYPE_MACROAREA = singleline(
         - When in doubt about whether a region spans multiple countries, default to using "geoarea"
           rather than "macroregion"
     """
-)
+).strip()
+
+GUIDELINE_DIRECTIONAL_SUBSET = dedent(
+    """
+    DIRECTIONAL SUBSET HANDLING
+    - For compound directional terms (e.g., "Southeastern", "Northwestern"), create nested
+      DirectionalSubset nodes
+    - Process compound directions by breaking them into component parts:
+        * "Southeastern" = Eastern half of the Southern half
+        * "Northwestern" = Western half of the Northern half
+        * "Southwestern" = Western half of the Southern half
+        * "Northeastern" = Eastern half of the Northern half
+    - Always nest the directional subsets in the correct order: first the primary direction
+      (North/South), then the secondary direction (East/West)
+    """
+).strip()
 
 GUIDELINES_SIMPLIFY = [
     # FUTURE these two seem redundant and could probably be combined.
@@ -147,7 +162,7 @@ PLACE NAME SIMPLIFICATION
     - Focus on mapping to standard geographical entities that would exist in geocoding databases
     - Remember that descriptive phrases like "business district," "shipping lanes," or "territorial
       waters" should inform your choice of place type but should not be included in the name field
-"""
+""".strip()
 
 GUIDELINE_PORTS = dedent(
     """
@@ -156,32 +171,37 @@ GUIDELINE_PORTS = dedent(
           port or harbor facility (e.g., "Port of Shanghai", "Shanghai Harbor").
         - References to maritime zones (like EEZ, territorial waters) or maritime activities
           (like fishing, shipping) near a location do not automatically make that location a
-          port - use the appropriate place type based on the actual location (e.g., "locality"
-          for cities).
+          port - use the city's primary classification (usually "locality") unless the port itself
+          is specifically the focus.
         - For queries involving maritime activities near cities with known ports, use the city's
           primary classification (usually "locality") unless the port itself is specifically the
           focus.
+        - **CRITICAL**: Mentions of "shipping lanes" or other maritime activities associated with a
+          city do NOT make that city a port - keep the standard place type (e.g., "locality" for
+          cities).
     """
-)
+).strip()
+
 GUIDELINE_FACT_VERIFICATION = dedent(
     """
     GEOGRAPHICAL FACT VERIFICATION
-        - Before returning an error about countries not sharing borders, thoroughly verify
-          geographical facts using your knowledge.
-        - Many countries in Central Asia, Africa, and South America share borders that might not
-          be as well-known
-        - When in doubt about whether two countries or regions share a border, assume they do and
-          process the request rather than returning an error.
-        - For maritime borders, remember that countries separated by narrow bodies of water
-          (straits, channels, etc.) can be considered to share maritime borders.
+    - Before returning an error about countries not sharing borders, thoroughly verify
+      geographical facts using your knowledge.
+    - Many countries in Central Asia, Africa, and South America share borders that might not
+      be as well-known
+    - When in doubt about whether two countries or regions share a border, assume they do and
+      process the request rather than returning an error.
+    - For maritime borders, remember that countries separated by narrow bodies of water
+      (straits, channels, etc.) can be considered to share maritime borders.
     """
-)
+).strip()
 
 GUIDELINES: list[str] = [
     *GUIDELINES_GENERAL,
     GUIDELINE_HIERARCHY,
     GUIDELINE_PLACETYPE,
     GUIDELINE_PLACETYPE_MACROAREA,
+    GUIDELINE_DIRECTIONAL_SUBSET,
     *GUIDELINES_SIMPLIFY,
     GUIDELINE_APPROPRIATE_NODE_TYPE,
     GUIDELINE_CONJUNCTIONS,

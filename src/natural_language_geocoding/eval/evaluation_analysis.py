@@ -49,9 +49,7 @@ Follow these steps to improve the prompt
 5. Generate an update to the original prompt that should resolve the issues.
 """
 
-config = LLMInferenceConfig(
-    system_prompt=system_prompt,
-)
+config = LLMInferenceConfig(system_prompt=system_prompt, max_tokens=10000)
 resp = llm.prompt(
     messages=[
         LLMMessage(
@@ -71,5 +69,5 @@ resp = llm.prompt(
 
 print(resp.to_text_only())  # noqa: T201
 
-with (_TEMP_DIR / "llm_suggestion_v{test_version}.md").open("w") as f:
+with (_TEMP_DIR / f"llm_suggestion_v{test_version}.md").open("w") as f:
     f.write(resp.to_text_only())
