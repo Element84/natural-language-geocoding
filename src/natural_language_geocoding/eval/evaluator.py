@@ -18,6 +18,7 @@ from natural_language_geocoding.models import (
     CoastOf,
     Difference,
     DirectionalConstraint,
+    DirectionalSubset,
     Intersection,
     NamedPlace,
     OffTheCoastOf,
@@ -283,7 +284,106 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
     ),
 ]
 
-ALL_EXAMPLES = [*NAMED_PLACE_EXAMPLES, *FEATURE_EXAMPLES]
+DIRECTIONAL_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
+    ExampleEval(
+        user_text="maryland west of annapolis",
+        description="directional constraint of an area",
+        expected_node=Intersection(
+            child_nodes=[
+                NamedPlace(
+                    name="Maryland",
+                    type="region",
+                    in_continent="North America",
+                    in_country="United States",
+                ),
+                DirectionalConstraint(
+                    direction="west",
+                    child_node=NamedPlace(
+                        name="Annapolis",
+                        type="locality",
+                        in_continent="North America",
+                        in_country="United States",
+                        in_region="Maryland",
+                    ),
+                ),
+            ]
+        ),
+    ),
+    ExampleEval(
+        user_text="Western Maryland",
+        description="directional subset",
+        expected_node=DirectionalSubset(
+            child_node=NamedPlace(
+                name="Maryland",
+                type="region",
+                in_continent="North America",
+                in_country="United States",
+            ),
+            direction="west",
+        ),
+    ),
+    ExampleEval(
+        user_text="Southern Maryland",
+        description="directional subset",
+        expected_node=DirectionalSubset(
+            child_node=NamedPlace(
+                name="Maryland",
+                type="region",
+                in_continent="North America",
+                in_country="United States",
+            ),
+            direction="south",
+        ),
+    ),
+    ExampleEval(
+        user_text="Northern Maryland",
+        description="directional subset",
+        expected_node=DirectionalSubset(
+            child_node=NamedPlace(
+                name="Maryland",
+                type="region",
+                in_continent="North America",
+                in_country="United States",
+            ),
+            direction="north",
+        ),
+    ),
+    ExampleEval(
+        user_text="Eastern Maryland",
+        description="directional subset",
+        expected_node=DirectionalSubset(
+            child_node=NamedPlace(
+                name="Maryland",
+                type="region",
+                in_continent="North America",
+                in_country="United States",
+            ),
+            direction="east",
+        ),
+    ),
+    ExampleEval(
+        user_text="Southeastern Florida",
+        description="directional subset",
+        expected_node=DirectionalSubset(
+            child_node=DirectionalSubset(
+                child_node=NamedPlace(
+                    name="Florida",
+                    type="region",
+                    in_continent="North America",
+                    in_country="United States",
+                ),
+                direction="south",
+            ),
+            direction="east",
+        ),
+    ),
+]
+
+ALL_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
+    *NAMED_PLACE_EXAMPLES,
+    *FEATURE_EXAMPLES,
+    *DIRECTIONAL_EXAMPLES,
+]
 
 
 class ParseSpatialNodeEvaluator(Evaluator[AnySpatialNodeType]):
@@ -311,6 +411,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # llm = BedrockClaudeLLM(model_id=CLAUDE_4_SONNET)
 # evaluator = ParseSpatialNodeEvaluator()
 
+
 # example = FEATURE_EXAMPLES[-1]
 
 # example: ExampleEval[AnySpatialNodeType] = ExampleEval(
@@ -323,6 +424,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # )
 
 
+# example = DIRECTIONAL_EXAMPLES[5]
 # eval_result = evaluator.evaluate(llm, example)
 # print(eval_result.to_markdown())
 
