@@ -87,15 +87,18 @@ GUIDELINE_PLACETYPE_MACROAREA = dedent(
 GUIDELINE_DIRECTIONAL_SUBSET = dedent(
     """
     DIRECTIONAL SUBSET HANDLING
-    - For compound directional terms (e.g., "Southeastern", "Northwestern"), create nested
-      DirectionalSubset nodes
-    - Process compound directions by breaking them into component parts:
-        * "Southeastern" = Eastern half of the Southern half
-        * "Northwestern" = Western half of the Northern half
-        * "Southwestern" = Western half of the Southern half
-        * "Northeastern" = Eastern half of the Northern half
+    - Compound directional terms MUST always be broken into nested DirectionalSubset nodes:
+      * "Northeastern" or "Northeast" = Eastern half of the Northern half
+      * "Northwestern" or "Northwest" = Western half of the Northern half
+      * "Southeastern" or "Southeast" = Eastern half of the Southern half
+      * "Southwestern" or "Southwest" = Western half of the Southern half
+    - These compound directions apply whether the user says "the northeastern", "within the
+      northeastern", "in the northeastern", etc. - the presence of prepositions does not change the
+      interpretation
     - Always nest the directional subsets in the correct order: first the primary direction
       (North/South), then the secondary direction (East/West)
+    - Single direction terms (Northern, Southern, Eastern, Western, North, South, East, West)
+      should use a single DirectionalSubset
     """
 ).strip()
 

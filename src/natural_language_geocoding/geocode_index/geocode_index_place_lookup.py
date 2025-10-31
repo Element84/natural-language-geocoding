@@ -204,7 +204,11 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 
 # resp = lookup.search_for_places(
 #     PlaceSearchRequest(
-#         name="Mediterranean Sea", place_type=GeoPlaceType.sea, in_continent="Europe"
+#         name="Cape Cod",
+#         place_type=GeoPlaceType.peninsula,
+#         in_continent="North America",
+#         in_country="United States",
+#         in_region="Massachusetts",
 #     ),
 #     explain=True,
 #     limit=10,
