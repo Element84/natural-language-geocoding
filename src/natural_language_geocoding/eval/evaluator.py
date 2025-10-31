@@ -377,6 +377,21 @@ DIRECTIONAL_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
             direction="east",
         ),
     ),
+    ExampleEval(
+        user_text="Within the northeastern United States of America",
+        description="directional subset",
+        expected_node=DirectionalSubset(
+            child_node=DirectionalSubset(
+                child_node=NamedPlace(
+                    name="United States",
+                    type="country",
+                    in_continent="North America",
+                ),
+                direction="north",
+            ),
+            direction="east",
+        ),
+    ),
 ]
 
 ALL_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
@@ -424,7 +439,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # )
 
 
-# example = DIRECTIONAL_EXAMPLES[5]
+# example = DIRECTIONAL_EXAMPLES[-1]
 # eval_result = evaluator.evaluate(llm, example)
 # print(eval_result.to_markdown())
 
