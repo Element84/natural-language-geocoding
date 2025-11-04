@@ -2,6 +2,8 @@
 
 Geocoding is the process of converting a place into the location of that place. Natural Language Geocoding can geocode natural language descriptions of places on the Earth into the geometry.
 
+**[Try it out: element84.com/natural-language-geocoding/](https://element84.com/natural-language-geocoding/)**
+
 ## Installing and Using
 
 ```shell
