@@ -13,7 +13,9 @@ requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
   "requests>=2.32.3",
-  "e84-geoai-common>=0.0.7"
+  "e84-geoai-common>=0.0.7",
+  "tabulate",
+  "opensearch-py"
 ]
 dynamic = ["version"]
 
@@ -50,9 +52,6 @@ dev = [
   "pre-commit>=3.8.0",
   "pre-commit-hooks>=4.6.0",
   "rich"]
-geocode_index = [
-  "tabulate",
-  "opensearch-py"]
 
 [tool.pyright]
 pythonVersion = "3.12"
