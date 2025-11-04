@@ -785,7 +785,9 @@ name = "natural-language-geocoding"
 source = { editable = "." }
 dependencies = [
     { name = "e84-geoai-common" },
+    { name = "opensearch-py" },
     { name = "requests" },
+    { name = "tabulate" },
 ]
 
 [package.optional-dependencies]
@@ -809,10 +811,6 @@ eval = [
     { name = "deepdiff" },
     { name = "zss" },
 ]
-geocode-index = [
-    { name = "opensearch-py" },
-    { name = "tabulate" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -820,7 +818,7 @@ requires-dist = [
     { name = "deepdiff", marker = "extra == 'eval'", specifier = ">=8.6.1" },
     { name = "e84-geoai-common", specifier = ">=0.0.7" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
-    { name = "opensearch-py", marker = "extra == 'geocode-index'" },
+    { name = "opensearch-py" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "pre-commit-hooks", marker = "extra == 'dev'", specifier = ">=4.6.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.381" },
@@ -831,11 +829,11 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.8" },
     { name = "streamlit", marker = "extra == 'demo'", specifier = ">=1.38.0" },
     { name = "streamlit-folium", marker = "extra == 'demo'", specifier = ">=0.22.1" },
-    { name = "tabulate", marker = "extra == 'geocode-index'" },
+    { name = "tabulate" },
     { name = "watchdog", marker = "extra == 'demo'", specifier = ">=6.0.0" },
     { name = "zss", marker = "extra == 'eval'" },
 ]
-provides-extras = ["demo", "eval", "dev", "geocode-index"]
+provides-extras = ["demo", "eval", "dev"]
 
 [[package]]
 name = "nest-asyncio"
