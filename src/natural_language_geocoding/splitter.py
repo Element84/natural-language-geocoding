@@ -11,7 +11,29 @@ def take_compass_subset(
     direction: Literal["west", "east", "north", "south"],
     geom: BaseGeometry,
 ) -> BaseGeometry:
-    """TODO docs."""
+    """Extract a directional subset (half) of a geometry based on compass direction.
+
+    This function takes a geometry and returns the portion that lies in the specified
+    compass direction (west, east, north, or south) relative to the geometry's centroid.
+    The split is made at the centroid coordinates, creating directional halves.
+
+    For multi-part geometries (MultiPolygon, GeometryCollection), the function attempts
+    to find a dominant geometry (>50% of total area) to use for centroid calculation.
+    If no single geometry dominates, it uses the centroid of the entire collection.
+
+    Args:
+        direction: The compass direction to extract. One of "west", "east", "north", "south".
+        geom: The input geometry to subset. Can be any Shapely geometry type.
+
+    Returns:
+        BaseGeometry: The portion of the input geometry that lies in the specified
+        compass direction. For Point geometries, returns the original point unchanged.
+
+    Examples:
+        >>> polygon = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+        >>> western_half = take_compass_subset("west", polygon)
+        >>> # Returns the western half of the polygon (left of centroid x-coordinate)
+    """
     if isinstance(geom, Point):
         return geom
 
