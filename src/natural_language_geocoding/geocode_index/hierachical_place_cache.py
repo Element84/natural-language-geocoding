@@ -7,7 +7,11 @@ from pathlib import Path
 from e84_geoai_common.util import timed_function
 
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType, Hierarchy
-from natural_language_geocoding.geocode_index.index import GEOPLACE_INDEX_NAME, GeoPlaceIndexField
+from natural_language_geocoding.geocode_index.index import (
+    GEOCODE_INDEX_CACHE_DIR,
+    GEOPLACE_INDEX_NAME,
+    GeoPlaceIndexField,
+)
 from natural_language_geocoding.geocode_index.opensearch_utils import (
     QueryDSL,
     create_opensearch_client,
@@ -236,9 +240,12 @@ class PlaceCache:
 
     _cache_file: Path
 
-    def __init__(self, *, cache_dir: str | Path = "./temp", force_reload: bool = False) -> None:
+    def __init__(
+        self, *, cache_dir: str | Path | None = None, force_reload: bool = False
+    ) -> None:
         # Increment the name of the file when something changes about the format of the storage
-        self._cache_file = Path(cache_dir) / "hierarchical_place_cache_v2.json"
+        resolved_cache_dir = cache_dir or GEOCODE_INDEX_CACHE_DIR
+        self._cache_file = Path(resolved_cache_dir) / "hierarchical_place_cache_v2.json"
         if force_reload or not self._cache_file.exists():
             self._dicts = _populate()
             self._cache_file.parent.mkdir(exist_ok=True)

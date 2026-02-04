@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import subprocess
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -187,6 +188,7 @@ class GeoPlaceDoc(TypedDict):
 
 
 GEOPLACE_INDEX_NAME = "geoplaces"
+GEOCODE_INDEX_CACHE_DIR = os.getenv("GEOCODE_INDEX_CACHE_DIR", "./temp")
 
 # The set of geo place types for which we'll index geometry spatially.
 # We don't do this for all types due to some issues getting everything to index. In the future, we
