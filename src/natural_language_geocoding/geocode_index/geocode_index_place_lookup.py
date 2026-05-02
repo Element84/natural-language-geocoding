@@ -10,8 +10,8 @@ from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import (
     DEFAULT_PLACE_TYPE_SORT_ORDER,
     DEFAULT_SOURCE_TYPE_SORT_ORDER,
-    GeoPlaceSourceType,
-    GeoPlaceType,
+    EarthPlaceSourceType,
+    EarthPlaceType,
 )
 from natural_language_geocoding.geocode_index.hierachical_place_cache import PlaceCache
 from natural_language_geocoding.geocode_index.index import (
@@ -41,7 +41,9 @@ def _continent_country_region_to_conditions(
     country_ids: set[str] | None = None
 
     if continent_name:
-        continent_ids = place_cache.find_ids(name=continent_name, place_type=GeoPlaceType.continent)
+        continent_ids = place_cache.find_ids(
+            name=continent_name, place_type=EarthPlaceType.continent
+        )
         if len(continent_ids) == 0:
             raise ValueError(f"Unable to find continent with name [{continent_name}]")
         if len(continent_ids) > 1:
@@ -52,7 +54,7 @@ def _continent_country_region_to_conditions(
 
     if country_name:
         country_ids = place_cache.find_ids(
-            name=country_name, place_type=GeoPlaceType.country, continent_ids=continent_ids
+            name=country_name, place_type=EarthPlaceType.country, continent_ids=continent_ids
         )
         if len(country_ids) == 0:
             raise ValueError(f"Unable to find country with name [{country_name}]")
@@ -63,7 +65,7 @@ def _continent_country_region_to_conditions(
     if region_name:
         region_ids = place_cache.find_ids(
             name=region_name,
-            place_type=GeoPlaceType.region,
+            place_type=EarthPlaceType.region,
             continent_ids=continent_ids,
             country_ids=country_ids,
         )
@@ -91,8 +93,8 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         self,
         index: GeocodeIndex | None = None,
         *,
-        place_type_sort_order: list[GeoPlaceType | str] = DEFAULT_PLACE_TYPE_SORT_ORDER,
-        source_type_sort_order: list[GeoPlaceSourceType | str] = DEFAULT_SOURCE_TYPE_SORT_ORDER,
+        place_type_sort_order: list[EarthPlaceType | str] = DEFAULT_PLACE_TYPE_SORT_ORDER,
+        source_type_sort_order: list[EarthPlaceSourceType | str] = DEFAULT_SOURCE_TYPE_SORT_ORDER,
     ) -> None:
         self._index = index or GeocodeIndex()
         self._place_cache = PlaceCache()
@@ -119,11 +121,11 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
         must_not_conds: list[QueryCondition] = []
         if request.place_type_value:
             should_conds.append(QueryDSL.term(GeoPlaceIndexField.type, request.place_type_value))
-            if request.place_type == GeoPlaceType.geoarea:
+            if request.place_type == EarthPlaceType.geoarea:
                 # If we're looking for a general geoarea we exclude locality so that we are more
                 # likely to find other areas first.
                 must_not_conds.append(
-                    QueryDSL.term(GeoPlaceIndexField.type, GeoPlaceType.locality.value)
+                    QueryDSL.term(GeoPlaceIndexField.type, EarthPlaceType.locality.value)
                 )
 
         should_conds = [
@@ -205,7 +207,7 @@ class GeocodeIndexPlaceLookup(PlaceLookup):
 # resp = lookup.search_for_places(
 #     PlaceSearchRequest(
 #         name="Cape Cod",
-#         place_type=GeoPlaceType.peninsula,
+#         place_type=EarthPlaceType.peninsula,
 #         in_continent="North America",
 #         in_country="United States",
 #         in_region="Massachusetts",

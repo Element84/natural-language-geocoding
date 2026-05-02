@@ -1,7 +1,7 @@
 """Composition of geographic places for complex spatial queries and operations."""
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 from shapely.geometry.base import BaseGeometry
@@ -10,9 +10,9 @@ from natural_language_geocoding.geocode_index.geocode_index_place_lookup import 
     GeocodeIndexPlaceLookup,
 )
 from natural_language_geocoding.geocode_index.geoplace import (
-    GeoPlace,
-    GeoPlaceSourceType,
-    GeoPlaceType,
+    EarthPlace,
+    EarthPlaceSourceType,
+    EarthPlaceType,
     Hierarchy,
 )
 from natural_language_geocoding.models import border_between
@@ -25,14 +25,14 @@ class GeoPlaceSource(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
     id: str
-    source_type: GeoPlaceSourceType | str
+    source_type: EarthPlaceSourceType | str
     source_path: str
 
     def __hash__(self) -> int:
         return hash((self.id, self.source_type, self.source_path))
 
     @staticmethod
-    def from_place(place: GeoPlace) -> "GeoPlaceSource":
+    def from_place(place: EarthPlace) -> "GeoPlaceSource":
         return GeoPlaceSource(
             id=place.id, source_type=place.source.source_type, source_path=place.source.source_path
         )
@@ -66,7 +66,7 @@ class ComposedPlace(BaseModel):
         return display_geometry([self.geom])
 
     @staticmethod
-    def from_place(place: GeoPlace) -> "ComposedPlace":
+    def from_place(place: EarthPlace) -> "ComposedPlace":
         return ComposedPlace(
             place_name=place.place_name,
             geom=place.geom,
@@ -84,16 +84,19 @@ class ComposedPlace(BaseModel):
         resp = place_lookup.search_for_places(request, limit=num_to_combine)
         composed: ComposedPlace | None = None
         for place in resp.places:
+            earth_place = cast("EarthPlace", place)
             composed = (
-                ComposedPlace.from_place(place) if composed is None else composed.union(place)
+                ComposedPlace.from_place(earth_place)
+                if composed is None
+                else composed.union(earth_place)
             )
         if composed is None:
             raise Exception(f"Unable to find places with request {request.model_dump_json()}")
         return composed
 
-    def union(self, place: "GeoPlace | ComposedPlace") -> "ComposedPlace":
+    def union(self, place: "EarthPlace | ComposedPlace") -> "ComposedPlace":
         sources = self.sources
-        if isinstance(place, GeoPlace):
+        if isinstance(place, EarthPlace):
             sources = {*sources, GeoPlaceSource.from_place(place)}
         return ComposedPlace(
             place_name=f"Union of [{self.place_name}] and [{place.place_name}]",
@@ -102,9 +105,9 @@ class ComposedPlace(BaseModel):
             sources=sources,
         )
 
-    def intersection(self, place: "GeoPlace | ComposedPlace") -> "ComposedPlace":
+    def intersection(self, place: "EarthPlace | ComposedPlace") -> "ComposedPlace":
         sources = self.sources
-        if isinstance(place, GeoPlace):
+        if isinstance(place, EarthPlace):
             sources = {*sources, GeoPlaceSource.from_place(place)}
         return ComposedPlace(
             place_name=f"Intersection of [{self.place_name}] and [{place.place_name}]",
@@ -113,7 +116,7 @@ class ComposedPlace(BaseModel):
             sources=sources,
         )
 
-    def difference(self, place: "GeoPlace | ComposedPlace") -> "ComposedPlace":
+    def difference(self, place: "EarthPlace | ComposedPlace") -> "ComposedPlace":
         return ComposedPlace(
             place_name=f"Difference of [{self.place_name}] and [{place.place_name}]",
             geom=self.geom.difference(place.geom),
@@ -186,7 +189,7 @@ class PlaceLookupComponent(CompositionComponent):
         )
 
     @staticmethod
-    def with_name_type(name: str, place_type: GeoPlaceType) -> "PlaceLookupComponent":
+    def with_name_type(name: str, place_type: EarthPlaceType) -> "PlaceLookupComponent":
         return PlaceLookupComponent(request=PlaceSearchRequest(name=name, place_type=place_type))
 
 
@@ -226,7 +229,7 @@ class ContinentSubregion(CompositionComponent):
             ComposedPlace.from_request(
                 place_lookup,
                 PlaceSearchRequest(
-                    name=country, place_type=GeoPlaceType.country, in_continent=self.continent
+                    name=country, place_type=EarthPlaceType.country, in_continent=self.continent
                 ),
             )
             for country in self.countries
@@ -235,7 +238,7 @@ class ContinentSubregion(CompositionComponent):
         if self.constrain_to_continent:
             continent = ComposedPlace.from_request(
                 place_lookup,
-                PlaceSearchRequest(name=self.continent, place_type=GeoPlaceType.continent),
+                PlaceSearchRequest(name=self.continent, place_type=EarthPlaceType.continent),
             )
             countries = [country.intersection(continent) for country in countries]
 

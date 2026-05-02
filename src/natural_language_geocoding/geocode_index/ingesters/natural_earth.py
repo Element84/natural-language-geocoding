@@ -22,10 +22,10 @@ from e84_geoai_common.geojson import Feature
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from natural_language_geocoding.geocode_index.geoplace import (
-    GeoPlace,
-    GeoPlaceSource,
-    GeoPlaceSourceType,
-    GeoPlaceType,
+    EarthPlace,
+    EarthPlaceSource,
+    EarthPlaceSourceType,
+    EarthPlaceType,
 )
 from natural_language_geocoding.geocode_index.index import (
     GeocodeIndex,
@@ -212,51 +212,51 @@ class _NEPlaceType(EnumWithValueLookup):
             feature_cla = "river"
         return cls.from_value(feature_cla)
 
-    def to_geoplace_type(self) -> GeoPlaceType:
+    def to_geoplace_type(self) -> EarthPlaceType:
         _place_type_map = {
-            _NEPlaceType.airport: GeoPlaceType.airport,
-            _NEPlaceType.alkaline_lake: GeoPlaceType.lake,
-            _NEPlaceType.lake: GeoPlaceType.lake,
-            _NEPlaceType.lake_centerline: GeoPlaceType.lake,
-            _NEPlaceType.reservoir: GeoPlaceType.lake,
-            _NEPlaceType.national_park_service: GeoPlaceType.national_park,
-            _NEPlaceType.port: GeoPlaceType.port,
-            _NEPlaceType.river: GeoPlaceType.river,
-            _NEPlaceType.basin: GeoPlaceType.basin,
-            _NEPlaceType.coast: GeoPlaceType.coast,
-            _NEPlaceType.delta: GeoPlaceType.delta,
-            _NEPlaceType.depression: GeoPlaceType.depression,
-            _NEPlaceType.desert: GeoPlaceType.desert,
-            _NEPlaceType.foothills: GeoPlaceType.foothills,
-            _NEPlaceType.geoarea: GeoPlaceType.geoarea,
-            _NEPlaceType.gorge: GeoPlaceType.gorge,
-            _NEPlaceType.island: GeoPlaceType.island,
-            _NEPlaceType.island_group: GeoPlaceType.island_group,
-            _NEPlaceType.isthmus: GeoPlaceType.isthmus,
-            _NEPlaceType.lowland: GeoPlaceType.lowland,
-            _NEPlaceType.pen_cape: GeoPlaceType.peninsula,
-            _NEPlaceType.peninsula: GeoPlaceType.peninsula,
-            _NEPlaceType.plain: GeoPlaceType.plain,
-            _NEPlaceType.plateau: GeoPlaceType.plateau,
-            _NEPlaceType.range_mtn: GeoPlaceType.range_mtn,
-            _NEPlaceType.tundra: GeoPlaceType.tundra,
-            _NEPlaceType.valley: GeoPlaceType.valley,
-            _NEPlaceType.wetlands: GeoPlaceType.wetlands,
-            _NEPlaceType.bay: GeoPlaceType.bay,
-            _NEPlaceType.channel: GeoPlaceType.channel,
-            _NEPlaceType.fjord: GeoPlaceType.fjord,
-            _NEPlaceType.gulf: GeoPlaceType.gulf,
-            _NEPlaceType.inlet: GeoPlaceType.inlet,
-            _NEPlaceType.lagoon: GeoPlaceType.lagoon,
-            _NEPlaceType.reef: GeoPlaceType.reef,
-            _NEPlaceType.sea: GeoPlaceType.sea,
-            _NEPlaceType.sound: GeoPlaceType.sound,
-            _NEPlaceType.strait: GeoPlaceType.strait,
+            _NEPlaceType.airport: EarthPlaceType.airport,
+            _NEPlaceType.alkaline_lake: EarthPlaceType.lake,
+            _NEPlaceType.lake: EarthPlaceType.lake,
+            _NEPlaceType.lake_centerline: EarthPlaceType.lake,
+            _NEPlaceType.reservoir: EarthPlaceType.lake,
+            _NEPlaceType.national_park_service: EarthPlaceType.national_park,
+            _NEPlaceType.port: EarthPlaceType.port,
+            _NEPlaceType.river: EarthPlaceType.river,
+            _NEPlaceType.basin: EarthPlaceType.basin,
+            _NEPlaceType.coast: EarthPlaceType.coast,
+            _NEPlaceType.delta: EarthPlaceType.delta,
+            _NEPlaceType.depression: EarthPlaceType.depression,
+            _NEPlaceType.desert: EarthPlaceType.desert,
+            _NEPlaceType.foothills: EarthPlaceType.foothills,
+            _NEPlaceType.geoarea: EarthPlaceType.geoarea,
+            _NEPlaceType.gorge: EarthPlaceType.gorge,
+            _NEPlaceType.island: EarthPlaceType.island,
+            _NEPlaceType.island_group: EarthPlaceType.island_group,
+            _NEPlaceType.isthmus: EarthPlaceType.isthmus,
+            _NEPlaceType.lowland: EarthPlaceType.lowland,
+            _NEPlaceType.pen_cape: EarthPlaceType.peninsula,
+            _NEPlaceType.peninsula: EarthPlaceType.peninsula,
+            _NEPlaceType.plain: EarthPlaceType.plain,
+            _NEPlaceType.plateau: EarthPlaceType.plateau,
+            _NEPlaceType.range_mtn: EarthPlaceType.range_mtn,
+            _NEPlaceType.tundra: EarthPlaceType.tundra,
+            _NEPlaceType.valley: EarthPlaceType.valley,
+            _NEPlaceType.wetlands: EarthPlaceType.wetlands,
+            _NEPlaceType.bay: EarthPlaceType.bay,
+            _NEPlaceType.channel: EarthPlaceType.channel,
+            _NEPlaceType.fjord: EarthPlaceType.fjord,
+            _NEPlaceType.gulf: EarthPlaceType.gulf,
+            _NEPlaceType.inlet: EarthPlaceType.inlet,
+            _NEPlaceType.lagoon: EarthPlaceType.lagoon,
+            _NEPlaceType.reef: EarthPlaceType.reef,
+            _NEPlaceType.sea: EarthPlaceType.sea,
+            _NEPlaceType.sound: EarthPlaceType.sound,
+            _NEPlaceType.strait: EarthPlaceType.strait,
         }
 
         if self in _place_type_map:
             return _place_type_map[self]
-        raise NotImplementedError(f"Missing mapping from NEPlaceType to GeoPlaceType for {self}")
+        raise NotImplementedError(f"Missing mapping from NEPlaceType to EarthPlaceType for {self}")
 
 
 _SKIPPABLE_PLACE_TYPES = {
@@ -358,7 +358,7 @@ def _get_ne_features_from_source(
 
 def _ne_feature_to_geoplace(
     index: GeocodeIndex, source: _NESourceFile, feature: _NEFeature
-) -> GeoPlace:
+) -> EarthPlace:
     """Convert a Natural Earth feature to a GeoPlace for indexing.
 
     Args:
@@ -381,14 +381,14 @@ def _ne_feature_to_geoplace(
     fixed_geom = fix_geometry(feature.id, feature.geometry)
     hierarchies = get_hierarchies(index, fixed_geom)
 
-    return GeoPlace(
+    return EarthPlace(
         id=feature.id,
         place_name=name,
         type=place_type,
         geom=fixed_geom,
         properties=props.model_dump(mode="json"),
-        source=GeoPlaceSource(
-            source_type=GeoPlaceSourceType.ne,
+        source=EarthPlaceSource(
+            source_type=EarthPlaceSourceType.ne,
             source_path=source.url,
         ),
         alternate_names=props.get_alternate_names(),
@@ -422,7 +422,7 @@ def _bulk_index_features(
         index: The geocode index to add features to
         source_features: Sequence of (source, feature) pairs to index
     """
-    places: list[GeoPlace] = [
+    places: list[EarthPlace] = [
         _ne_feature_to_geoplace(index, source, feature) for source, feature in source_features
     ]
     index.bulk_index(places)
@@ -447,8 +447,6 @@ if __name__ == "__main__" and "get_ipython" not in globals():
     )
 
     process_features()
-
-
 
 
 ## Code for manual testing
@@ -516,4 +514,3 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # print_hierarchies_with_names(index, place.hierarchies)
 
 # display_geometry([place.geom])
-

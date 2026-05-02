@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceSourceType, GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import EarthPlaceSourceType, EarthPlaceType
 
 
 def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
@@ -24,11 +24,11 @@ def _get_best_place(places: list[dict[str, Any]]) -> dict[str, Any]:
 class PlaceSearchRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
     name: str
-    place_type: GeoPlaceType | str | None = None
+    place_type: EarthPlaceType | str | None = None
     in_continent: str | None = None
     in_country: str | None = None
     in_region: str | None = None
-    source_type: GeoPlaceSourceType | str | None = None
+    source_type: EarthPlaceSourceType | str | None = None
 
     @property
     def place_type_value(self) -> str | None:

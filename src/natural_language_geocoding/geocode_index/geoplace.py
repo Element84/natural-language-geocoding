@@ -1,4 +1,8 @@
-"""Defines types that represent places on the earth."""
+"""Defines types that represent geospatial places.
+
+Geo-prefixed types are generic (body-agnostic).
+Earth-prefixed types are Earth-specific.
+"""
 
 from enum import Enum
 from typing import Annotated, Any, cast
@@ -7,9 +11,61 @@ from e84_geoai_common.geometry import geometry_from_geojson_dict
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation, field_serializer, field_validator
 from shapely.geometry.base import BaseGeometry
 
+# =============================================================================
+# Generic (body-agnostic) types
+# =============================================================================
 
-class GeoPlaceType(Enum):
-    """The set of different place types that are supported.
+
+class GeoPlaceSource(BaseModel):
+    """Generic source identifier for any geospatial place."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+    source_type: str
+    source_path: str
+
+
+class GeoPlace(BaseModel):
+    """Base model for any geospatial place, body-agnostic.
+
+    This is the common interface shared by Earth places, Lunar places, and any
+    future celestial body. Body-specific models extend this with additional fields.
+    """
+
+    model_config = ConfigDict(
+        strict=True, extra="forbid", frozen=True, arbitrary_types_allowed=True
+    )
+
+    id: str
+    place_name: str
+    type: str
+    geom: Annotated[BaseGeometry, SkipValidation]
+    source: GeoPlaceSource
+    alternate_names: list[str] = Field(default_factory=list)
+    area_sq_km: float | None = None
+    properties: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("geom", mode="before")
+    @classmethod
+    def _parse_shapely_geometry(cls, d: Any) -> BaseGeometry:  # noqa: ANN401
+        if isinstance(d, dict):
+            return geometry_from_geojson_dict(cast("dict[str, Any]", d))
+        if isinstance(d, BaseGeometry):
+            return d
+        msg = "geometry must be a geojson feature dictionary or a shapely geometry."
+        raise TypeError(msg)
+
+    @field_serializer("geom")
+    def _shapely_geometry_to_json(self, g: BaseGeometry) -> dict[str, Any]:
+        return g.__geo_interface__
+
+
+# =============================================================================
+# Earth-specific types
+# =============================================================================
+
+
+class EarthPlaceType(Enum):
+    """The set of different Earth place types that are supported.
 
     Based on a subset of the Who's On First placetypes.
     """
@@ -74,21 +130,21 @@ class GeoPlaceType(Enum):
 
 # The sort order for search results by place type. If the place type is not in this list then it
 # should appear after any of these
-DEFAULT_PLACE_TYPE_SORT_ORDER: list[GeoPlaceType | str] = [
-    GeoPlaceType.continent,
-    GeoPlaceType.country,
-    GeoPlaceType.empire,
-    GeoPlaceType.region,
-    GeoPlaceType.marinearea,
-    GeoPlaceType.ocean,
-    GeoPlaceType.geoarea,
-    GeoPlaceType.locality,
-    GeoPlaceType.county,
-    GeoPlaceType.postalregion,
+DEFAULT_PLACE_TYPE_SORT_ORDER: list[EarthPlaceType | str] = [
+    EarthPlaceType.continent,
+    EarthPlaceType.country,
+    EarthPlaceType.empire,
+    EarthPlaceType.region,
+    EarthPlaceType.marinearea,
+    EarthPlaceType.ocean,
+    EarthPlaceType.geoarea,
+    EarthPlaceType.locality,
+    EarthPlaceType.county,
+    EarthPlaceType.postalregion,
 ]
 
 
-class GeoPlaceSourceType(Enum):
+class EarthPlaceSourceType(Enum):
     # Who's on First
     wof = "wof"
     # Natural Earth
@@ -99,27 +155,27 @@ class GeoPlaceSourceType(Enum):
 
 # The sort order for search results by source type. If the source type is not in this list then it
 # should appear after any of these
-DEFAULT_SOURCE_TYPE_SORT_ORDER: list[GeoPlaceSourceType | str] = [
-    GeoPlaceSourceType.comp,
-    GeoPlaceSourceType.ne,
-    GeoPlaceSourceType.wof,
+DEFAULT_SOURCE_TYPE_SORT_ORDER: list[EarthPlaceSourceType | str] = [
+    EarthPlaceSourceType.comp,
+    EarthPlaceSourceType.ne,
+    EarthPlaceSourceType.wof,
 ]
 
 
-class GeoPlaceSource(BaseModel):
+class EarthPlaceSource(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
-    source_type: GeoPlaceSourceType | str
+    source_type: EarthPlaceSourceType | str
     source_path: str
 
     @field_validator("source_type", mode="before")
     @classmethod
-    def _parse_place_source_type(cls, v: Any) -> GeoPlaceSourceType | str:  # noqa: ANN401
+    def _parse_place_source_type(cls, v: Any) -> EarthPlaceSourceType | str:  # noqa: ANN401
         if isinstance(v, str):
             try:
-                return GeoPlaceSourceType(v)
+                return EarthPlaceSourceType(v)
             except ValueError:
                 return v
-        if isinstance(v, GeoPlaceSourceType):
+        if isinstance(v, EarthPlaceSourceType):
             return v
         msg = "source_type must be a string or GeoPlaceSourceType."
         raise TypeError(msg)
@@ -153,10 +209,10 @@ class Hierarchy(BaseModel, frozen=True):
     postalregion_id: str | None = None
     region_id: str | None = None
 
-    def get_by_place_type(self, place_type: GeoPlaceType) -> str | None:
+    def get_by_place_type(self, place_type: EarthPlaceType) -> str | None:
         return getattr(self, f"{place_type.value}_id")
 
-    def with_id(self, feature_id: str, place_type: GeoPlaceType | str) -> "Hierarchy":
+    def with_id(self, feature_id: str, place_type: EarthPlaceType | str) -> "Hierarchy":
         """Creates a new hierarchy with the specified id set."""
         model = self.model_dump()
         place_type_value = place_type if isinstance(place_type, str) else place_type.value
@@ -164,33 +220,31 @@ class Hierarchy(BaseModel, frozen=True):
         return Hierarchy.model_validate(model)
 
 
-class GeoPlace(BaseModel):
-    model_config = ConfigDict(
-        strict=True, extra="forbid", frozen=True, arbitrary_types_allowed=True
-    )
+class EarthPlace(GeoPlace):
+    """An Earth-specific geospatial place with hierarchies and population."""
 
     id: str
     place_name: str
-    type: GeoPlaceType | str
+    type: EarthPlaceType | str
     geom: Annotated[BaseGeometry, SkipValidation]
-    source: GeoPlaceSource
-    alternate_names: list[str] = Field(default_factory=list[str])
-    hierarchies: list[Hierarchy] = Field(default_factory=list[Hierarchy])
+    source: EarthPlaceSource
+    alternate_names: list[str] = Field(default_factory=list)
+    hierarchies: list[Hierarchy] = Field(default_factory=lambda: [])  # noqa: PIE807
     area_sq_km: float | None = None
     population: int | None = None
-    properties: dict[str, Any]
+    properties: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("type", mode="before")
     @classmethod
-    def _parse_place_type(cls, v: Any) -> GeoPlaceType | str:  # noqa: ANN401
+    def _parse_place_type(cls, v: Any) -> EarthPlaceType | str:  # noqa: ANN401
         if isinstance(v, str):
             try:
-                return GeoPlaceType(v)
+                return EarthPlaceType(v)
             except ValueError:
                 return v
-        if isinstance(v, GeoPlaceType):
+        if isinstance(v, EarthPlaceType):
             return v
-        msg = "type must be a string or GeoPlaceType."
+        msg = "type must be a string or EarthPlaceType."
         raise TypeError(msg)
 
     @property
@@ -203,20 +257,6 @@ class GeoPlace(BaseModel):
         from e84_geoai_common.debugging import display_geometry  # noqa: PLC0415
 
         return display_geometry([self.geom])
-
-    @field_validator("geom", mode="before")
-    @classmethod
-    def _parse_shapely_geometry(cls, d: Any) -> BaseGeometry:  # noqa: ANN401
-        if isinstance(d, dict):
-            return geometry_from_geojson_dict(cast("dict[str, Any]", d))
-        if isinstance(d, BaseGeometry):
-            return d
-        msg = "geometry must be a geojson feature dictionary or a shapely geometry."
-        raise TypeError(msg)
-
-    @field_serializer("geom")
-    def _shapely_geometry_to_json(self, g: BaseGeometry) -> dict[str, Any]:
-        return g.__geo_interface__
 
     def self_as_hierarchies(self) -> list[Hierarchy]:
         """Returns a set of hierarchies representing this place in the hierarchy."""

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Any, Literal, Self
 
 from e84_geoai_common.geometry import (
@@ -11,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.errors import GeocodeError
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import EarthPlaceType
 from natural_language_geocoding.natural_earth import coastline_of
 from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
 from natural_language_geocoding.splitter import take_compass_subset
@@ -48,7 +49,7 @@ class NamedPlace(SpatialNodeType):
             "to help ensure the correct area is found."
         )
     )
-    type: GeoPlaceType | str | None = Field(
+    type: EarthPlaceType | str | None = Field(
         default=None, description="Limits the search to a specific type of location"
     )
 
@@ -73,17 +74,20 @@ class NamedPlace(SpatialNodeType):
 
     @field_validator("type", mode="before")
     @classmethod
-    def _parse_place_type(cls, v: Any) -> GeoPlaceType | str | None:  # noqa: ANN401
+    def _parse_place_type(cls, v: Any) -> EarthPlaceType | str | None:  # noqa: ANN401
         if v is None:
             return v
         if isinstance(v, str):
             try:
-                return GeoPlaceType(v)
+                return EarthPlaceType(v)
             except ValueError:
                 return v
-        if isinstance(v, GeoPlaceType):
+        if isinstance(v, EarthPlaceType):
             return v
-        msg = "type must be None, a string, or GeoPlaceType."
+        # Accept other Enum types (e.g., LunarPlaceType) by converting to string value
+        if isinstance(v, Enum):
+            return v.value
+        msg = "type must be None, a string, or a place type enum."
         raise TypeError(msg)
 
     def to_geometry(self, place_lookup: PlaceLookup) -> BaseGeometry:

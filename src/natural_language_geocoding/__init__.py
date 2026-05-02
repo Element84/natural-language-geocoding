@@ -1,6 +1,7 @@
 """Provides python functions for parsing text to extract geospatial areas."""
 
 import logging
+from typing import Literal
 
 from e84_geoai_common.llm.core import LLM
 from e84_geoai_common.llm.extraction import extract_data_from_text
@@ -8,24 +9,29 @@ from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.models import SpatialNode
 from natural_language_geocoding.place_lookup import NominatimAPI, PlaceLookup
-from natural_language_geocoding.prompt import SYSTEM_PROMPT
+from natural_language_geocoding.prompt import get_system_prompt
+
+CelestialBody = Literal["earth", "moon"]
 
 logger = logging.getLogger(__name__)
 
 
-def parse_spatial_node_from_text(llm: LLM, text: str) -> SpatialNode:
+def parse_spatial_node_from_text(
+    llm: LLM, text: str, *, body: CelestialBody = "earth"
+) -> SpatialNode:
     """Parses out the spatial node from text."""
+    system_prompt = get_system_prompt(body)
     return extract_data_from_text(
-        llm=llm, model_type=SpatialNode, system_prompt=SYSTEM_PROMPT, user_prompt=text
+        llm=llm, model_type=SpatialNode, system_prompt=system_prompt, user_prompt=text
     )
 
 
 def extract_geometry_from_text(
-    llm: LLM, text: str, place_lookup: PlaceLookup | None = None
+    llm: LLM, text: str, place_lookup: PlaceLookup | None = None, *, body: CelestialBody = "earth"
 ) -> BaseGeometry:
     """Extracts a spatial area referenced in text as geometry."""
     place_lookup = place_lookup or NominatimAPI()
-    spatial_node = parse_spatial_node_from_text(llm, text)
+    spatial_node = parse_spatial_node_from_text(llm, text, body=body)
     logger.info("Found spatial node from text %s: %s", text, spatial_node.model_dump_json(indent=2))
     return spatial_node.to_geometry(place_lookup)
 

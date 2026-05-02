@@ -8,7 +8,7 @@ from e84_geoai_common.llm.models import CLAUDE_4_SONNET, BedrockClaudeLLM
 
 from natural_language_geocoding import parse_spatial_node_from_text
 from natural_language_geocoding.eval.evaluation_core import Evaluator, ExampleEval
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import EarthPlaceType
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
     Between,
@@ -36,7 +36,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Simple city lookup",
         expected_node=NamedPlace(
             name="Paris",
-            type=GeoPlaceType.locality,
+            type=EarthPlaceType.locality,
             in_continent="Europe",
             in_country="France",
         ),
@@ -46,7 +46,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Simple country lookup",
         expected_node=NamedPlace(
             name="France",
-            type=GeoPlaceType.country,
+            type=EarthPlaceType.country,
             in_continent="Europe",
         ),
     ),
@@ -55,7 +55,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="City scoped to a country",
         expected_node=NamedPlace(
             name="Paris",
-            type=GeoPlaceType.locality,
+            type=EarthPlaceType.locality,
             in_continent="Europe",
             in_country="France",
         ),
@@ -65,7 +65,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="USA lookup",
         expected_node=NamedPlace(
             name="United States",
-            type=GeoPlaceType.country,
+            type=EarthPlaceType.country,
             in_continent="North America",
         ),
     ),
@@ -74,7 +74,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="City scoped to a US State",
         expected_node=NamedPlace(
             name="Annapolis",
-            type=GeoPlaceType.locality,
+            type=EarthPlaceType.locality,
             in_continent="North America",
             in_country="United States",
             in_region="Maryland",
@@ -85,7 +85,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Ambiguous state or river defaults to state",
         expected_node=NamedPlace(
             name="Mississippi",
-            type=GeoPlaceType.region,
+            type=EarthPlaceType.region,
             in_continent="North America",
             in_country="United States",
         ),
@@ -95,7 +95,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="River",
         expected_node=NamedPlace(
             name="Mississippi River",
-            type=GeoPlaceType.river,
+            type=EarthPlaceType.river,
             in_continent="North America",
             in_country="United States",
         ),
@@ -105,7 +105,7 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Island",
         expected_node=NamedPlace(
             name="Maui",
-            type=GeoPlaceType.island,
+            type=EarthPlaceType.island,
             in_continent="North America",
             in_country="United States",
             in_region="Hawaii",
@@ -114,12 +114,12 @@ NAMED_PLACE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
     ExampleEval(
         user_text="The mediterranean",
         description="A sea",
-        expected_node=NamedPlace(name="Mediterranean Sea", type=GeoPlaceType.sea),
+        expected_node=NamedPlace(name="Mediterranean Sea", type=EarthPlaceType.sea),
     ),
     ExampleEval(
         user_text="West Africa",
         description="Geoarea",
-        expected_node=NamedPlace(name="West Africa", type=GeoPlaceType.geoarea),
+        expected_node=NamedPlace(name="West Africa", type=EarthPlaceType.geoarea),
     ),
 ]
 
@@ -130,7 +130,7 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         expected_node=CoastOf(
             child_node=NamedPlace(
                 name="Maryland",
-                type=GeoPlaceType.region,
+                type=EarthPlaceType.region,
                 in_continent="North America",
                 in_country="United States",
             )
@@ -142,7 +142,7 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         expected_node=OffTheCoastOf(
             child_node=NamedPlace(
                 name="Maryland",
-                type=GeoPlaceType.region,
+                type=EarthPlaceType.region,
                 in_continent="North America",
                 in_country="United States",
             ),
@@ -156,7 +156,7 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         expected_node=DirectionalConstraint(
             child_node=NamedPlace(
                 name="London",
-                type=GeoPlaceType.locality,
+                type=EarthPlaceType.locality,
                 in_continent="Europe",
                 in_country="United Kingdom",
             ),
@@ -168,31 +168,35 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Simple border between two areas",
         expected_node=BorderBetween(
             child_node_1=NamedPlace(
-                name="France", type=GeoPlaceType.country, in_continent="Europe"
+                name="France", type=EarthPlaceType.country, in_continent="Europe"
             ),
-            child_node_2=NamedPlace(name="Spain", type=GeoPlaceType.country, in_continent="Europe"),
+            child_node_2=NamedPlace(
+                name="Spain", type=EarthPlaceType.country, in_continent="Europe"
+            ),
         ),
     ),
     ExampleEval(
         user_text="Border between Oman and Yemen",
         description="Simple border between two areas that may miss continent",
         expected_node=BorderBetween(
-            child_node_1=NamedPlace(name="Oman", type=GeoPlaceType.country, in_continent="Asia"),
-            child_node_2=NamedPlace(name="Yemen", type=GeoPlaceType.country, in_continent="Asia"),
+            child_node_1=NamedPlace(name="Oman", type=EarthPlaceType.country, in_continent="Asia"),
+            child_node_2=NamedPlace(name="Yemen", type=EarthPlaceType.country, in_continent="Asia"),
         ),
     ),
     ExampleEval(
         user_text="Border of France",
         description="Simple border extraction",
         expected_node=BorderOf(
-            child_node=NamedPlace(name="France", type=GeoPlaceType.country, in_continent="Europe")
+            child_node=NamedPlace(name="France", type=EarthPlaceType.country, in_continent="Europe")
         ),
     ),
     ExampleEval(
         user_text="Within 10 miles of France",
         description="Buffer of an area",
         expected_node=Buffer(
-            child_node=NamedPlace(name="France", type=GeoPlaceType.country, in_continent="Europe"),
+            child_node=NamedPlace(
+                name="France", type=EarthPlaceType.country, in_continent="Europe"
+            ),
             distance=10,
             distance_unit="miles",
         ),
@@ -202,11 +206,11 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Intersection in combination with other areas",
         expected_node=Intersection(
             child_nodes=[
-                NamedPlace(name="France", type=GeoPlaceType.country, in_continent="Europe"),
+                NamedPlace(name="France", type=EarthPlaceType.country, in_continent="Europe"),
                 Buffer(
                     child_node=NamedPlace(
                         name="London",
-                        type=GeoPlaceType.locality,
+                        type=EarthPlaceType.locality,
                         in_continent="Europe",
                         in_country="United Kingdom",
                     ),
@@ -221,8 +225,8 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Simple union",
         expected_node=Union(
             child_nodes=[
-                NamedPlace(name="France", type=GeoPlaceType.country, in_continent="Europe"),
-                NamedPlace(name="Spain", type=GeoPlaceType.country, in_continent="Europe"),
+                NamedPlace(name="France", type=EarthPlaceType.country, in_continent="Europe"),
+                NamedPlace(name="Spain", type=EarthPlaceType.country, in_continent="Europe"),
             ]
         ),
     ),
@@ -231,11 +235,11 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         description="Simple Difference",
         expected_node=Difference(
             child_node_1=NamedPlace(
-                name="France", type=GeoPlaceType.country, in_continent="Europe"
+                name="France", type=EarthPlaceType.country, in_continent="Europe"
             ),
             child_node_2=NamedPlace(
                 name="Paris",
-                type=GeoPlaceType.locality,
+                type=EarthPlaceType.locality,
                 in_continent="Europe",
                 in_country="France",
             ),
@@ -247,14 +251,14 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
         expected_node=Between(
             child_node_1=NamedPlace(
                 name="Baltimore",
-                type=GeoPlaceType.locality,
+                type=EarthPlaceType.locality,
                 in_continent="North America",
                 in_country="United States",
                 in_region="Maryland",
             ),
             child_node_2=NamedPlace(
                 name="Washington",
-                type=GeoPlaceType.locality,
+                type=EarthPlaceType.locality,
                 in_continent="North America",
                 in_country="United States",
             ),
@@ -273,11 +277,11 @@ FEATURE_EXAMPLES: list[ExampleEval[AnySpatialNodeType]] = [
                 child_nodes=[
                     NamedPlace(
                         name="Shanghai",
-                        type=GeoPlaceType.locality,
+                        type=EarthPlaceType.locality,
                         in_country="China",
                         in_continent="Asia",
                     ),
-                    NamedPlace(name="South China Sea", type=GeoPlaceType.sea),
+                    NamedPlace(name="South China Sea", type=EarthPlaceType.sea),
                 ]
             ),
         ),
@@ -433,8 +437,8 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 #     user_text="along the Oman-Yemen border",
 #     description="Simple border between two areas that may miss continent",
 #     expected_node=BorderBetween(
-#         child_node_1=NamedPlace(name="Oman", type=GeoPlaceType.country, in_continent="Asia"),
-#         child_node_2=NamedPlace(name="Yemen", type=GeoPlaceType.country, in_continent="Asia"),
+#         child_node_1=NamedPlace(name="Oman", type=EarthPlaceType.country, in_continent="Asia"),
+#         child_node_2=NamedPlace(name="Yemen", type=EarthPlaceType.country, in_continent="Asia"),
 #     ),
 # )
 

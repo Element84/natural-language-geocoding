@@ -1,19 +1,19 @@
 from shapely import Point
 
 from natural_language_geocoding.geocode_index.geoplace import (
-    GeoPlace,
-    GeoPlaceSource,
-    GeoPlaceSourceType,
-    GeoPlaceType,
+    EarthPlace,
+    EarthPlaceSource,
+    EarthPlaceSourceType,
+    EarthPlaceType,
     Hierarchy,
 )
 
-place = GeoPlace(
+place = EarthPlace(
     id="the id",
     place_name="the name",
-    type=GeoPlaceType.borough,
+    type=EarthPlaceType.borough,
     geom=Point(10, 12),
-    source=GeoPlaceSource(source_type=GeoPlaceSourceType.ne, source_path="the source path"),
+    source=EarthPlaceSource(source_type=EarthPlaceSourceType.ne, source_path="the source path"),
     alternate_names=["alt name 1", "alt name 2"],
     hierarchies=[
         Hierarchy(continent_id="north america", country_id="usa"),
@@ -26,8 +26,8 @@ place = GeoPlace(
 
 
 def test_geoplace_serialization() -> None:
-    assert GeoPlace.model_validate(place.model_dump()) == place
-    assert GeoPlace.model_validate_json(place.model_dump_json()) == place
+    assert EarthPlace.model_validate(place.model_dump()) == place
+    assert EarthPlace.model_validate_json(place.model_dump_json()) == place
 
 
 def test_self_as_hierarchies() -> None:
@@ -38,12 +38,12 @@ def test_self_as_hierarchies() -> None:
     ]
 
     # No hierarchies
-    simple_place = GeoPlace(
+    simple_place = EarthPlace(
         id="the id",
         place_name="the name",
-        type=GeoPlaceType.borough,
+        type=EarthPlaceType.borough,
         geom=Point(10, 12),
-        source=GeoPlaceSource(source_type=GeoPlaceSourceType.ne, source_path="the source path"),
+        source=EarthPlaceSource(source_type=EarthPlaceSourceType.ne, source_path="the source path"),
         properties={},
     )
     assert simple_place.self_as_hierarchies() == [Hierarchy(borough_id="the id")]

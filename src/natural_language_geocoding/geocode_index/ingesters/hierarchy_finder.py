@@ -4,15 +4,18 @@ This is useful for ingesting places other than Who's on First places that come w
 predefined.
 """
 
+from typing import cast
+
 import rich
 from rich.tree import Tree
 from shapely.geometry.base import BaseGeometry
 
 from natural_language_geocoding.geocode_index.geoplace import (
-    GeoPlaceType,
+    EarthPlaceType,
     Hierarchy,
 )
 from natural_language_geocoding.geocode_index.index import (
+    FoundEarthPlace,
     GeocodeIndex,
     GeoPlaceIndexField,
     SearchRequest,
@@ -109,9 +112,9 @@ def get_hierarchies(
                 [
                     # Note if adding more types here in the future they also need to be indexed
                     # spatially. The current implementation only indexes shapes for these areas.
-                    GeoPlaceType.continent.value,
-                    GeoPlaceType.country.value,
-                    GeoPlaceType.region.value,
+                    EarthPlaceType.continent.value,
+                    EarthPlaceType.country.value,
+                    EarthPlaceType.region.value,
                 ],
             ),
             QueryDSL.geo_shape(GeoPlaceIndexField.geom_spatial, geom),
@@ -123,5 +126,6 @@ def get_hierarchies(
 
     tracker = _ContinentCountryRegionTracker()
     for parent in resp.places:
-        tracker.add_hierarchies(parent.self_as_hierarchies())
+        earth_parent = cast("FoundEarthPlace", parent)
+        tracker.add_hierarchies(earth_parent.self_as_hierarchies())
     return tracker.to_hierarchies()

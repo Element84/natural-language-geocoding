@@ -25,10 +25,10 @@ from e84_geoai_common.util import unique_by
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from natural_language_geocoding.geocode_index.geoplace import (
-    GeoPlace,
-    GeoPlaceSource,
-    GeoPlaceSourceType,
-    GeoPlaceType,
+    EarthPlace,
+    EarthPlaceSource,
+    EarthPlaceSourceType,
+    EarthPlaceType,
     Hierarchy,
 )
 from natural_language_geocoding.geocode_index.index import GeocodeIndex
@@ -133,8 +133,8 @@ class _WhosOnFirstPlaceType(Enum):
     venue = "venue"
     wing = "wing"
 
-    def to_geoplace_type(self) -> GeoPlaceType:
-        return GeoPlaceType(self.value)
+    def to_geoplace_type(self) -> EarthPlaceType:
+        return EarthPlaceType(self.value)
 
 
 _DOWNLOADABLE_PLACETYPES = [
@@ -164,7 +164,7 @@ _DOWNLOADABLE_PLACETYPES = [
 ]
 
 _VALID_WOF_HIERARCHY_KEYS = {
-    key for place_type in GeoPlaceType for key in [place_type.value, f"{place_type.value}_id"]
+    key for place_type in EarthPlaceType for key in [place_type.value, f"{place_type.value}_id"]
 }
 
 
@@ -270,21 +270,21 @@ class _WhosOnFirstFeature(Feature[_WhosOnFirstPlaceProperties]):
         return self.properties.edtf_deprecated is not None
 
 
-def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> GeoPlace:
+def _wof_feature_to_geoplace(feature: _WhosOnFirstFeature, source_path: str) -> EarthPlace:
     """Converts a WOF feature to a GeoPlace."""
     props = feature.properties
     name = props.name
     if name is None:
         raise Exception(f"Can't convert feature [{feature.id}] to geoplace without a name.")
 
-    return GeoPlace(
+    return EarthPlace(
         id=f"wof_{feature.id}",
         place_name=name,
         type=props.placetype.to_geoplace_type(),
         geom=fix_geometry(f"wof_{feature.id}", feature.geometry),
         properties=props.model_dump(mode="json"),
-        source=GeoPlaceSource(
-            source_type=GeoPlaceSourceType.wof,
+        source=EarthPlaceSource(
+            source_type=EarthPlaceSourceType.wof,
             source_path=source_path,
         ),
         hierarchies=props.hierarchies,

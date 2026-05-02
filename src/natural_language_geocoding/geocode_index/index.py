@@ -15,10 +15,11 @@ from opensearchpy import OpenSearch
 from pydantic import BaseModel, ConfigDict, Field
 
 from natural_language_geocoding.geocode_index.geoplace import (
+    EarthPlace,
+    EarthPlaceSource,
+    EarthPlaceSourceType,
+    EarthPlaceType,
     GeoPlace,
-    GeoPlaceSource,
-    GeoPlaceSourceType,
-    GeoPlaceType,
     Hierarchy,
 )
 from natural_language_geocoding.geocode_index.opensearch_utils import (
@@ -36,8 +37,8 @@ _GEOPLACE_INDEX_SETTINGS: dict[str, Any] = {
 }
 
 
-class GeoPlaceIndexField(IndexField):
-    """Defines the different index fields on the GeoPlace index."""
+class EarthPlaceIndexField(IndexField):
+    """Defines the different index fields on the Earth GeoPlace index."""
 
     id = "id"
     place_name = "place_name"
@@ -81,65 +82,69 @@ class GeoPlaceIndexField(IndexField):
 _GEOPLACE_INDEX_MAPPINGS = {
     "dynamic": "strict",
     "properties": {
-        GeoPlaceIndexField.id.name: {"type": "keyword"},
-        GeoPlaceIndexField.place_name.name: {
+        EarthPlaceIndexField.id.name: {"type": "keyword"},
+        EarthPlaceIndexField.place_name.name: {
             "type": "text",
             "fields": {
-                GeoPlaceIndexField.place_name_keyword.name: {"type": "keyword"},
-                GeoPlaceIndexField.place_name_lower_keyword.name: {
+                EarthPlaceIndexField.place_name_keyword.name: {"type": "keyword"},
+                EarthPlaceIndexField.place_name_lower_keyword.name: {
                     "type": "keyword",
                     "normalizer": "lowercase",
                 },
             },
         },
-        GeoPlaceIndexField.type.name: {"type": "keyword"},
+        EarthPlaceIndexField.type.name: {"type": "keyword"},
         # The geometry of the place as an indexed geo shape
-        GeoPlaceIndexField.geom_spatial.name: {"type": "geo_shape"},
+        EarthPlaceIndexField.geom_spatial.name: {"type": "geo_shape"},
         # The geometry of the place as a JSON string.
-        GeoPlaceIndexField.geom_str.name: {"type": "keyword", "doc_values": False, "index": False},
-        GeoPlaceIndexField.source_id.name: {"type": "long"},
-        GeoPlaceIndexField.source_type.name: {"type": "keyword"},
-        GeoPlaceIndexField.source_path.name: {"type": "keyword"},
-        GeoPlaceIndexField.alternate_names.name: {
-            "type": "text",
-            "fields": {
-                GeoPlaceIndexField.alternate_names_keyword.name: {"type": "keyword"},
-                GeoPlaceIndexField.alternate_names_lower_keyword.name: {
-                    "type": "keyword",
-                    "normalizer": "lowercase",
-                },
-            },
-        },
-        GeoPlaceIndexField.population.name: {"type": "long"},
-        GeoPlaceIndexField.area_sq_km.name: {"type": "double"},
-        GeoPlaceIndexField.properties.name: {
+        EarthPlaceIndexField.geom_str.name: {
             "type": "keyword",
             "doc_values": False,
             "index": False,
         },
-        GeoPlaceIndexField.hierarchies.name: {
+        EarthPlaceIndexField.source_id.name: {"type": "long"},
+        EarthPlaceIndexField.source_type.name: {"type": "keyword"},
+        EarthPlaceIndexField.source_path.name: {"type": "keyword"},
+        EarthPlaceIndexField.alternate_names.name: {
+            "type": "text",
+            "fields": {
+                EarthPlaceIndexField.alternate_names_keyword.name: {"type": "keyword"},
+                EarthPlaceIndexField.alternate_names_lower_keyword.name: {
+                    "type": "keyword",
+                    "normalizer": "lowercase",
+                },
+            },
+        },
+        EarthPlaceIndexField.population.name: {"type": "long"},
+        EarthPlaceIndexField.area_sq_km.name: {"type": "double"},
+        EarthPlaceIndexField.properties.name: {
+            "type": "keyword",
+            "doc_values": False,
+            "index": False,
+        },
+        EarthPlaceIndexField.hierarchies.name: {
             "type": "object",
             "dynamic": "strict",
             "properties": {
-                GeoPlaceIndexField.hierarchies_borough_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_continent_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_country_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_county_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_dependency_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_disputed_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_empire_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_localadmin_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_locality_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_macrocounty_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_macrohood_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_macroregion_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_marinearea_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_marketarea_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_microhood_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_neighbourhood_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_ocean_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_postalregion_id.name: {"type": "keyword"},
-                GeoPlaceIndexField.hierarchies_region_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_borough_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_continent_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_country_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_county_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_dependency_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_disputed_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_empire_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_localadmin_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_locality_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_macrocounty_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_macrohood_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_macroregion_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_marinearea_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_marketarea_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_microhood_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_neighbourhood_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_ocean_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_postalregion_id.name: {"type": "keyword"},
+                EarthPlaceIndexField.hierarchies_region_id.name: {"type": "keyword"},
             },
         },
     },
@@ -170,7 +175,7 @@ class HierarchyDoc(TypedDict):
     region_id: str | None
 
 
-class GeoPlaceDoc(TypedDict):
+class EarthPlaceDoc(TypedDict):
     """Represents an indexed geoplace."""
 
     id: str
@@ -193,12 +198,12 @@ GEOCODE_INDEX_CACHE_DIR = os.getenv("GEOCODE_INDEX_CACHE_DIR", "./temp")
 # The set of geo place types for which we'll index geometry spatially.
 # We don't do this for all types due to some issues getting everything to index. In the future, we
 # may index more.
-_SPATIAL_INDEXED_TYPES = {GeoPlaceType.continent, GeoPlaceType.country, GeoPlaceType.region}
+_SPATIAL_INDEXED_TYPES = {EarthPlaceType.continent, EarthPlaceType.country, EarthPlaceType.region}
 
 
-def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
+def _geo_place_to_doc(geoplace: EarthPlace) -> EarthPlaceDoc:
     """Converts a GeoPlace model into an opensearch document for indexing."""
-    doc: GeoPlaceDoc = {
+    doc: EarthPlaceDoc = {
         "id": geoplace.id,
         "place_name": geoplace.place_name,
         "type": geoplace.type_value,
@@ -218,28 +223,47 @@ def _geo_place_to_doc(geoplace: GeoPlace) -> GeoPlaceDoc:
 
 
 class FoundGeoPlace(GeoPlace):
-    """A Geoplace that has been found in a search query."""
+    """A generic geospatial place found in a search query.
 
-    score: float | None
-    sort: list[float] | None
+    This is the body-agnostic search result type used by SearchResponse.
+    Both Earth and Lunar indexes produce FoundGeoPlace results.
+    """
+
+    score: float | None = None
+    sort: list[float] | None = None
+
+
+class FoundEarthPlace(FoundGeoPlace):
+    """An Earth-specific place found in a search query, with hierarchies and population."""
+
+    source: EarthPlaceSource
+    hierarchies: list[Hierarchy] = Field(default_factory=lambda: [])  # noqa: PIE807
+    population: int | None = None
+
+    def self_as_hierarchies(self) -> list[Hierarchy]:
+        """Returns a set of hierarchies representing this place in the hierarchy."""
+        if len(self.hierarchies) > 0:
+            return [h.with_id(self.id, self.type) for h in self.hierarchies]
+        model = {f"{self.type}_id": self.id}
+        return [Hierarchy.model_validate(model)]
 
     @staticmethod
-    def from_hit(hit: dict[str, Any]) -> "FoundGeoPlace":
-        doc: GeoPlaceDoc = hit["_source"]
-        """Converts an opensearch document to the GeoPlace model."""
-        place_type = GeoPlaceType(doc["type"]) if doc["type"] in GeoPlaceType else doc["type"]
+    def from_hit(hit: dict[str, Any]) -> "FoundEarthPlace":
+        """Converts an opensearch document to the FoundEarthPlace model."""
+        doc: EarthPlaceDoc = hit["_source"]
+        place_type = EarthPlaceType(doc["type"]) if doc["type"] in EarthPlaceType else doc["type"]
         source_type = (
-            GeoPlaceSourceType(doc["source_type"])
-            if doc["source_type"] in GeoPlaceSourceType
+            EarthPlaceSourceType(doc["source_type"])
+            if doc["source_type"] in EarthPlaceSourceType
             else doc["source_type"]
         )
 
-        return FoundGeoPlace(
+        return FoundEarthPlace(
             id=doc["id"],
             place_name=doc["place_name"],
-            type=place_type,
+            type=place_type if isinstance(place_type, str) else place_type.value,
             geom=geometry_from_geojson(doc["geom_str"]),
-            source=GeoPlaceSource(source_type=source_type, source_path=doc["source_path"]),
+            source=EarthPlaceSource(source_type=source_type, source_path=doc["source_path"]),
             alternate_names=doc["alternate_names"],
             properties=json.loads(doc["properties"]),
             hierarchies=[
@@ -273,7 +297,7 @@ class SearchResponse(BaseModel):
             body=body,
             took_ms=body["took"],
             hits=body["hits"]["total"]["value"],
-            places=[FoundGeoPlace.from_hit(hit) for hit in hits],
+            places=[FoundEarthPlace.from_hit(hit) for hit in hits],
             explanations=explanations,
         )
 
@@ -349,7 +373,7 @@ class SearchRequest(BaseModel):
         return body
 
 
-class GeocodeIndexBase(ABC):
+class GeocodeIndexBase[PlaceT](ABC):
     """Abstract base class for geospatial place indexing and search operations.
 
     This class defines the interface for creating, populating, and searching an index
@@ -371,7 +395,7 @@ class GeocodeIndexBase(ABC):
         ...
 
     @abstractmethod
-    def bulk_index(self, places: list[GeoPlace]) -> None:
+    def bulk_index(self, places: list[PlaceT]) -> None:
         """Index multiple geospatial places in a single operation.
 
         This method adds or updates a batch of places in the index.
@@ -400,13 +424,13 @@ class GeocodeIndexBase(ABC):
         ...
 
     @abstractmethod
-    def get_by_ids(self, ids: Iterable[str]) -> list[GeoPlace]:
+    def get_by_ids(self, ids: Iterable[str]) -> list[PlaceT]:
         """Fetches geoplaces by id."""
         ...
 
 
-class GeocodeIndex(GeocodeIndexBase):
-    """Implementation of GeocodeIndexBase against opensearch cluster.
+class EarthGeocodeIndex(GeocodeIndexBase[EarthPlace]):
+    """Earth-specific implementation of GeocodeIndexBase against opensearch cluster.
 
     See base class for documentation.
     """
@@ -433,7 +457,7 @@ class GeocodeIndex(GeocodeIndexBase):
             },
         )
 
-    def bulk_index(self, places: list[GeoPlace]) -> None:
+    def bulk_index(self, places: list[EarthPlace]) -> None:
         bulk_command_lines = [
             json.dumps(bulk_line)
             for place in places
@@ -469,25 +493,25 @@ class GeocodeIndex(GeocodeIndexBase):
         return resp
 
     @timed_function(logger)
-    def get_by_ids(self, ids: Iterable[str]) -> list[GeoPlace]:
+    def get_by_ids(self, ids: Iterable[str]) -> list[EarthPlace]:
         resp = self.client.mget(
             body={"docs": [{"_id": place_id} for place_id in ids]}, index=GEOPLACE_INDEX_NAME
         )
-        return [FoundGeoPlace.from_hit(doc) for doc in resp["docs"]]
+        return cast("list[EarthPlace]", [FoundEarthPlace.from_hit(doc) for doc in resp["docs"]])
 
     @timed_function(logger)
     def get_names_by_ids(self, ids: Iterable[str]) -> dict[str, str]:
         resp = self.client.mget(
             body={
                 "docs": [
-                    {"_id": place_id, "_source": {"include": GeoPlaceIndexField.place_name.value}}
+                    {"_id": place_id, "_source": {"include": EarthPlaceIndexField.place_name.value}}
                     for place_id in ids
                 ]
             },
             index=GEOPLACE_INDEX_NAME,
         )
         return {
-            doc["_id"]: doc["_source"][GeoPlaceIndexField.place_name.value]
+            doc["_id"]: doc["_source"][EarthPlaceIndexField.place_name.value]
             for doc in resp["docs"]
             if doc["found"]
         }
@@ -506,11 +530,11 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
     exp1 = resp.explanations[index1]
     exp2 = resp.explanations[index2]
 
-    def to_compare_str(place: GeoPlace, exp: dict[str, Any]) -> str:
+    def to_compare_str(place: FoundGeoPlace, exp: dict[str, Any]) -> str:
         return json.dumps(
             {
                 "place_name": place.place_name,
-                "type": place.type_value,
+                "type": place.type,
                 "alternate_names": place.alternate_names,
                 "explanation": exp,
             },
@@ -526,7 +550,7 @@ def diff_explanations(resp: SearchResponse, index1: int, index2: int) -> None:
     subprocess.run(["code", "temp/compare2.json"], check=True)  # noqa: S607
 
 
-def print_hierarchies_with_names(index: GeocodeIndex, hierarchies: list[Hierarchy]) -> None:
+def print_hierarchies_with_names(index: EarthGeocodeIndex, hierarchies: list[Hierarchy]) -> None:
     """Prints hierarchies as a table. Useful for debugging."""
     places = index.get_by_ids(
         [place_id for h in hierarchies for place_id in h.model_dump(exclude_none=True).values()]
@@ -554,7 +578,7 @@ def print_hierarchies_as_table(hierarchies: list[Hierarchy]) -> None:
     print(tabulate(table_data, headers="keys", tablefmt="grid"))  # noqa: T201
 
 
-def print_places_with_names(index: GeocodeIndex, places: list[FoundGeoPlace]) -> None:
+def print_places_with_names(index: EarthGeocodeIndex, places: list[FoundEarthPlace]) -> None:
     """Prints places as a table with hierarchy names. Useful for debugging."""
     all_ids = {
         place_id
@@ -573,7 +597,7 @@ def print_places_with_names(index: GeocodeIndex, places: list[FoundGeoPlace]) ->
             "sort": place.sort,
             "id": place.id,
             "name": place.place_name,
-            "type": place.type_value,
+            "type": place.type,
             "alternate_names": place.alternate_names,
             "hierarchies": [
                 {k: id_to_name.get(v, v) for k, v in h if v is not None} for h in place.hierarchies
@@ -635,3 +659,11 @@ def print_places_with_names(index: GeocodeIndex, places: list[FoundGeoPlace]) ->
 # print_places_with_names(index, resp.places)
 
 # diff_explanations(resp, 25, 26)
+
+
+# =============================================================================
+# Backward compatibility aliases
+# =============================================================================
+GeocodeIndex = EarthGeocodeIndex
+GeoPlaceIndexField = EarthPlaceIndexField
+GeoPlaceDoc = EarthPlaceDoc

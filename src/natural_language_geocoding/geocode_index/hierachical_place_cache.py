@@ -6,7 +6,7 @@ from pathlib import Path
 
 from e84_geoai_common.util import timed_function
 
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType, Hierarchy
+from natural_language_geocoding.geocode_index.geoplace import EarthPlaceType, Hierarchy
 from natural_language_geocoding.geocode_index.index import (
     GEOCODE_INDEX_CACHE_DIR,
     GEOPLACE_INDEX_NAME,
@@ -30,13 +30,13 @@ class HierchicalPlaceCache:
 
     # The source of truth for which ids are in the cache. Will contain every id of every place
     # mapped to the hierarchies of that place
-    _id_to_name_place_hierarchies: dict[str, tuple[str, GeoPlaceType, list[Hierarchy]]]
+    _id_to_name_place_hierarchies: dict[str, tuple[str, EarthPlaceType, list[Hierarchy]]]
 
     # Fast reverse lookups of name and place type with other parent ids.
-    _name_place_to_ids: dict[tuple[str, GeoPlaceType], set[str]]
-    _name_place_continent_to_ids: dict[tuple[str, GeoPlaceType, str], set[str]]
-    _name_place_country_to_ids: dict[tuple[str, GeoPlaceType, str], set[str]]
-    _name_place_continent_country_to_ids: dict[tuple[str, GeoPlaceType, str, str], set[str]]
+    _name_place_to_ids: dict[tuple[str, EarthPlaceType], set[str]]
+    _name_place_continent_to_ids: dict[tuple[str, EarthPlaceType, str], set[str]]
+    _name_place_country_to_ids: dict[tuple[str, EarthPlaceType, str], set[str]]
+    _name_place_continent_country_to_ids: dict[tuple[str, EarthPlaceType, str, str], set[str]]
 
     def __init__(self) -> None:
         self._id_to_name_place_hierarchies = {}
@@ -49,7 +49,7 @@ class HierchicalPlaceCache:
         self,
         feature_id: str,
         name: str,
-        place_type: GeoPlaceType,
+        place_type: EarthPlaceType,
         hierarchies: list[Hierarchy],
     ) -> None:
         """Add a geographic place to the cache.
@@ -98,7 +98,7 @@ class HierchicalPlaceCache:
         self,
         *,
         name: str,
-        place_type: GeoPlaceType,
+        place_type: EarthPlaceType,
         continent_ids: Collection[str] | None = None,
         country_ids: Collection[str] | None = None,
     ) -> set[str]:
@@ -188,7 +188,7 @@ class HierchicalPlaceCache:
         dicts = HierchicalPlaceCache()
         rows = json.loads(json_str)
         for feature_id, name, place_type_str, hierarchies_data in rows:
-            place_type = GeoPlaceType(place_type_str)
+            place_type = EarthPlaceType(place_type_str)
             hierarchies = [Hierarchy.model_validate(h) for h in hierarchies_data]
             dicts.add(feature_id, name, place_type, hierarchies)
         return dicts
@@ -211,9 +211,9 @@ def _populate() -> HierchicalPlaceCache:
         query=QueryDSL.terms(
             GeoPlaceIndexField.type,
             [
-                GeoPlaceType.continent.value,
-                GeoPlaceType.country.value,
-                GeoPlaceType.region.value,
+                EarthPlaceType.continent.value,
+                EarthPlaceType.country.value,
+                EarthPlaceType.region.value,
             ],
         ),
         source_fields=[
@@ -223,7 +223,7 @@ def _populate() -> HierchicalPlaceCache:
         ],
     ):
         feature_id = hit["_id"]
-        place_type = GeoPlaceType(hit["_source"]["type"])
+        place_type = EarthPlaceType(hit["_source"]["type"])
         name = hit["_source"]["place_name"]
         hierarchies = [Hierarchy.model_validate(h) for h in hit["_source"]["hierarchies"]]
         cache.add(feature_id, name, place_type, hierarchies)
@@ -240,9 +240,7 @@ class PlaceCache:
 
     _cache_file: Path
 
-    def __init__(
-        self, *, cache_dir: str | Path | None = None, force_reload: bool = False
-    ) -> None:
+    def __init__(self, *, cache_dir: str | Path | None = None, force_reload: bool = False) -> None:
         # Increment the name of the file when something changes about the format of the storage
         resolved_cache_dir = cache_dir or GEOCODE_INDEX_CACHE_DIR
         self._cache_file = Path(resolved_cache_dir) / "hierarchical_place_cache_v2.json"
@@ -259,7 +257,7 @@ class PlaceCache:
         self,
         *,
         name: str,
-        place_type: GeoPlaceType,
+        place_type: EarthPlaceType,
         continent_ids: Collection[str] | None = None,
         country_ids: Collection[str] | None = None,
     ) -> set[str]:
@@ -306,7 +304,7 @@ class PlaceCache:
 # r_items = [t for t in items if t[0] == "Russia"]
 
 
-# # cache.find_ids(name="France", place_type=GeoPlaceType.country)
+# # cache.find_ids(name="France", place_type=EarthPlaceType.country)
 
 # client = create_opensearch_client()
 
@@ -319,9 +317,9 @@ class PlaceCache:
 #             QueryDSL.terms(
 #                 GeoPlaceIndexField.type,
 #                 [
-#                     GeoPlaceType.continent.value,
-#                     GeoPlaceType.country.value,
-#                     GeoPlaceType.region.value,
+#                     EarthPlaceType.continent.value,
+#                     EarthPlaceType.country.value,
+#                     EarthPlaceType.region.value,
 #                 ],
 #             ),
 #         ),

@@ -1,13 +1,17 @@
 import json
 from pathlib import Path
 from textwrap import dedent
+from typing import Literal
 
 from e84_geoai_common.llm.extraction import ExtractDataExample
 from e84_geoai_common.util import singleline
 
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import EarthPlaceType
+from natural_language_geocoding.geocode_index.lunar_place_types import LunarPlaceType
 from natural_language_geocoding.models import (
+    Buffer,
     DirectionalConstraint,
+    DirectionalSubset,
     Intersection,
     NamedPlace,
     SpatialNode,
@@ -65,7 +69,7 @@ GUIDELINE_HIERARCHY = dedent(
 GUIDELINE_PLACETYPE = (
     "Always specify the place type when it can be determined. "
     "The place type must be one of the following values: "
-    + (", ".join([pt.value for pt in GeoPlaceType]))
+    + (", ".join([pt.value for pt in EarthPlaceType]))
 )
 
 GUIDELINE_PLACETYPE_MACROAREA = dedent(
@@ -220,7 +224,7 @@ EXAMPLES = [
         user_query="in North Dakota",
         structure=NamedPlace(
             name="North Dakota",
-            type=GeoPlaceType.region,
+            type=EarthPlaceType.region,
             in_continent="North America",
             in_country="United States",
         ),
@@ -232,7 +236,7 @@ EXAMPLES = [
             child_nodes=[
                 NamedPlace(
                     name="New Mexico",
-                    type=GeoPlaceType.region,
+                    type=EarthPlaceType.region,
                     in_continent="North America",
                     in_country="United States",
                 ),
@@ -240,7 +244,7 @@ EXAMPLES = [
                     direction="west",
                     child_node=NamedPlace(
                         name="Albuquerque",
-                        type=GeoPlaceType.locality,
+                        type=EarthPlaceType.locality,
                         in_continent="North America",
                         in_country="United States",
                         in_region="New Mexico",
@@ -259,3 +263,159 @@ SYSTEM_PROMPT = prompt_template.format(
     guidelines="\n\n".join(GUIDELINES),
     examples="\n\n".join([example.to_str() for example in EXAMPLES]),
 )
+
+# --- Lunar Prompt ---
+
+LUNAR_GUIDELINES_GENERAL = [
+    singleline(
+        """
+        These requests will define spatial areas on the Moon through direct mentions or implied
+        geological contexts. Your structure should articulate the spatial operations needed,
+        integrating named lunar features and their spatial relationships.
+        """
+    ),
+    singleline(
+        """
+        The structured response must adhere to the provided JSON schema, emphasizing the importance
+        of accurately representing spatial relationships. These include direct spatial operations
+        like "between," "buffer," and "intersection," as well as spatial containment within
+        larger features.
+        """
+    ),
+]
+
+LUNAR_GUIDELINE_PLACETYPE = (
+    "Always specify the place type when it can be determined. "
+    "The place type must be one of the following values: "
+    + (", ".join([pt.value for pt in LunarPlaceType]))
+)
+
+LUNAR_GUIDELINE_NAMING = dedent(
+    """
+    LUNAR NAMING CONVENTIONS
+        - Use official IAU names as they appear in the USGS Planetary Nomenclature database
+        - Latin names are canonical: "Mare Imbrium" not "Sea of Rains", "Montes Apenninus" not
+          "Apennine Mountains"
+        - However, if the user uses a common English name, map it to the official Latin name
+          (e.g., "Sea of Tranquility" → "Mare Tranquillitatis")
+        - Satellite features use letter suffixes: "Tycho A", "Copernicus H"
+        - Landing sites are typed as "landing_site": "Apollo 11 Landing Site", "Luna 9 Landing Site"
+        - The name field should contain just the feature name without the type descriptor
+          (e.g., "Tycho" not "Tycho Crater", "Mare Imbrium" not "Imbrium Mare")
+        - Exception: For Maria, include "Mare" as part of the name since it's part of the official
+          name (e.g., "Mare Imbrium", "Mare Tranquillitatis")
+    """
+).strip()
+
+LUNAR_GUIDELINE_NO_HIERARCHY = dedent(
+    """
+    LUNAR CONTEXT
+        - The Moon has no political boundaries (countries, regions, states)
+        - Do NOT use in_continent, in_country, or in_region fields for lunar features
+        - The Moon's spatial organization is geological: basins, maria, highland areas
+        - If the user specifies a context like "near the south pole" or "on the near side",
+          use spatial operations (DirectionalSubset, Buffer) rather than hierarchy fields
+    """
+).strip()
+
+LUNAR_GUIDELINE_DIRECTIONAL_SUBSET = dedent(
+    """
+    DIRECTIONAL SUBSET HANDLING
+    - Compound directional terms MUST always be broken into nested DirectionalSubset nodes:
+      * "Northeastern" or "Northeast" = Eastern half of the Northern half
+      * "Northwestern" or "Northwest" = Western half of the Northern half
+      * "Southeastern" or "Southeast" = Eastern half of the Southern half
+      * "Southwestern" or "Southwest" = Western half of the Southern half
+    - Single direction terms (Northern, Southern, Eastern, Western, North, South, East, West)
+      should use a single DirectionalSubset
+    - "Southern rim of Mare Imbrium" = DirectionalSubset(direction="south",
+      child=NamedPlace(name="Mare Imbrium", type="mare"))
+    """
+).strip()
+
+LUNAR_GUIDELINES_SIMPLIFY = [
+    singleline(
+        """
+        Simplify When Possible: Always generate the simplest version of the tree possible to
+        accurately represent the user's request. Map singular feature references directly to
+        a NamedPlace without implied spatial operations.
+        """
+    ),
+]
+
+LUNAR_GUIDELINE_CONJUNCTIONS = dedent(
+    """
+    HANDLING CONJUNCTIONS
+    - When users combine areas with "and" (e.g., "Tycho and Copernicus"), interpret this as a UNION
+      operation by default
+    - Only use INTERSECTION when the query explicitly mentions overlap or combined constraints
+    - "Between Tycho and Copernicus" should use the Between node type
+    """
+).strip()
+
+LUNAR_GUIDELINE_NO_COAST = dedent(
+    """
+    COASTLINE OPERATIONS NOT APPLICABLE
+    - The Moon has no oceans or coastlines
+    - Do NOT use CoastOf or OffTheCoastOf node types for lunar queries
+    - If a user asks about the edge of a mare, use DirectionalSubset or BorderOf instead
+    """
+).strip()
+
+LUNAR_GUIDELINES: list[str] = [
+    *LUNAR_GUIDELINES_GENERAL,
+    LUNAR_GUIDELINE_PLACETYPE,
+    LUNAR_GUIDELINE_NAMING,
+    LUNAR_GUIDELINE_NO_HIERARCHY,
+    LUNAR_GUIDELINE_DIRECTIONAL_SUBSET,
+    *LUNAR_GUIDELINES_SIMPLIFY,
+    LUNAR_GUIDELINE_CONJUNCTIONS,
+    LUNAR_GUIDELINE_NO_COAST,
+]
+
+LUNAR_EXAMPLES = [
+    ExtractDataExample(
+        name="Simple Lunar Feature",
+        user_query="Tycho Crater",
+        structure=NamedPlace(
+            name="Tycho",
+            type=LunarPlaceType.crater.value,
+        ),
+    ),
+    ExtractDataExample(
+        name="Buffer Around Landing Site",
+        user_query="within 50 km of the Apollo 11 landing site",
+        structure=Buffer(
+            child_node=NamedPlace(
+                name="Apollo 11 Landing Site",
+                type=LunarPlaceType.landing_site.value,
+            ),
+            distance=50,
+            distance_unit="kilometers",
+        ),
+    ),
+    ExtractDataExample(
+        name="Directional Subset of Mare",
+        user_query="the southern rim of Mare Imbrium",
+        structure=DirectionalSubset(
+            direction="south",
+            child_node=NamedPlace(
+                name="Mare Imbrium",
+                type=LunarPlaceType.mare.value,
+            ),
+        ),
+    ),
+]
+
+LUNAR_SYSTEM_PROMPT = prompt_template.format(
+    json_schema=json.dumps(SpatialNode.model_json_schema()),
+    guidelines="\n\n".join(LUNAR_GUIDELINES),
+    examples="\n\n".join([example.to_str() for example in LUNAR_EXAMPLES]),
+)
+
+
+def get_system_prompt(body: Literal["earth", "moon"] = "earth") -> str:
+    """Returns the appropriate system prompt for the given celestial body."""
+    if body == "moon":
+        return LUNAR_SYSTEM_PROMPT
+    return SYSTEM_PROMPT

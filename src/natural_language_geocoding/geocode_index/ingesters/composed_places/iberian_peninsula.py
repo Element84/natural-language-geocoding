@@ -5,7 +5,7 @@ from shapely import LinearRing, Polygon
 from natural_language_geocoding.geocode_index.geocode_index_place_lookup import (
     GeocodeIndexPlaceLookup,
 )
-from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
+from natural_language_geocoding.geocode_index.geoplace import EarthPlaceType
 from natural_language_geocoding.geocode_index.ingesters.composed_places.composers_core import (
     ComposedPlace,
     CompositionComponent,
@@ -33,37 +33,37 @@ class IberianPeninsulaCompositionComponent(CompositionComponent):
 
     def lookup(self, place_lookup: GeocodeIndexPlaceLookup) -> ComposedPlace:
         europe = ComposedPlace.from_request(
-            place_lookup, PlaceSearchRequest(name="Europe", place_type=GeoPlaceType.continent)
+            place_lookup, PlaceSearchRequest(name="Europe", place_type=EarthPlaceType.continent)
         )
         spain = ComposedPlace.from_request(
             place_lookup,
             PlaceSearchRequest(
-                name="Spain", place_type=GeoPlaceType.country, in_continent="Europe"
+                name="Spain", place_type=EarthPlaceType.country, in_continent="Europe"
             ),
         )
         portugal = ComposedPlace.from_request(
             place_lookup,
             PlaceSearchRequest(
-                name="Portugal", place_type=GeoPlaceType.country, in_continent="Europe"
+                name="Portugal", place_type=EarthPlaceType.country, in_continent="Europe"
             ),
         )
         france = ComposedPlace.from_request(
             place_lookup,
             PlaceSearchRequest(
-                name="France", place_type=GeoPlaceType.country, in_continent="Europe"
+                name="France", place_type=EarthPlaceType.country, in_continent="Europe"
             ),
         )
         andorra = ComposedPlace.from_request(
             place_lookup,
             PlaceSearchRequest(
-                name="Andorra", place_type=GeoPlaceType.country, in_continent="Europe"
+                name="Andorra", place_type=EarthPlaceType.country, in_continent="Europe"
             ),
         )
         balearic = ComposedPlace.from_request(
             place_lookup,
             PlaceSearchRequest(
                 name="Balearic Islands",
-                place_type=GeoPlaceType.region,
+                place_type=EarthPlaceType.region,
                 in_continent="Europe",
                 in_country="Spain",
             ),
