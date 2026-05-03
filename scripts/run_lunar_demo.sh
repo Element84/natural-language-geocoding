@@ -1,13 +1,15 @@
 #!/bin/bash
 
 ####################################################################################################
-# Ingests lunar places from USGS Planetary Nomenclature into OpenSearch.
+# Runs the demo of lunar natural language geocoding.
 ####################################################################################################
 
 set -e -o pipefail
 
-set -a
-source .env
-set +a
+if [[ -f .env ]]; then
+  set -a
+  source .env
+  set +a
+fi
 
-PYTHONPATH=src python -u src/natural_language_geocoding/geocode_index/ingesters/lunar_nomenclature.py
+PYTHONPATH=src streamlit run src/natural_language_geocoding_demo/lunar_app.py

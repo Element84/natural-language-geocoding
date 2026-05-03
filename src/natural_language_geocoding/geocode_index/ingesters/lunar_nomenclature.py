@@ -14,9 +14,11 @@ from typing import Any
 
 import geopandas as gpd
 import requests
+from shapely import Point
 from shapely.geometry import Polygon, box
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.geocode_index.ingesters.ingest_utils import fix_geometry
 from natural_language_geocoding.geocode_index.lunar_index import (
     LunarGeocodeIndex,
     LunarPlace,
@@ -152,6 +154,13 @@ def _generate_geometry(  # noqa: PLR0913
     if place_type == LunarPlaceType.satellite_feature and diameter_km and diameter_km > 0:
         return _generate_circle_polygon(center_lat, center_lon, diameter_km)
 
+    # If bounding box is degenerate (a point):
+    if min_lat == max_lat and min_lon == max_lon:
+        if diameter_km and diameter_km > 0:
+            # if we have a diameter, use a circle instead
+            return _generate_circle_polygon(center_lat, center_lon, diameter_km)
+        return Point(center_lon, center_lat)
+
     # Default: use bounding box
     return box(min_lon, min_lat, max_lon, max_lat)
 
@@ -255,6 +264,7 @@ def shapefile_to_lunar_geoplaces(
         diameter_km: float | None = diameter if diameter and diameter > 0 else None
 
         # Generate geometry
+        feature_id = f"lunar-{code}-{idx}"
         geom = _generate_geometry(
             place_type=place_type,
             center_lat=center_lat,
@@ -265,6 +275,7 @@ def shapefile_to_lunar_geoplaces(
             min_lon=min_lon,
             max_lon=max_lon,
         )
+        geom = fix_geometry(feature_id, geom)
 
         alternate_names = _get_alternate_names(name, place_type)
 
@@ -275,7 +286,7 @@ def shapefile_to_lunar_geoplaces(
             area_sq_km = math.pi * (diameter_km / 2) ** 2
 
         place = LunarPlace(
-            id=f"lunar-{code}-{idx}",
+            id=feature_id,
             place_name=name,
             type=place_type,
             type_code=code,
@@ -338,3 +349,9 @@ def ingest_lunar_places(
         index.bulk_index(batch)
 
     logger.info("Successfully ingested %d lunar places", total)
+
+
+if __name__ == "__main__" and "get_ipython" not in globals():
+    logging.getLogger("opensearch").setLevel(logging.WARNING)
+
+    ingest_lunar_places(recreate=True)
