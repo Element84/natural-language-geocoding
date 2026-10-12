@@ -30,9 +30,17 @@ from natural_language_geocoding.tests.canned_place_lookup import (
 
 
 def make_llm(spatial_node: AnySpatialNodeType) -> LLM:
-    claude_resp = spatial_node.model_dump_json()[1:]
+    # SpatialNode is a union at the root so extract_data_from_text wraps it in a "data" field.
+    tool_use = {
+        "type": "tool_use",
+        "id": "toolu_123fake",
+        "name": "parse_data",
+        "input": {"data": spatial_node.model_dump(mode="json")},
+    }
     return BedrockClaudeLLM(
-        client=make_test_bedrock_runtime_client([claude_response_with_content(claude_resp)])
+        client=make_test_bedrock_runtime_client(
+            [claude_response_with_content([tool_use], {"stop_reason": "tool_use"})]
+        )
     )
 
 

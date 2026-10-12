@@ -19,6 +19,10 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+# TODO: Temporarily pointing at a branch of e84-geoai-common. Remove once it's released.
+[tool.uv.sources]
+e84-geoai-common = { git = "https://github.com/Element84/e84-geoai-common", branch = "jgilman/updates" }
+
 [tool.setuptools-git-versioning]
 enabled = true
 dev_template = "{tag}"
@@ -108,7 +112,9 @@ ignore = [
   'TD003',
   'TD004',
   # Allow T O D O s in code.
-  'FIX002']
+  'FIX002',
+  # Missing copyright notice at top of file
+  'CPY001']
 
 [tool.ruff.lint.per-file-ignores]
 '__init__.py' = [
