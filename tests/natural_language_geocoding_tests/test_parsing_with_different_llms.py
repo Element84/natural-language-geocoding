@@ -1,9 +1,6 @@
 import pytest
-from e84_geoai_common.llm.models import (
-    CLAUDE_4_SONNET,
-    BedrockClaudeLLM,
-    BedrockNovaLLM,
-)
+from e84_geoai_common.llm.models import BedrockNovaLLM
+from e84_geoai_common.llm.models.claude import CLAUDE_5_5_SONNET, BedrockClaudeLLM
 from e84_geoai_common.llm.tests.mock_bedrock_runtime import USE_REAL_BEDROCK_RUNTIME_CLIENT
 
 import natural_language_geocoding
@@ -49,7 +46,7 @@ def test_nova_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
 )
 @pytest.mark.parametrize(("example_pair"), EXAMPLES)
 def test_claude_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
-    llm = BedrockClaudeLLM(CLAUDE_4_SONNET)
+    llm = BedrockClaudeLLM(CLAUDE_5_5_SONNET)
     query, expected_node = example_pair
     node = parse_spatial_node(llm, query)
     assert node.root.model_dump() == expected_node.model_dump()
