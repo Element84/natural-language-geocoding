@@ -13,7 +13,8 @@ requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
   "requests>=2.32.3",
-  "e84-geoai-common>=0.0.7",
+  # 0.0.8 is the first release with CLAUDE_5_5_SONNET and tool use based extraction.
+  "e84-geoai-common>=0.0.8",
   "tabulate",
   "opensearch-py"
 ]

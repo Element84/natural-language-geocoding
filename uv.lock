@@ -557,7 +557,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf57
 [[package]]
 name = "e84-geoai-common"
 version = "0.0.7"
-source = { git = "https://github.com/Element84/e84-geoai-common?branch=jgilman%2Fupdates#bfd77a789db7a406a5602d05fdd77fc0432c39d9" }
+source = { git = "https://github.com/Element84/e84-geoai-common?branch=jgilman%2Fupdates#d0ee861ddc3c2fa1474454252350cf6b9d391963" }
 dependencies = [
     { name = "boto3" },
     { name = "boto3-stubs", extra = ["bedrock", "bedrock-runtime", "s3"] },

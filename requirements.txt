@@ -65,7 +65,7 @@ distlib==0.4.3
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@bfd77a789db7a406a5602d05fdd77fc0432c39d9
+e84-geoai-common @ git+https://github.com/Element84/e84-geoai-common@d0ee861ddc3c2fa1474454252350cf6b9d391963
     # via natural-language-geocoding
 events==0.5
     # via opensearch-py

@@ -1,12 +1,16 @@
+from typing import Any
+
+import pytest
 from e84_geoai_common.llm.core import LLM
+from e84_geoai_common.llm.extraction import ExtractionError
 from e84_geoai_common.llm.models.claude import BedrockClaudeLLM
 from e84_geoai_common.llm.tests.mock_bedrock_runtime import (
+    _MockBedrockRuntimeClient,  # type: ignore[reportPrivateUsage]
     claude_response_with_content,
-    make_test_bedrock_runtime_client,
 )
 from shapely import Polygon
 
-from natural_language_geocoding import extract_geometry_from_text
+from natural_language_geocoding import MAX_PARSE_ATTEMPTS, extract_geometry_from_text
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
     BorderBetween,
@@ -29,19 +33,49 @@ from natural_language_geocoding.tests.canned_place_lookup import (
 )
 
 
-def make_llm(spatial_node: AnySpatialNodeType) -> LLM:
-    # SpatialNode is a union at the root so extract_data_from_text wraps it in a "data" field.
+def spatial_node_response(spatial_node: AnySpatialNodeType) -> dict[str, Any]:
+    """Returns a canned Claude response calling the extraction tool with the spatial node.
+
+    This mirrors how extract_data_from_text in e84-geoai-common calls the LLM: it defines a single
+    "parse_data" tool and, since SpatialNode is a union at the root, wraps it in a "data" field.
+    """
     tool_use = {
         "type": "tool_use",
         "id": "toolu_123fake",
         "name": "parse_data",
         "input": {"data": spatial_node.model_dump(mode="json")},
     }
-    return BedrockClaudeLLM(
-        client=make_test_bedrock_runtime_client(
-            [claude_response_with_content([tool_use], {"stop_reason": "tool_use"})]
-        )
+    return claude_response_with_content([tool_use], {"stop_reason": "tool_use"})
+
+
+# A response from a model that replies in text instead of calling the extraction tool.
+TEXT_ONLY_RESPONSE = claude_response_with_content("Which port do you mean?")
+
+
+def make_llm_with_responses(*responses: dict[str, Any]) -> LLM:
+    # These tests check the geometry produced from a known spatial node, so they always use canned
+    # responses. make_test_bedrock_runtime_client would ignore them when running with
+    # --use-real-client. test_parsing_with_different_llms.py covers parsing with real LLMs.
+    return BedrockClaudeLLM(client=_MockBedrockRuntimeClient(list(responses)))
+
+
+def make_llm(spatial_node: AnySpatialNodeType) -> LLM:
+    return make_llm_with_responses(spatial_node_response(spatial_node))
+
+
+def test_retries_when_llm_does_not_call_tool():
+    place_lookup = CannedPlaceLookup()
+    llm = make_llm_with_responses(
+        TEXT_ONLY_RESPONSE, spatial_node_response(NamedPlace(name="Florida"))
     )
+    geom = extract_geometry_from_text(llm, text="Florida", place_lookup=place_lookup)
+    assert geom == FLORIDA
+
+
+def test_fails_when_llm_never_calls_tool():
+    llm = make_llm_with_responses(*[TEXT_ONLY_RESPONSE] * MAX_PARSE_ATTEMPTS)
+    with pytest.raises(ExtractionError):
+        extract_geometry_from_text(llm, text="near the port", place_lookup=CannedPlaceLookup())
 
 
 def test_single_place():
