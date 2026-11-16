@@ -2,9 +2,9 @@ import json
 from pathlib import Path
 from textwrap import dedent
 
-from e84_geoai_common.llm.extraction import ExtractDataExample
-from e84_geoai_common.util import singleline
+from pydantic import BaseModel, ConfigDict
 
+from natural_language_geocoding.common.util import singleline
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.models import (
     DirectionalConstraint,
@@ -12,6 +12,21 @@ from natural_language_geocoding.models import (
     NamedPlace,
     SpatialNode,
 )
+
+
+class ExtractDataExample[Model: BaseModel](BaseModel):
+    """An example of the structure that should be extracted from a user query."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    name: str
+    user_query: str
+    structure: Model
+
+    def to_str(self) -> str:
+        json_str = self.structure.model_dump_json(indent=2, exclude_none=True)
+        return f'Example: {self.name}\nUser Query: "{self.user_query}"\n\n```json\n{json_str}\n```'
+
 
 # FUTURE Some of these may be unnecessary. Try pruning guidelines and seeing the effect once there
 # are more evaluations

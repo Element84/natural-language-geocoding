@@ -3,9 +3,9 @@
 import logging
 from typing import Any
 
-from e84_geoai_common.util import timed_function
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.common.util import timed_function
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import (
     DEFAULT_PLACE_TYPE_SORT_ORDER,

@@ -1,13 +1,14 @@
 import re
 from pathlib import Path
 
-from e84_geoai_common.llm.core import LLMInferenceConfig, LLMMessage, TextContent
-from e84_geoai_common.llm.models import CLAUDE_4_SONNET, BedrockClaudeLLM
+from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 import natural_language_geocoding.prompt
+from natural_language_geocoding import DEFAULT_MODEL
 from natural_language_geocoding.eval.evaluator import ALL_EXAMPLES, ParseSpatialNodeEvaluator
 
-llm = BedrockClaudeLLM(model_id=CLAUDE_4_SONNET)
+llm = DEFAULT_MODEL
 
 evaluator = ParseSpatialNodeEvaluator()
 full_eval = evaluator.evaluate_examples(llm, ALL_EXAMPLES)
@@ -49,25 +50,20 @@ Follow these steps to improve the prompt
 5. Generate an update to the original prompt that should resolve the issues.
 """
 
-config = LLMInferenceConfig(system_prompt=system_prompt, max_tokens=10000)
-resp = llm.prompt(
-    messages=[
-        LLMMessage(
-            content=[
-                TextContent(
-                    text=f"<prompt>{natural_language_geocoding.prompt.SYSTEM_PROMPT}</prompt>"
-                ),
-                TextContent(
-                    text=f"<evaluation_result>{full_eval.to_markdown()}</evaluation_result>"
-                ),
-            ]
-        )
-    ],
-    inference_cfg=config,
+agent = Agent(
+    llm,
+    system_prompt=system_prompt,
+    model_settings=ModelSettings(max_tokens=10000, temperature=0),
 )
+suggestion = agent.run_sync(
+    [
+        f"<prompt>{natural_language_geocoding.prompt.SYSTEM_PROMPT}</prompt>",
+        f"<evaluation_result>{full_eval.to_markdown()}</evaluation_result>",
+    ]
+).output
 
 
-print(resp.to_text_only())  # noqa: T201
+print(suggestion)  # noqa: T201
 
 with (_TEMP_DIR / f"llm_suggestion_v{test_version}.md").open("w") as f:
-    f.write(resp.to_text_only())
+    f.write(suggestion)

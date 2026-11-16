@@ -3,9 +3,10 @@
 from enum import Enum
 from typing import Annotated, Any, cast
 
-from e84_geoai_common.geometry import geometry_from_geojson_dict
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation, field_serializer, field_validator
 from shapely.geometry.base import BaseGeometry
+
+from natural_language_geocoding.common.geometry import geometry_from_geojson_dict
 
 
 class GeoPlaceType(Enum):
@@ -200,7 +201,7 @@ class GeoPlace(BaseModel):
 
     def display_geometry(self) -> Any:  # noqa: ANN401
         """Displays geometry in a jupyter like environment for debugging."""
-        from e84_geoai_common.debugging import display_geometry  # noqa: PLC0415
+        from natural_language_geocoding.common.debugging import display_geometry  # noqa: PLC0415
 
         return display_geometry([self.geom])
 

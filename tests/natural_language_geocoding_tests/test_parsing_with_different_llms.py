@@ -1,10 +1,6 @@
+import os
+
 import pytest
-from e84_geoai_common.llm.models import (
-    CLAUDE_4_SONNET,
-    BedrockClaudeLLM,
-    BedrockNovaLLM,
-)
-from e84_geoai_common.llm.tests.mock_bedrock_runtime import USE_REAL_BEDROCK_RUNTIME_CLIENT
 
 import natural_language_geocoding
 from natural_language_geocoding.models import (
@@ -15,7 +11,12 @@ from natural_language_geocoding.models import (
     NamedPlace,
 )
 
-parse_spatial_node = natural_language_geocoding.parse_spatial_node_from_text  # type: ignore[reportPrivateUsage]
+parse_spatial_node = natural_language_geocoding.parse_spatial_node_from_text
+
+# Set to "true" to run tests that call the real AWS Bedrock runtime.
+USE_REAL_BEDROCK_RUNTIME_CLIENT = os.getenv("USE_REAL_BEDROCK_RUNTIME_CLIENT") == "true"
+
+NOVA_PRO = "bedrock:us.amazon.nova-pro-v1:0"
 
 
 EXAMPLES: list[tuple[str, AnySpatialNodeType]] = [
@@ -38,7 +39,7 @@ EXAMPLES: list[tuple[str, AnySpatialNodeType]] = [
 )
 @pytest.mark.parametrize(("example_pair"), EXAMPLES)
 def test_nova_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
-    llm = BedrockNovaLLM()
+    llm = NOVA_PRO
     query, expected_node = example_pair
     node = parse_spatial_node(llm, query)
     assert node.root.model_dump() == expected_node.model_dump()
@@ -49,7 +50,7 @@ def test_nova_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
 )
 @pytest.mark.parametrize(("example_pair"), EXAMPLES)
 def test_claude_geocoding(example_pair: tuple[str, AnySpatialNodeType]) -> None:
-    llm = BedrockClaudeLLM(CLAUDE_4_SONNET)
+    llm = natural_language_geocoding.DEFAULT_MODEL
     query, expected_node = example_pair
     node = parse_spatial_node(llm, query)
     assert node.root.model_dump() == expected_node.model_dump()

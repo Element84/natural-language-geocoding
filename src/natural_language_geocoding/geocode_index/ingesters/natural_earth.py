@@ -18,9 +18,9 @@ from pathlib import Path
 from typing import ClassVar, Literal, Self
 
 import requests
-from e84_geoai_common.geojson import Feature
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from natural_language_geocoding.common.geojson import Feature
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
     GeoPlaceSource,
@@ -441,6 +441,10 @@ def process_features() -> None:
 
 
 if __name__ == "__main__" and "get_ipython" not in globals():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     logging.getLogger("opensearch").setLevel(logging.WARNING)
     logging.getLogger("natural_language_geocoding.geocode_index.index.GeocodeIndex").setLevel(
         logging.WARNING

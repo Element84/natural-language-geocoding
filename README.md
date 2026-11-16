@@ -13,6 +13,16 @@ natural-language-geocoding init
 
 See documentation on how to configure and populate the OpenSearch cluster in [Sources](docs/sources.md).
 
+### Using from Python
+
+LLM calls are made with [Pydantic AI](https://ai.pydantic.dev/). Any Pydantic AI model or model name can be used. The default is Anthropic Claude on AWS Bedrock (requires AWS credentials and a region). Other providers can be used by installing the matching `pydantic-ai-slim` extra (e.g. `pydantic-ai-slim[openai]`).
+
+```python
+from natural_language_geocoding import DEFAULT_MODEL, extract_geometry_from_text
+
+geometry = extract_geometry_from_text(DEFAULT_MODEL, "within 10 km of Baltimore")
+```
+
 ## Running the demo
 
 There's a streamlit demo in `src/natural_language_geocoding_demo`. It can be run by following these steps.

@@ -61,7 +61,7 @@ class ComposedPlace(BaseModel):
 
     def display_geometry(self) -> Any:  # noqa: ANN401
         """Displays the geometry of this place on a map when run in a Jupyter Notebook."""
-        from e84_geoai_common.debugging import display_geometry  # noqa: PLC0415
+        from natural_language_geocoding.common.debugging import display_geometry  # noqa: PLC0415
 
         return display_geometry([self.geom])
 

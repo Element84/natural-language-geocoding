@@ -3,10 +3,10 @@
 from pathlib import Path
 
 import yaml
-from e84_geoai_common.geometry import geometry_from_geojson_dict
 from shapely import Polygon
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.common.geometry import geometry_from_geojson_dict
 from natural_language_geocoding.place_lookup import PlaceLookup, PlaceSearchRequest
 
 _STATES_TO_GEOM_FILE = Path(__file__).parent / "states_to_geom.yaml"

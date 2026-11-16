@@ -3,10 +3,7 @@
 import logging
 from pathlib import Path
 
-from e84_geoai_common.llm.core import LLM
-from e84_geoai_common.llm.models import CLAUDE_4_SONNET, BedrockClaudeLLM
-
-from natural_language_geocoding import parse_spatial_node_from_text
+from natural_language_geocoding import DEFAULT_MODEL, LLM, parse_spatial_node_from_text
 from natural_language_geocoding.eval.evaluation_core import Evaluator, ExampleEval
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.models import (
@@ -411,7 +408,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    llm = BedrockClaudeLLM(model_id=CLAUDE_4_SONNET)
+    llm = DEFAULT_MODEL
     evaluator = ParseSpatialNodeEvaluator()
     full_eval = evaluator.evaluate_examples(llm, ALL_EXAMPLES)
     print(full_eval.to_markdown())  # noqa: T201
@@ -423,7 +420,7 @@ if __name__ == "__main__" and "get_ipython" not in globals():
 # code for manual testing
 # ruff: noqa: ERA001
 
-# llm = BedrockClaudeLLM(model_id=CLAUDE_4_SONNET)
+# llm = DEFAULT_MODEL
 # evaluator = ParseSpatialNodeEvaluator()
 
 

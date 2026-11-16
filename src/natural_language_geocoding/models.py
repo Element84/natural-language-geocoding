@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Self
 
-from e84_geoai_common.geometry import (
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
+from shapely.geometry.base import BaseGeometry
+
+from natural_language_geocoding.common.geometry import (
     BoundingBox,
     add_buffer,
     between,
     simplify_geometry,
 )
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
-from shapely.geometry.base import BaseGeometry
-
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.natural_earth import coastline_of

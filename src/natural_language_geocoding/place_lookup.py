@@ -4,11 +4,11 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import requests
-from e84_geoai_common.geometry import geometry_from_wkt
-from e84_geoai_common.util import get_env_var, timed_function
 from pydantic import BaseModel, ConfigDict
 from shapely.geometry.base import BaseGeometry
 
+from natural_language_geocoding.common.geometry import geometry_from_wkt
+from natural_language_geocoding.common.util import get_env_var, timed_function
 from natural_language_geocoding.errors import GeocodeError
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceSourceType, GeoPlaceType
 

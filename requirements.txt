@@ -3,8 +3,13 @@
 -e .
 altair==6.0.0
     # via streamlit
-annotated-types==0.7.0
+annotated-types==0.8.0
     # via pydantic
+anyio==4.16.0
+    # via
+    #   httpx2
+    #   pydantic-ai-slim
+    #   pydantic-graph
 appnope==0.1.4 ; sys_platform == 'darwin'
     # via ipykernel
 asttokens==3.0.1
@@ -15,15 +20,17 @@ attrs==25.4.0
     #   referencing
 blinker==1.9.0
     # via streamlit
-boto3==1.42.70
-    # via e84-geoai-common
-boto3-stubs==1.42.70
-    # via e84-geoai-common
-botocore==1.42.70
+boto3==1.44.3
+    # via
+    #   natural-language-geocoding
+    #   pydantic-ai-slim
+boto3-stubs==1.44.3
+    # via natural-language-geocoding
+botocore==1.44.3
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.42.41
+botocore-stubs==1.43.126
     # via boto3-stubs
 branca==0.8.2
     # via
@@ -64,8 +71,6 @@ distlib==0.4.0
     # via virtualenv
 docopt==0.6.2
     # via pytest-watch
-e84-geoai-common==0.0.7
-    # via natural-language-geocoding
 events==0.5
     # via opensearch-py
 executing==2.2.1
@@ -75,19 +80,36 @@ filelock==3.25.2
     #   python-discovery
     #   virtualenv
 folium==0.20.0
-    # via streamlit-folium
-function-schema==0.4.5
-    # via e84-geoai-common
+    # via
+    #   natural-language-geocoding
+    #   streamlit-folium
+genai-prices==0.2.3
+    # via pydantic-ai-slim
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.46
     # via streamlit
+griffelib==2.4.1
+    # via pydantic-ai-slim
 grpcio==1.78.0
     # via opensearch-protobufs
+h11==0.16.0 ; sys_platform != 'emscripten'
+    # via httpcore2
+httpcore2==2.16.2 ; sys_platform != 'emscripten'
+    # via httpx2
+httpx2==2.16.2
+    # via
+    #   genai-prices
+    #   pydantic-ai-slim
+httpx2-jsfetch==1.0 ; sys_platform == 'emscripten'
+    # via httpx2
 identify==2.6.18
     # via pre-commit
-idna==3.11
-    # via requests
+idna==3.20
+    # via
+    #   anyio
+    #   httpx2
+    #   requests
 iniconfig==2.3.0
     # via pytest
 ipykernel==7.2.0
@@ -119,6 +141,8 @@ jupyter-core==5.9.1
     # via
     #   ipykernel
     #   jupyter-client
+logfire-api==5.6.0
+    # via pydantic-graph
 markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.3
@@ -129,14 +153,6 @@ matplotlib-inline==0.2.1
     #   ipython
 mdurl==0.1.2
     # via markdown-it-py
-mypy-boto3-bedrock==1.42.69
-    # via boto3-stubs
-mypy-boto3-bedrock-runtime==1.42.42
-    # via
-    #   boto3-stubs
-    #   e84-geoai-common
-mypy-boto3-s3==1.42.67
-    # via boto3-stubs
 narwhals==2.18.0
     # via altair
 nest-asyncio==1.6.0
@@ -157,6 +173,8 @@ opensearch-protobufs==0.19.0
     # via opensearch-py
 opensearch-py==3.1.0
     # via natural-language-geocoding
+opentelemetry-api==1.45.2
+    # via pydantic-ai-slim
 orderly-set==5.5.0
     # via deepdiff
 packaging==26.0
@@ -201,10 +219,18 @@ pyarrow==23.0.1
     # via streamlit
 pycparser==3.0 ; implementation_name == 'pypy'
     # via cffi
-pydantic==2.12.5
-    # via e84-geoai-common
-pydantic-core==2.41.5
+pydantic==2.14.3
+    # via
+    #   genai-prices
+    #   natural-language-geocoding
+    #   pydantic-ai-slim
+    #   pydantic-graph
+pydantic-ai-slim==2.68.0
+    # via natural-language-geocoding
+pydantic-core==2.50.4
     # via pydantic
+pydantic-graph==2.68.0
+    # via pydantic-ai-slim
 pydeck==0.9.1
     # via streamlit
 pygments==2.19.2
@@ -250,9 +276,7 @@ requests==2.32.5
     #   opensearch-py
     #   streamlit
 rich==14.3.3
-    # via
-    #   e84-geoai-common
-    #   natural-language-geocoding
+    # via natural-language-geocoding
 rpds-py==0.30.0
     # via
     #   jsonschema
@@ -261,10 +285,10 @@ ruamel-yaml==0.19.1
     # via pre-commit-hooks
 ruff==0.15.6
     # via natural-language-geocoding
-s3transfer==0.16.0
+s3transfer==0.19.3
     # via boto3
-shapely==2.1.2
-    # via e84-geoai-common
+shapely==2.2.0
+    # via natural-language-geocoding
 six==1.17.0
     # via
     #   python-dateutil
@@ -297,24 +321,32 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-types-awscrt==0.31.3
-    # via botocore-stubs
-types-s3transfer==0.16.0
+truststore==0.10.5 ; sys_platform != 'emscripten'
+    # via
+    #   httpcore2
+    #   httpx2
+types-s3transfer==0.19.3
     # via boto3-stubs
-types-shapely==2.1.0.20250917
-    # via e84-geoai-common
-typing-extensions==4.15.0
+types-shapely==2.1.0.20261030
+    # via natural-language-geocoding
+typing-extensions==4.16.0
     # via
     #   altair
+    #   anyio
     #   grpcio
+    #   httpx2
+    #   opentelemetry-api
     #   pydantic
     #   pydantic-core
     #   pyright
     #   referencing
     #   streamlit
     #   typing-inspection
-typing-inspection==0.4.2
-    # via pydantic
+typing-inspection==0.4.5
+    # via
+    #   pydantic
+    #   pydantic-ai-slim
+    #   pydantic-graph
 tzdata==2025.3
     # via pandas
 urllib3==2.6.3
