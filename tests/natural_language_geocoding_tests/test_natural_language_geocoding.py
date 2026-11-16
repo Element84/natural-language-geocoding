@@ -155,3 +155,20 @@ def test_fails_when_llm_never_returns_spatial_node():
     with pytest.raises(UnexpectedModelBehavior):
         parse_spatial_node_from_text(FunctionModel(respond), "near the port")
     assert len(requests) == MAX_PARSE_ATTEMPTS
+
+
+def test_retries_when_place_type_is_invalid():
+    expected = NamedPlace(name="Florida")
+    responses = [
+        '{"node_type": "NamedPlace", "name": "Florida", "type": 42}',
+        expected.model_dump_json(),
+    ]
+    requests: list[list[ModelMessage]] = []
+
+    def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        requests.append(messages)
+        return ModelResponse(parts=[TextPart(responses[len(requests) - 1])])
+
+    node = parse_spatial_node_from_text(FunctionModel(respond), "Florida")
+    assert node.root == expected
+    assert len(requests) == 2

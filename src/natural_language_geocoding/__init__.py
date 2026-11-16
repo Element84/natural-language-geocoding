@@ -39,7 +39,8 @@ def _parse_spatial_node(text: str) -> SpatialNode:
             text = text[start : end + 1]
     try:
         return SpatialNode.model_validate_json(text)
-    except ValidationError as e:
+    # Pydantic doesn't wrap TypeErrors raised by field validators in a ValidationError.
+    except (ValidationError, TypeError) as e:
         logger.warning("Unable to parse LLM response: %s", text)
         raise ModelRetry(f"The response was not valid JSON matching the schema: {e}") from e
 
