@@ -81,6 +81,10 @@ GUIDELINE_PLACETYPE = (
     "Always specify the place type when it can be determined. "
     "The place type must be one of the following values: "
     + (", ".join([pt.value for pt in GeoPlaceType]))
+    + ". **CRITICAL**: Only specify a place type when it is stated in the request or you "
+    "recognize the specific real-world place and know what kind of place it is. If you don't "
+    "recognize a place name, omit the type field entirely rather than guessing. Never default an "
+    'unrecognized name to "locality".'
 )
 
 GUIDELINE_PLACETYPE_MACROAREA = dedent(
@@ -187,6 +191,9 @@ GUIDELINE_PORTS = dedent(
     Port Handling Specifics:
         - Only classify a location as a "port" type when the user explicitly refers to it as a
           port or harbor facility (e.g., "Port of Shanghai", "Shanghai Harbor").
+        - When classifying a location as a "port", the name field must be just the place name
+          without "Port of", "Harbor", or similar words (e.g., "the port of Shanghai" becomes
+          name "Shanghai" with type "port", not name "Port of Shanghai").
         - References to maritime zones (like EEZ, territorial waters) or maritime activities
           (like fishing, shipping) near a location do not automatically make that location a
           port - use the city's primary classification (usually "locality") unless the port itself
