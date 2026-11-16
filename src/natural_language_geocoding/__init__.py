@@ -22,6 +22,9 @@ DEFAULT_MODEL = "bedrock:us.anthropic.claude-haiku-5-5"
 
 DEFAULT_MODEL_SETTINGS = ModelSettings(max_tokens=1000, temperature=0)
 
+# The model is asked to try again if its response isn't a valid spatial node.
+MAX_PARSE_ATTEMPTS = 3
+
 _JSON_CODE_FENCE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
 
@@ -52,6 +55,7 @@ def create_spatial_node_agent(
         output_type=TextOutput(_parse_spatial_node),
         system_prompt=SYSTEM_PROMPT,
         model_settings=model_settings or DEFAULT_MODEL_SETTINGS,
+        retries={"output": MAX_PARSE_ATTEMPTS - 1},
     )
 
 
@@ -61,6 +65,9 @@ def _as_agent(llm: "LLM | Agent[None, SpatialNode]") -> Agent[None, SpatialNode]
 
 def parse_spatial_node_from_text(llm: "LLM | Agent[None, SpatialNode]", text: str) -> SpatialNode:
     """Parses out the spatial node from text.
+
+    Raises pydantic_ai.exceptions.UnexpectedModelBehavior if the LLM doesn't return a valid spatial
+    node within MAX_PARSE_ATTEMPTS attempts.
 
     Args:
         llm: A Pydantic AI model, model name, or an agent created with create_spatial_node_agent.

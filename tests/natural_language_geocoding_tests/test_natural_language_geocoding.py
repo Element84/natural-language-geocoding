@@ -1,8 +1,14 @@
+import pytest
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from shapely import Polygon
 
-from natural_language_geocoding import extract_geometry_from_text, parse_spatial_node_from_text
+from natural_language_geocoding import (
+    MAX_PARSE_ATTEMPTS,
+    extract_geometry_from_text,
+    parse_spatial_node_from_text,
+)
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
     BorderBetween,
@@ -137,3 +143,15 @@ def test_parse_response_with_surrounding_text_and_retry():
     node = parse_spatial_node_from_text(FunctionModel(respond), "Florida")
     assert node.root == expected
     assert len(requests) == 2
+
+
+def test_fails_when_llm_never_returns_spatial_node():
+    requests: list[list[ModelMessage]] = []
+
+    def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        requests.append(messages)
+        return ModelResponse(parts=[TextPart("Which port do you mean?")])
+
+    with pytest.raises(UnexpectedModelBehavior):
+        parse_spatial_node_from_text(FunctionModel(respond), "near the port")
+    assert len(requests) == MAX_PARSE_ATTEMPTS

@@ -3,10 +3,10 @@ import os
 import pytest
 
 import natural_language_geocoding
+from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
     Between,
-    CoastOf,
     Difference,
     NamedPlace,
 )
@@ -30,7 +30,16 @@ EXAMPLES: list[tuple[str, AnySpatialNodeType]] = [
             child_node_2=NamedPlace(name="Charlie"),
         ),
     ),
-    ("the port of miami", CoastOf(child_node=NamedPlace(name="Miami Florida"))),
+    (
+        "the port of miami",
+        NamedPlace(
+            name="Miami",
+            type=GeoPlaceType.port,
+            in_continent="North America",
+            in_country="United States",
+            in_region="Florida",
+        ),
+    ),
 ]
 
 
