@@ -227,9 +227,11 @@ def simplify_geometry(geom: BaseGeometry, max_points: int = 3_000) -> BaseGeomet
 
     # Performance Optimization for multipolygons with hundreds (or thousands of subpolygons)
     if isinstance(geom, MultiPolygon) and len(geom.geoms) > 100:  # noqa: PLR2004
-        # Drop the smallest polygons
+        # Drop the smallest polygons, unless that would remove all of them
         one_acre = 0.000001
-        geom = MultiPolygon([g for g in geom.geoms if g.area > one_acre])
+        large_polygons = [g for g in geom.geoms if g.area > one_acre]
+        if large_polygons:
+            geom = MultiPolygon(large_polygons)
 
     # Repeatedly try different tolerances to simplify it just until it reaches
     # below the maximum number of points.

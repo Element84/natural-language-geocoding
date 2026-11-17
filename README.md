@@ -19,8 +19,13 @@ LLM calls are made with [Pydantic AI](https://ai.pydantic.dev/). Any Pydantic AI
 
 ```python
 from natural_language_geocoding import DEFAULT_MODEL, extract_geometry_from_text
+from natural_language_geocoding.geocode_index.geocode_index_place_lookup import (
+    GeocodeIndexPlaceLookup,
+)
 
-geometry = extract_geometry_from_text(DEFAULT_MODEL, "within 10 km of Baltimore")
+geometry = extract_geometry_from_text(
+    DEFAULT_MODEL, "within 10 km of Baltimore", place_lookup=GeocodeIndexPlaceLookup()
+)
 ```
 
 ## Running the demo

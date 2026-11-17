@@ -78,15 +78,14 @@ def timed_function[F: Callable[..., Any]](
 def unique_by[T, K](
     items: Iterable[T],
     *,
-    key_fn: Callable[[T], K] = lambda x: x,
+    key_fn: Callable[[T], K],
     duplicate_handler_fn: Callable[[T, K], None] | None = None,
 ) -> Generator[T, None, None]:
     """Filter an iterable to yield only the first item for each unique key.
 
     Args:
         items: The input items to be filtered for uniqueness.
-        key_fn: A function that extracts the key to determine uniqueness. Defaults to the identity
-            function.
+        key_fn: A function that extracts the key to determine uniqueness.
         duplicate_handler_fn: Optional function called with each duplicate item and its key.
 
     Example:
