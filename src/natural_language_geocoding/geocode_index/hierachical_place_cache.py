@@ -4,8 +4,7 @@ import json
 from collections.abc import Collection
 from pathlib import Path
 
-from e84_geoai_common.util import timed_function
-
+from natural_language_geocoding.common.util import timed_function
 from natural_language_geocoding.geocode_index.geoplace import GeoPlaceType, Hierarchy
 from natural_language_geocoding.geocode_index.index import (
     GEOCODE_INDEX_CACHE_DIR,

@@ -9,11 +9,11 @@ from collections.abc import Iterable
 from time import time
 from typing import Any, Literal, TypedDict, cast
 
-from e84_geoai_common.geometry import geometry_from_geojson
-from e84_geoai_common.util import get_env_var, singleline, timed_function
 from opensearchpy import OpenSearch
 from pydantic import BaseModel, ConfigDict, Field
 
+from natural_language_geocoding.common.geometry import geometry_from_geojson
+from natural_language_geocoding.common.util import get_env_var, singleline, timed_function
 from natural_language_geocoding.geocode_index.geoplace import (
     GeoPlace,
     GeoPlaceSource,

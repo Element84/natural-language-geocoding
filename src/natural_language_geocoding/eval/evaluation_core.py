@@ -1,6 +1,6 @@
 """Defines examples and methods for evaluating natural language geocoding.
 
-Eventually we want to move this to e84-geoai-common once we establish what a general evaluation
+Eventually we want to move this to a shared library once we establish what a general evaluation
 framework looks like consistently.
 """
 
@@ -14,9 +14,9 @@ from typing import Any, cast
 
 import deepdiff.serialization
 from deepdiff import DeepDiff
-from e84_geoai_common.llm.core import LLM
 from pydantic import BaseModel, ConfigDict, Field
 
+from natural_language_geocoding import LLM
 from natural_language_geocoding.eval.tree_distance import get_tree_edit_distance
 
 logger = logging.getLogger(__name__)

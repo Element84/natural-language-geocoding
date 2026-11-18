@@ -7,9 +7,10 @@ from textwrap import dedent
 from typing import Any, Literal, TypedDict
 
 import boto3
-from e84_geoai_common.util import get_env_var
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 from shapely.geometry.base import BaseGeometry
+
+from natural_language_geocoding.common.util import get_env_var
 
 
 def create_opensearch_client() -> OpenSearch:

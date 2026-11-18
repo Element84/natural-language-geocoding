@@ -1,12 +1,14 @@
-from e84_geoai_common.llm.core import LLM
-from e84_geoai_common.llm.models.claude import BedrockClaudeLLM
-from e84_geoai_common.llm.tests.mock_bedrock_runtime import (
-    claude_response_with_content,
-    make_test_bedrock_runtime_client,
-)
+import pytest
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 from shapely import Polygon
 
-from natural_language_geocoding import extract_geometry_from_text
+from natural_language_geocoding import (
+    MAX_PARSE_ATTEMPTS,
+    extract_geometry_from_text,
+    parse_spatial_node_from_text,
+)
 from natural_language_geocoding.models import (
     AnySpatialNodeType,
     BorderBetween,
@@ -29,11 +31,11 @@ from natural_language_geocoding.tests.canned_place_lookup import (
 )
 
 
-def make_llm(spatial_node: AnySpatialNodeType) -> LLM:
-    claude_resp = spatial_node.model_dump_json()[1:]
-    return BedrockClaudeLLM(
-        client=make_test_bedrock_runtime_client([claude_response_with_content(claude_resp)])
-    )
+def make_llm(spatial_node: AnySpatialNodeType) -> FunctionModel:
+    def respond(_messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[TextPart(spatial_node.model_dump_json())])
+
+    return FunctionModel(respond)
 
 
 def test_single_place():
@@ -124,3 +126,49 @@ def test_border_between():
     # Ensure the border covers the south of North Dakota and the north of South Dakota
     assert border_south < nd_south < border_north
     assert border_south < sd_north < border_north
+
+
+def test_parse_response_with_surrounding_text_and_retry():
+    expected = NamedPlace(name="Florida")
+    responses = [
+        "I can't find a place in that request.",
+        f"Here is the result:\n```json\n{expected.model_dump_json()}\n```\nHope that helps!",
+    ]
+    requests: list[list[ModelMessage]] = []
+
+    def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        requests.append(messages)
+        return ModelResponse(parts=[TextPart(responses[len(requests) - 1])])
+
+    node = parse_spatial_node_from_text(FunctionModel(respond), "Florida")
+    assert node.root == expected
+    assert len(requests) == 2
+
+
+def test_fails_when_llm_never_returns_spatial_node():
+    requests: list[list[ModelMessage]] = []
+
+    def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        requests.append(messages)
+        return ModelResponse(parts=[TextPart("Which port do you mean?")])
+
+    with pytest.raises(UnexpectedModelBehavior):
+        parse_spatial_node_from_text(FunctionModel(respond), "near the port")
+    assert len(requests) == MAX_PARSE_ATTEMPTS
+
+
+def test_retries_when_place_type_is_invalid():
+    expected = NamedPlace(name="Florida")
+    responses = [
+        '{"node_type": "NamedPlace", "name": "Florida", "type": 42}',
+        expected.model_dump_json(),
+    ]
+    requests: list[list[ModelMessage]] = []
+
+    def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        requests.append(messages)
+        return ModelResponse(parts=[TextPart(responses[len(requests) - 1])])
+
+    node = parse_spatial_node_from_text(FunctionModel(respond), "Florida")
+    assert node.root == expected
+    assert len(requests) == 2

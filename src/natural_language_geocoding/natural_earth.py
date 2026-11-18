@@ -6,12 +6,13 @@ import urllib.request
 from functools import lru_cache
 from pathlib import Path
 
-from e84_geoai_common.geojson import FeatureCollection
-from e84_geoai_common.geometry import add_buffer
-from e84_geoai_common.util import timed_function
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from shapely import GeometryCollection
 from shapely.geometry.base import BaseGeometry
+
+from natural_language_geocoding.common.geojson import FeatureCollection
+from natural_language_geocoding.common.geometry import add_buffer
+from natural_language_geocoding.common.util import timed_function
 
 NATURAL_EARTH_DATA_DIR = Path(__file__).parent / "natural_earth_data"
 NE_COASTLINE_FILE = NATURAL_EARTH_DATA_DIR / "ne_10m_coastline.json"

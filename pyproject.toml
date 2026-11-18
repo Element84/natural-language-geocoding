@@ -13,9 +13,13 @@ requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
   "requests>=2.32.3",
-  "e84-geoai-common>=0.0.7",
   "tabulate",
-  "opensearch-py"
+  "opensearch-py",
+  "pydantic-ai-slim[bedrock]>=2.68.0",
+  "pydantic>=2.9.1",
+  "shapely>=2.0.6",
+  "boto3>=1.35.20",
+  "rich>=14.3.3",
 ]
 dynamic = ["version"]
 
@@ -36,9 +40,11 @@ testpaths = ["tests"]
 
 [project.optional-dependencies]
 demo = [
+  "folium>=0.17.0",
   "streamlit>=1.38.0",
   "streamlit-folium>=0.22.1",
-  "watchdog>=6.0.0"]
+  "watchdog>=6.0.0",
+]
 eval = [
   "deepdiff>=8.6.1",
   "zss"]
@@ -51,7 +57,9 @@ dev = [
   "build>=1.2.2",
   "pre-commit>=3.8.0",
   "pre-commit-hooks>=4.6.0",
-  "rich"]
+  "types-shapely>=2.0.0",
+  "boto3-stubs>=1.35.20",
+]
 
 [tool.pyright]
 pythonVersion = "3.12"
@@ -108,7 +116,9 @@ ignore = [
   'TD003',
   'TD004',
   # Allow T O D O s in code.
-  'FIX002']
+  'FIX002',
+  # Missing copyright notice at top of file
+  'CPY001']
 
 [tool.ruff.lint.per-file-ignores]
 '__init__.py' = [

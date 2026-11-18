@@ -1,9 +1,10 @@
 from typing import Literal, cast
 
-from e84_geoai_common.geometry import BoundingBox
-from e84_geoai_common.tracing import timed_function
 from shapely import GeometryCollection, MultiPolygon, Point
 from shapely.geometry.base import BaseGeometry, BaseMultipartGeometry
+
+from natural_language_geocoding.common.geometry import BoundingBox
+from natural_language_geocoding.common.util import timed_function
 
 
 @timed_function
